@@ -1,0 +1,36 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle with gradient -->
+  <circle cx="96" cy="96" r="90" fill="url(#gradient)" stroke="#3B82F6" stroke-width="6"/>
+  
+  <!-- Customer/User icon in center -->
+  <circle cx="96" cy="72" r="24" fill="white"/>
+  
+  <!-- Body/shoulders -->
+  <path d="M60 144C60 126 78 108 96 108C114 108 132 126 132 144" fill="white"/>
+  
+  <!-- Connection lines representing relationships -->
+  <path d="M48 48L72 72" stroke="white" stroke-width="6" stroke-linecap="round" opacity="0.7"/>
+  <path d="M144 48L120 72" stroke="white" stroke-width="6" stroke-linecap="round" opacity="0.7"/>
+  <path d="M48 144L72 120" stroke="white" stroke-width="6" stroke-linecap="round" opacity="0.7"/>
+  <path d="M144 144L120 120" stroke="white" stroke-width="6" stroke-linecap="round" opacity="0.7"/>
+  
+  <!-- Small dots representing data points -->
+  <circle cx="48" cy="48" r="6" fill="white" opacity="0.8"/>
+  <circle cx="144" cy="48" r="6" fill="white" opacity="0.8"/>
+  <circle cx="48" cy="144" r="6" fill="white" opacity="0.8"/>
+  <circle cx="144" cy="144" r="6" fill="white" opacity="0.8"/>
+  
+  <!-- Additional connection dots for more network feel -->
+  <circle cx="96" cy="48" r="4" fill="white" opacity="0.6"/>
+  <circle cx="48" cy="96" r="4" fill="white" opacity="0.6"/>
+  <circle cx="144" cy="96" r="4" fill="white" opacity="0.6"/>
+  <circle cx="96" cy="144" r="4" fill="white" opacity="0.6"/>
+  
+  <!-- Gradient definition -->
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1E40AF;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>
