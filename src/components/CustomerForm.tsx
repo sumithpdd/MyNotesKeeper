@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { Save, X, Building, Users, ExternalLink } from 'lucide-react';
 import { Customer, CreateCustomerData } from '@/types';
 import { MultiSelect } from './ui/MultiSelect';
+import { AIButton } from './ui/AIButton';
 import { 
   dummyProducts, 
   dummyCustomerContacts, 
@@ -47,6 +48,21 @@ const customerSchema = z.object({
   salesforceLink: z.string(),
   additionalLink: z.string().optional(),
   additionalInfo: z.string().optional(),
+  // Migration fields
+  existingMigrationOpp: z.string().optional(),
+  perpetualOrSubscription: z.string().optional(),
+  hostingLocation: z.string().optional(),
+  frontEndTech: z.string().optional(),
+  exmUser: z.string().optional(),
+  marketingAutomationUser: z.string().optional(),
+  integrations: z.string().optional(),
+  heavilyCustomisedCE: z.string().optional(),
+  migrationComplexity: z.string().optional(),
+  customerAwareOfXMC: z.string().optional(),
+  compellingEvent: z.string().optional(),
+  managedCloud: z.string().optional(),
+  dateAnalysed: z.string().optional(),
+  migrationNotes: z.string().optional(),
 });
 
 type CustomerFormData = z.infer<typeof customerSchema>;
@@ -83,6 +99,20 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
       salesforceLink: customer.salesforceLink,
       additionalLink: customer.additionalLink,
       additionalInfo: customer.additionalInfo,
+      existingMigrationOpp: customer.existingMigrationOpp || '',
+      perpetualOrSubscription: customer.perpetualOrSubscription || '',
+      hostingLocation: customer.hostingLocation || '',
+      frontEndTech: customer.frontEndTech || '',
+      exmUser: customer.exmUser ? String(customer.exmUser) : '',
+      marketingAutomationUser: customer.marketingAutomationUser ? String(customer.marketingAutomationUser) : '',
+      integrations: customer.integrations || '',
+      heavilyCustomisedCE: customer.heavilyCustomisedCE ? String(customer.heavilyCustomisedCE) : '',
+      migrationComplexity: customer.migrationComplexity || '',
+      customerAwareOfXMC: customer.customerAwareOfXMC ? String(customer.customerAwareOfXMC) : '',
+      compellingEvent: customer.compellingEvent || '',
+      managedCloud: customer.managedCloud ? String(customer.managedCloud) : '',
+      dateAnalysed: customer.dateAnalysed || '',
+      migrationNotes: customer.migrationNotes || '',
     } : {
       customerName: '',
       products: [],
@@ -93,6 +123,20 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
       salesforceLink: '',
       additionalLink: '',
       additionalInfo: '',
+      existingMigrationOpp: '',
+      perpetualOrSubscription: '',
+      hostingLocation: '',
+      frontEndTech: '',
+      exmUser: '',
+      marketingAutomationUser: '',
+      integrations: '',
+      heavilyCustomisedCE: '',
+      migrationComplexity: '',
+      customerAwareOfXMC: '',
+      compellingEvent: '',
+      managedCloud: '',
+      dateAnalysed: '',
+      migrationNotes: '',
     }
   });
 
@@ -125,7 +169,7 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
   };
 
   return (
-    <div className="max-h-[80vh] overflow-y-auto">
+    <div className="p-6">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Basic Information */}
         <div className="bg-white p-6 rounded-lg border border-gray-200">
@@ -274,6 +318,188 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
                 setValue('partners', [...watchedValues.partners, newPartner]);
               }}
             />
+          </div>
+        </div>
+
+        {/* Migration Opportunity Information */}
+        <div className="bg-white p-6 rounded-lg border border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Migration Opportunity Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Existing Migration Opp
+              </label>
+              <select {...register('existingMigrationOpp')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white">
+                <option value="">Not Set</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+                <option value="YES">YES (Active)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                License Type
+              </label>
+              <select {...register('perpetualOrSubscription')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white">
+                <option value="">Select...</option>
+                <option value="Perpetual">Perpetual</option>
+                <option value="Subscription">Subscription</option>
+                <option value="Churn">Churn</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Hosting Location
+              </label>
+              <input
+                {...register('hostingLocation')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                placeholder="e.g., Azure, AWS, PaaS"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Front End Tech
+              </label>
+              <input
+                {...register('frontEndTech')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                placeholder="e.g., MVC, mv"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                EXM User
+              </label>
+              <select {...register('exmUser')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white">
+                <option value="">Not Set</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Marketing Automation User
+              </label>
+              <select {...register('marketingAutomationUser')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white">
+                <option value="">Not Set</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Integrations
+              </label>
+              <input
+                {...register('integrations')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                placeholder="e.g., Salesforce, Dynamics, CRM"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Heavily Customised CE
+              </label>
+              <select {...register('heavilyCustomisedCE')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white">
+                <option value="">Not Set</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Migration Complexity
+              </label>
+              <select {...register('migrationComplexity')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white">
+                <option value="">Select...</option>
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Customer Aware of XMC
+              </label>
+              <select {...register('customerAwareOfXMC')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white">
+                <option value="">Not Set</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+                <option value="YES">YES</option>
+                <option value="Y">Y</option>
+                <option value="N">N</option>
+              </select>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Compelling Event
+                </label>
+                <AIButton 
+                  currentText={watchedValues.compellingEvent || ''} 
+                  onGenerated={(text) => setValue('compellingEvent', text)}
+                  context={`Customer: ${watchedValues.customerName}, Products: ${watchedValues.products.map(p => p.name).join(', ')}`}
+                />
+              </div>
+              <input
+                {...register('compellingEvent')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                placeholder="e.g., 2026 upgrade, cost savings"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Managed Cloud
+              </label>
+              <select {...register('managedCloud')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white">
+                <option value="">Not Set</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Date Analysed
+              </label>
+              <input
+                type="date"
+                {...register('dateAnalysed')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+              />
+            </div>
+
+
+            <div className="md:col-span-3">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Migration Notes
+                </label>
+                <AIButton 
+                  currentText={watchedValues.migrationNotes || ''} 
+                  onGenerated={(text) => setValue('migrationNotes', text)}
+                  context={`Customer: ${watchedValues.customerName}, Migration Complexity: ${watchedValues.migrationComplexity || 'Not specified'}`}
+                />
+              </div>
+              <textarea
+                {...register('migrationNotes')}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                placeholder="Add migration-specific notes here..."
+              />
+            </div>
           </div>
         </div>
 

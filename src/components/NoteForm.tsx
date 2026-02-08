@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, X, Calendar, User } from 'lucide-react';
 import { CustomerNote } from '@/types';
+import { AIButton } from './ui/AIButton';
 
 const noteSchema = z.object({
   notes: z.string().min(1, 'Notes are required'),
@@ -29,6 +30,8 @@ export function NoteForm({ customerId, note, onSave, onCancel }: NoteFormProps) 
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors, isSubmitting }
   } = useForm<NoteFormData>({
     resolver: zodResolver(noteSchema),
@@ -48,6 +51,8 @@ export function NoteForm({ customerId, note, onSave, onCancel }: NoteFormProps) 
       otherFields: {},
     }
   });
+
+  const watchedValues = watch();
 
   const onSubmit = async (data: NoteFormData) => {
     try {
@@ -90,9 +95,16 @@ export function NoteForm({ customerId, note, onSave, onCancel }: NoteFormProps) 
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Note Information</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Notes
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Notes
+                  </label>
+                  <AIButton 
+                    currentText={watchedValues.notes} 
+                    onGenerated={(text) => setValue('notes', text)}
+                    context={`Customer ID: ${customerId}, Note Date: ${watchedValues.noteDate?.toLocaleDateString() || 'Today'}`}
+                  />
+                </div>
                 <textarea
                   {...register('notes')}
                   rows={6}
@@ -175,9 +187,16 @@ export function NoteForm({ customerId, note, onSave, onCancel }: NoteFormProps) 
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Additional Notes
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Additional Notes
+                  </label>
+                  <AIButton 
+                    currentText={watchedValues.otherFields?.additionalNotes as string || ''} 
+                    onGenerated={(text) => setValue('otherFields', { ...watchedValues.otherFields, additionalNotes: text })}
+                    context={`Main Notes: ${watchedValues.notes}`}
+                  />
+                </div>
                 <textarea
                   {...register('otherFields.additionalNotes')}
                   rows={3}
@@ -187,9 +206,16 @@ export function NoteForm({ customerId, note, onSave, onCancel }: NoteFormProps) 
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Next Steps
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Next Steps
+                  </label>
+                  <AIButton 
+                    currentText={watchedValues.otherFields?.nextSteps as string || ''} 
+                    onGenerated={(text) => setValue('otherFields', { ...watchedValues.otherFields, nextSteps: text })}
+                    context={`Notes: ${watchedValues.notes}, SE Confidence: ${watchedValues.seConfidence || 'Not set'}`}
+                  />
+                </div>
                 <textarea
                   {...register('otherFields.nextSteps')}
                   rows={2}

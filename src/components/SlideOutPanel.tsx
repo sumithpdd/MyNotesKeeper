@@ -285,6 +285,20 @@ export function SlideOutPanel({ note, customer, customerProfile, onClose }: Slid
                       )}
                     </div>
                   </div>
+
+                  {customerProfile?.seProductNotGreenReason && (
+                    <CopyableField
+                      label="Reason for SE Product not Green"
+                      value={customerProfile.seProductNotGreenReason}
+                    />
+                  )}
+
+                  {customerProfile?.seConfidenceNotGreenReason && (
+                    <CopyableField
+                      label="Reason for SE Confidence not Green"
+                      value={customerProfile.seConfidenceNotGreenReason}
+                    />
+                  )}
                 </div>
               </div>
 
@@ -411,7 +425,7 @@ export function SlideOutPanel({ note, customer, customerProfile, onClose }: Slid
                           className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-orange-100 text-orange-800"
                         >
                           <Tag className="h-3 w-3 mr-1" />
-                          {product.name}
+                          {product.name}{product.version ? ` v${product.version}` : ''}
                         </span>
                       ))}
                     </div>

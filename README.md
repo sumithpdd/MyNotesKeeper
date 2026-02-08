@@ -1,6 +1,43 @@
 # Customer Engagement Hub
 
-A comprehensive Next.js application for managing customer relationships, tracking engagement progress, and maintaining detailed customer notes. Built with React, TypeScript, and modern web technologies.
+A comprehensive Next.js application for Sales Solution Engineers to manage customer relationships, track engagement progress, and maintain detailed customer notes. Built with React 19, TypeScript, and powered by AI.
+
+> **⚡ Quick Start**: See [QUICKSTART.md](docs/QUICKSTART.md) to get running in 5 minutes!  
+> **📋 Full Overview**: See [PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) for complete project documentation!  
+> **📚 Documentation**: Browse [docs/](docs/) for detailed guides and architecture!
+
+---
+
+## 🚀 Quick Start
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Set up environment variables
+copy .env.example .env.local
+# Edit .env.local with your Firebase and Gemini API keys
+
+# 3. Start development server
+npm run dev
+
+# 4. Open browser
+# Navigate to http://localhost:3000
+```
+
+**→ See [QUICKSTART.md](docs/QUICKSTART.md) for detailed setup instructions**
+
+### 📖 Documentation Quick Links
+
+| For... | Start Here... |
+|--------|---------------|
+| 🚀 **Quick Start** | [QUICKSTART.md](docs/QUICKSTART.md) - Get running in 5 minutes |
+| 📝 **Detailed Setup** | [HOW_TO_RUN.md](docs/HOW_TO_RUN.md) - Step-by-step guide |
+| 📋 **Project Overview** | [PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) - Complete documentation |
+| 📚 **All Documentation** | [docs/README.md](docs/README.md) - Documentation hub |
+| 🎯 **Brief Summary** | [PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md) - Executive summary |
+
+---
 
 ## 🚀 Features
 
@@ -26,6 +63,14 @@ A comprehensive Next.js application for managing customer relationships, trackin
 - **Quick Hit Details** - Discovery status, demos, technical deep dives
 - **Success Planning** - Customer objectives and use cases with predefined pools
 - **AI Integration** - Gemini AI for content generation and template filling
+
+### 🤖 AI Chatbot (NEW!)
+- **Natural Language Interface** - Add notes and update customers using plain English
+- **8 Prompt Templates** - Pre-configured for common SE tasks
+- **Smart Parsing** - AI extracts structured data from conversational input
+- **Confirmation Workflow** - Review before applying changes
+- **Prompt Library** - Browse, search, and use example commands
+- **SE Persona** - Understands Solution Engineer terminology and workflows
 
 ### Advanced Features
 - **Search & Filter** - Advanced search across customers, contacts, and partners
@@ -123,7 +168,39 @@ A comprehensive Next.js application for managing customer relationships, trackin
 4. Close panel to return to main view
 ```
 
-### 7. **Data Flow Architecture**
+### 7. **AI Chatbot Usage** (NEW!)
+```
+1. Navigate to "AI Chatbot" tab
+2. Type natural language command:
+   Example: "Add a note to ABC Corp, demo yesterday, green SE confidence"
+3. Review AI-extracted information
+4. Confirm or cancel the action
+5. Changes are saved automatically
+
+Available Commands:
+- Add customer notes
+- Update customer profiles
+- Create new customers
+- Change SE confidence levels
+- Schedule follow-ups
+- Update products and contacts
+```
+
+### 8. **Prompt Library**
+```
+1. Navigate to "Prompt Library" tab
+2. Browse 8+ prompt templates
+3. Search or filter by category:
+   - Notes
+   - Customers
+   - Profiles
+   - Updates
+4. View example commands
+5. Copy examples to use in chatbot
+6. Click "Use in Chatbot" to switch tabs
+```
+
+### 9. **Data Flow Architecture**
 ```
 Customer (Static) → Customer Profile (Static) → Customer Notes (Dynamic)
      ↓                        ↓                           ↓
@@ -132,6 +209,13 @@ Customer (Static) → Customer Profile (Static) → Customer Notes (Dynamic)
 - Products                - SE Assessments             - Note-specific Data
 - Partners                - Objectives/Use Cases      - Timestamps
 - URLs                    - Technical Details
+
+                    ↓
+            AI Chatbot Interface
+                    ↓
+        Natural Language Processing
+                    ↓
+        Structured Data Extraction
 ```
 
 ## 🏗️ Architecture
@@ -193,11 +277,15 @@ customer-engagement-hub/
 │   │   ├── CustomerManagement.tsx  # Unified CRUD interface for customers and notes
 │   │   ├── CustomerProfileForm.tsx # Customer profile creation/editing form
 │   │   ├── NoteForm.tsx            # Dynamic note creation/editing form
-│   │   └── SlideOutPanel.tsx       # Note details panel
+│   │   ├── SlideOutPanel.tsx       # Note details panel
+│   │   ├── ChatbotInterface.tsx    # AI chatbot UI (NEW!)
+│   │   └── PromptLibrary.tsx       # Prompt template browser (NEW!)
 │   ├── lib/
 │   │   ├── utils.ts                # Utility functions
 │   │   ├── firebase.ts             # Firebase configuration
 │   │   ├── ai.ts                   # Gemini AI integration
+│   │   ├── chatbotAI.ts            # Chatbot AI service (NEW!)
+│   │   ├── chatbotPrompts.ts       # Prompt templates (NEW!)
 │   │   ├── customerNotes.ts        # Customer notes utilities
 │   │   └── seTemplate.ts           # SE note templates
 │   └── types/
@@ -214,57 +302,35 @@ customer-engagement-hub/
 └── next.config.js                  # Next.js configuration
 ```
 
-## 🚀 Getting Started
+## 📚 Documentation
 
-### Prerequisites
-- Node.js 18+ 
-- npm or yarn
-- Firebase project (for production)
-- Google Gemini API key (for AI features)
+### 🚀 Getting Started Guides
+- **[QUICKSTART.md](docs/QUICKSTART.md)** - ⚡ Get running in 5 minutes
+- **[HOW_TO_RUN.md](docs/HOW_TO_RUN.md)** - 📝 Detailed step-by-step running guide
+- **[PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md)** - 📋 Complete project documentation
+- **[DOCUMENTATION_GUIDE.md](docs/DOCUMENTATION_GUIDE.md)** - 📚 Documentation structure and guide
 
-### Installation
+### 📖 Documentation Hub
+- **[docs/README.md](docs/README.md)** - Full documentation index and navigation
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd customer-engagement-hub
-   ```
+### 🎯 For Developers
+- **[Getting Started](docs/developer-guide/GETTING_STARTED.md)** - Developer onboarding and setup
+- **[React Concepts](docs/developer-guide/REACT_CONCEPTS.md)** - React patterns used in this project
+- **[System Architecture](docs/architecture/OVERVIEW.md)** - How the application works
+- **[Data Models](docs/architecture/DATA_MODELS.md)** - Database schema and relationships
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+### ⚙️ Configuration
+- **[Environment Setup](docs/setup/ENVIRONMENT.md)** - Environment variables and API keys
+- **[Firebase Setup](docs/setup/FIREBASE_SETUP.md)** - Firebase configuration guide
 
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env.local
-   ```
-   
-   Edit `.env.local` with your configuration:
-   ```env
-   # Firebase Configuration
-   NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
-   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-   NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-   
-   # Google Gemini AI Configuration
-   NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key
-   
-   # Application Configuration
-   NEXT_PUBLIC_APP_NAME=Customer Engagement Hub
-   NEXT_PUBLIC_APP_VERSION=1.0.0
-   ```
+### ✨ Features
+- **[AI Chatbot](docs/features/CHATBOT.md)** - Natural language interface
+- **[AI Features](docs/features/AI_FEATURES.md)** - Text enhancement and generation
+- **[SE Notes](docs/features/SE_NOTES.md)** - Solution Engineer note templates
+- **[Migration Opportunities](docs/features/MIGRATION_OPPORTUNITIES.md)** - Migration tracking
 
-4. **Run the development server**
-   ```bash
-   npm run dev
-   ```
-
-5. **Open your browser**
-   Navigate to [http://localhost:3000](http://localhost:3000)
+### 👥 For Users
+- **[Customer Management](docs/user-guides/CUSTOMER_MANAGEMENT.md)** - Complete user manual
 
 ## 📊 Data Models
 
@@ -401,91 +467,59 @@ interface CustomerNote {
 
 ### Available Scripts
 ```bash
-# Development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
-
-# Lint code
-npm run lint
-
-# Type check
-npm run type-check
+npm run dev          # Start development server with Turbopack
+npm run build        # Build for production
+npm start            # Start production server
+npm run lint         # Run ESLint
+npm run type-check   # TypeScript type checking
+npm test             # Run tests
 ```
 
-### Code Quality
-- **TypeScript** - Full type safety
-- **ESLint** - Code linting
-- **Prettier** - Code formatting
-- **Husky** - Git hooks for quality
-
-## 🚀 Deployment
-
-### Vercel (Recommended)
-1. Push code to GitHub
-2. Connect repository to Vercel
-3. Add environment variables in Vercel dashboard
-4. Deploy automatically
-
-### Other Platforms
-- **Netlify** - Static site deployment
-- **Railway** - Full-stack deployment
-- **AWS** - EC2 or Lambda deployment
-
-## 📈 Performance
-
-### Optimizations
-- **Next.js App Router** - Latest routing system
-- **Turbopack** - Fast development builds
-- **Image Optimization** - Automatic image optimization
-- **Code Splitting** - Automatic code splitting
-- **Static Generation** - Pre-rendered pages
-
-### Bundle Analysis
-```bash
-npm run build
-npm run analyze
-```
+**See [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md#common-commands)** for all available commands.
 
 ## 🔒 Security
 
-### Best Practices
-- **Environment Variables** - Sensitive data in `.env.local`
-- **Input Validation** - Zod schema validation
-- **Type Safety** - TypeScript for type checking
-- **HTTPS** - Secure connections in production
+- **Environment Variables** - Store sensitive data in `.env.local` (never commit)
+- **Type Safety** - TypeScript prevents many common bugs
+- **Input Validation** - Zod schema validation on all forms
+- **Firebase Security** - Authentication and security rules
 
 ## 🤝 Contributing
 
+We welcome contributions! Please:
 1. Fork the repository
 2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+3. Make your changes with tests
+4. Submit a pull request
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT License - See [LICENSE](LICENSE) file for details.
 
 ## 🆘 Support
 
-### Common Issues
-- **Build Errors** - Check TypeScript types and imports
-- **Firebase Issues** - Verify configuration and permissions
-- **AI Features** - Check Gemini API key and quotas
+**Common Issues:**
+- **Server won't start** → Check Node.js version (18+)
+- **Firebase errors** → Verify `.env.local` configuration
+- **AI not working** → Check Gemini API key
 
-### Getting Help
-- Check the documentation
-- Review the code examples
-- Open an issue on GitHub
+**Resources:**
+- [Full Documentation](docs/README.md)
+- [Troubleshooting Guide](docs/developer-guide/GETTING_STARTED.md#common-issues)
+- [Project Overview](docs/PROJECT_OVERVIEW.md)
 
 ## 🔄 Version History
 
-### v1.1.0 (Latest)
+### v1.2.0 (Latest) - AI Chatbot Release
+- **🤖 AI Chatbot Interface** - Natural language command interface for SE tasks
+- **📚 Prompt Library** - 8 pre-configured prompt templates with examples
+- **🎯 Smart Parsing** - AI-powered extraction of structured data from conversational input
+- **✅ Confirmation Workflow** - Review parsed data before applying changes
+- **🔍 Prompt Search** - Search and filter prompt templates by category
+- **👤 SE Persona** - Understands Solution Engineer terminology and workflows
+- **📝 All Prompts in Separate File** - Easy to read and customize (`chatbotPrompts.ts`)
+
+### v1.1.0
 - **Database Schema Refactoring** - Separated static customer profiles from dynamic notes
 - **Customer Profile Management** - Comprehensive business information per customer
 - **Simplified Note Taking** - Focus on interaction-specific information

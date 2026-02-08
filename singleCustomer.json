@@ -1,0 +1,67 @@
+{
+  "customerName": "Example Company",
+  "website": "https://www.example.com",
+  "customerContacts": [
+    {
+      "id": "contact-example-1",
+      "name": "John Doe",
+      "email": "john.doe@example.com",
+      "role": "Project Manager",
+      "phone": "+1-555-0123"
+    },
+    {
+      "id": "contact-example-2",
+      "name": "Jane Smith",
+      "email": "jane.smith@example.com",
+      "role": "Technical Lead"
+    }
+  ],
+  "internalContacts": [
+    {
+      "id": "sc-example-1",
+      "name": "Ibrahim Samy",
+      "role": "Account Executive",
+      "email": "ibrahim.samy@sitecore.com"
+    },
+    {
+      "id": "sc-example-2",
+      "name": "Steve Little",
+      "role": "Director SE UK and I",
+      "email": "steve.little@sitecore.com"
+    }
+  ],
+  "products": [
+    {
+      "id": "product-xp-example",
+      "name": "XP",
+      "version": "10.3",
+      "description": "Experience Platform - Complete digital experience platform",
+      "status": "Active"
+    },
+    {
+      "id": "product-xm-cloud-example",
+      "name": "XM Cloud",
+      "version": "Latest",
+      "description": "Cloud-native headless CMS with modern architecture",
+      "status": "Active"
+    }
+  ],
+  "partners": [
+    {
+      "id": "partner-example-1",
+      "name": "DEPT",
+      "type": "Digital Agency",
+      "website": "https://www.deptagency.com"
+    },
+    {
+      "id": "partner-example-2",
+      "name": "Valtech",
+      "type": "Digital Agency",
+      "website": "https://www.valtech.com"
+    }
+  ],
+  "sharePointUrl": "https://company.sharepoint.com/sites/opportunities/example-company",
+  "salesforceLink": "https://company.lightning.force.com/lightning/r/Opportunity/example-company/view",
+  "additionalLink": "https://loop.microsoft.com/loop/workspace/example-company-notes",
+  "additionalInfo": "Example Company is a strategic customer focused on digital transformation. They are looking to migrate from their legacy CMS to Sitecore XP for better personalization and content management capabilities. Key requirements include multi-language support, headless implementation, and integration with existing marketing tools."
+}

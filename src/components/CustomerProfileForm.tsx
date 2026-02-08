@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Save, X, Sparkles } from 'lucide-react';
+import { Save, X, Sparkles, BookOpen } from 'lucide-react';
 import { CustomerProfile, CreateCustomerProfileData } from '@/types';
 import { DXP_OBJECTIVES, DXP_USE_CASES } from '../../data/dxpPools';
+import { PromptLibrary } from './PromptLibrary';
 
 const customerProfileSchema = z.object({
   customerId: z.string().min(1, 'Customer ID is required'),
@@ -31,6 +32,8 @@ const customerProfileSchema = z.object({
   seInvolvement: z.boolean(),
   seNotesLastUpdated: z.date(),
   seProductFitAssessment: z.enum(['Green', 'Yellow', 'Red', '']),
+  seProductNotGreenReason: z.string(),
+  seConfidenceNotGreenReason: z.string(),
   // Success Planning
   customerObjective1: z.string(),
   customerObjective2: z.string(),
@@ -56,6 +59,8 @@ export function CustomerProfileForm({
   onSave, 
   onCancel 
 }: CustomerProfileFormProps) {
+  const [showPromptLibrary, setShowPromptLibrary] = useState(false);
+  
   const {
     register,
     handleSubmit,
@@ -84,6 +89,8 @@ export function CustomerProfileForm({
       seInvolvement: customerProfile.seInvolvement,
       seNotesLastUpdated: customerProfile.seNotesLastUpdated,
       seProductFitAssessment: customerProfile.seProductFitAssessment,
+      seProductNotGreenReason: customerProfile.seProductNotGreenReason || '',
+      seConfidenceNotGreenReason: customerProfile.seConfidenceNotGreenReason || '',
       customerObjective1: customerProfile.customerObjective1,
       customerObjective2: customerProfile.customerObjective2,
       customerObjective3: customerProfile.customerObjective3,
@@ -111,6 +118,8 @@ export function CustomerProfileForm({
       seInvolvement: false,
       seNotesLastUpdated: new Date(),
       seProductFitAssessment: '',
+      seProductNotGreenReason: '',
+      seConfidenceNotGreenReason: '',
       customerObjective1: '',
       customerObjective2: '',
       customerObjective3: '',
@@ -124,26 +133,37 @@ export function CustomerProfileForm({
   const watchedValues = watch();
 
   const generateSENotesFromFields = () => {
-    const template = `Initial Details:
-• What business problem are we solving? ${watchedValues.businessProblem}
-• Why Us? ${watchedValues.whyUs}
-• Why now? ${watchedValues.whyNow}
+    const formatDate = (date: Date | undefined) => {
+      if (!date) return 'Not specified';
+      return new Intl.DateTimeFormat('en-US', {
+        month: '2-digit',
+        day: '2-digit',
+        year: '2-digit',
+      }).format(date);
+    };
+
+    const template = `SFDC SE Notes Template:
+
+Initial Details:
+• What business problem are we solving? ${watchedValues.businessProblem || 'Not specified'}
+• Why Us? ${watchedValues.whyUs || 'Not specified'}
+• Why now? ${watchedValues.whyNow || 'Not specified'}
 • Tech select (y/n) ${watchedValues.techSelect ? 'Yes' : 'No'}
 
 Quick Hit Details:
 • Pre-discovery (y/n) ${watchedValues.preDiscovery ? 'Yes' : 'No'}
-• Discovery (y/n) ${watchedValues.discovery}
+• Discovery (y/n) ${watchedValues.discovery || 'Not specified'}
 • Are discovery notes attached (.doc) ${watchedValues.discoveryNotesAttached ? 'Yes' : 'No'}
-• Total number of demos to date ${watchedValues.totalDemos}
+• Total number of demos to date ${watchedValues.totalDemos || 0}
 • Latest demo dry run (y/n) ${watchedValues.latestDemoDryRun ? 'Yes' : 'No'}
-• Latest demo date (mm/dd/yy) ${watchedValues.latestDemoDate.toLocaleDateString()}
-• Tech deep dive (y/n) ${watchedValues.techDeepDive}
+• Latest demo date (mm/dd/yy) ${formatDate(watchedValues.latestDemoDate)}
+• Tech deep dive (y/n) ${watchedValues.techDeepDive || 'Not specified'}
 • InfoSec completed (y/n) ${watchedValues.infoSecCompleted ? 'Yes' : 'No'}
-• Known technical risks: ${watchedValues.knownTechnicalRisks}
-• Mitigation plan: ${watchedValues.mitigationPlan}
+• Known technical risks: ${watchedValues.knownTechnicalRisks || 'None identified'}
+• Mitigation plan: ${watchedValues.mitigationPlan || 'To be determined'}${watchedValues.seProductNotGreenReason ? '\n• Reason for SE Product not Green: ' + watchedValues.seProductNotGreenReason : ''}${watchedValues.seConfidenceNotGreenReason ? '\n• Reason for SE Confidence not Green: ' + watchedValues.seConfidenceNotGreenReason : ''}
 
 Activity Details:
-• Generated content based on provided information for ${customerName}`;
+• Initials/date/activity description: Generated for ${customerName} on ${new Date().toLocaleDateString()}`;
     
     setValue('seNotes', template);
   };
@@ -419,19 +439,55 @@ Activity Details:
                 </select>
               </div>
 
+              {watchedValues.seProductFitAssessment && watchedValues.seProductFitAssessment !== 'Green' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Reason for SE Product not Green <span className="text-gray-500">(if applicable)</span>
+                  </label>
+                  <textarea
+                    {...register('seProductNotGreenReason')}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                    placeholder="Explain why the assessment is not Green..."
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for SE Confidence not Green <span className="text-gray-500">(if applicable)</span>
+                </label>
+                <textarea
+                  {...register('seConfidenceNotGreenReason')}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                  placeholder="Explain if SE Confidence is not Green..."
+                />
+              </div>
+
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700">
                     SE Notes
                   </label>
-                  <button
-                    type="button"
-                    onClick={generateSENotesFromFields}
-                    className="flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors text-sm"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    Generate from fields
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowPromptLibrary(!showPromptLibrary)}
+                      className="flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors text-sm"
+                    >
+                      <BookOpen className="h-4 w-4" />
+                      Prompt Library
+                    </button>
+                    <button
+                      type="button"
+                      onClick={generateSENotesFromFields}
+                      className="flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors text-sm"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Generate from fields
+                    </button>
+                  </div>
                 </div>
                 <textarea
                   {...register('seNotes')}
@@ -440,6 +496,17 @@ Activity Details:
                   placeholder="SE Notes will be auto-generated..."
                 />
               </div>
+
+              {showPromptLibrary && (
+                <div className="mt-4">
+                  <PromptLibrary
+                    onSelectPrompt={(content) => {
+                      setValue('seNotes', content);
+                      setShowPromptLibrary(false);
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
 

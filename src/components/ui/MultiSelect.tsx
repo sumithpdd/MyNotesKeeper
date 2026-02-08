@@ -8,6 +8,7 @@ interface MultiSelectOption {
   id: string;
   name: string;
   description?: string;
+  version?: string; // For products to show version
 }
 
 interface MultiSelectProps {
@@ -168,9 +169,16 @@ export function MultiSelect({
                   onClick={() => handleSelect(option.id)}
                   className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
                 >
-                  <div className="font-medium">{option.name}</div>
+                  <div className="flex items-center justify-between">
+                    <div className="font-medium text-gray-900">{option.name}</div>
+                    {option.version && (
+                      <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded">
+                        v{option.version}
+                      </span>
+                    )}
+                  </div>
                   {option.description && (
-                    <div className="text-xs text-gray-500">{option.description}</div>
+                    <div className="text-xs text-gray-700 mt-0.5">{option.description}</div>
                   )}
                 </button>
               ))

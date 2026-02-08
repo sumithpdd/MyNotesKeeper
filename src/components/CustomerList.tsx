@@ -1,6 +1,7 @@
 'use client';
 
-import { Building, Users, Package, ExternalLink, Globe, Link2 } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Building, Users, Package, ExternalLink, Globe, Link2, Search } from 'lucide-react';
 import { Customer } from '@/types';
 
 interface CustomerListProps {
@@ -14,19 +15,49 @@ export function CustomerList({
   selectedCustomer, 
   onSelectCustomer
 }: CustomerListProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Filter customers based on search term
+  const filteredCustomers = useMemo(() => {
+    if (!searchTerm) return customers;
+    
+    const term = searchTerm.toLowerCase();
+    return customers.filter(customer => 
+      customer.customerName.toLowerCase().includes(term) ||
+      customer.website?.toLowerCase().includes(term) ||
+      customer.products.some(p => p.name.toLowerCase().includes(term) || p.version?.toLowerCase().includes(term)) ||
+      customer.internalContacts.some(c => c.name.toLowerCase().includes(term)) ||
+      customer.partners.some(p => p.name.toLowerCase().includes(term))
+    );
+  }, [customers, searchTerm]);
+  
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-gray-900">Customer Directory</h2>
-          <p className="text-sm text-gray-600">{customers.length} customers</p>
+          <p className="text-sm text-gray-600">
+            {filteredCustomers.length} of {customers.length} customers
+          </p>
         </div>
+      </div>
+      
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Search customers by name, website, products, contacts, or partners..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
       </div>
 
       {/* Customer Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {customers.map((customer) => {
+        {filteredCustomers.map((customer) => {
           const topProducts = customer.products.slice(0, 2);
           return (
             <button
@@ -65,7 +96,7 @@ export function CustomerList({
                         key={p.id}
                         className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 font-medium"
                       >
-                        {p.name}
+                        {p.name}{p.version ? ` v${p.version}` : ''}
                       </span>
                     ))}
                     {customer.products.length > 2 && (
@@ -126,6 +157,14 @@ export function CustomerList({
         })}
       </div>
 
+      {filteredCustomers.length === 0 && customers.length > 0 && (
+        <div className="text-center py-12">
+          <Search className="mx-auto h-12 w-12 text-gray-300" />
+          <p className="mt-3 text-sm text-gray-500">No customers found matching "{searchTerm}"</p>
+          <p className="mt-1 text-xs text-gray-400">Try a different search term</p>
+        </div>
+      )}
+      
       {customers.length === 0 && (
         <div className="text-center py-12">
           <Building className="mx-auto h-12 w-12 text-gray-300" />

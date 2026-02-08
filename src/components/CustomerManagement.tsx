@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Edit, Trash2, Eye, Building, Users, Calendar, FileText, ArrowLeft } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Building, Users, Calendar, FileText, ArrowLeft, Sparkles, X } from 'lucide-react';
+import { aiService } from '@/lib/ai';
 import { Customer, CustomerNote, CustomerProfile, CreateCustomerData, CreateCustomerNoteData, UpdateCustomerNoteData } from '@/types';
 import { CustomerForm } from './CustomerForm';
 import { NoteForm } from './NoteForm';
@@ -43,6 +44,8 @@ export function CustomerManagement({
   const [showNoteForm, setShowNoteForm] = useState(false);
   const [editingNote, setEditingNote] = useState<CustomerNote | undefined>();
   const [viewingNote, setViewingNote] = useState<CustomerNote | null>(null);
+  const [customerSummary, setCustomerSummary] = useState<string | null>(null);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
   const selectedCustomerData = customers.find(c => c.id === selectedCustomer);
   const selectedCustomerProfile = customerProfiles.find(p => p.customerId === selectedCustomer);
@@ -115,6 +118,22 @@ export function CustomerManagement({
     setShowNoteForm(true);
   };
 
+  const handleGenerateSummary = async () => {
+    if (!selectedCustomerData) return;
+    
+    setIsGeneratingSummary(true);
+    try {
+      const summary = await aiService.generateCustomerSummary(selectedCustomerData);
+      setCustomerSummary(summary);
+    } catch (error: any) {
+      console.error('Error generating summary:', error);
+      // Use the error message from the AI service which includes helpful details
+      alert(error?.message || 'Failed to generate summary. Please check your API key at https://aistudio.google.com/app/apikey');
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -162,6 +181,15 @@ export function CustomerManagement({
                   </div>
                   <div className="flex items-center gap-2">
                     <button
+                      onClick={handleGenerateSummary}
+                      disabled={isGeneratingSummary}
+                      className="flex items-center gap-2 px-3 py-2 bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-lg transition-colors disabled:opacity-50"
+                      title="Generate AI Summary"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      <span className="text-sm font-medium">AI Summary</span>
+                    </button>
+                    <button
                       onClick={() => handleEditCustomer(selectedCustomerData!)}
                       className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                       title="Edit Customer"
@@ -178,6 +206,25 @@ export function CustomerManagement({
                   </div>
                 </div>
               </div>
+
+              {/* AI Summary */}
+              {customerSummary && (
+                <div className="mx-6 mb-6 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-purple-600" />
+                      <h3 className="font-semibold text-purple-900">AI-Generated Customer Summary</h3>
+                    </div>
+                    <button
+                      onClick={() => setCustomerSummary(null)}
+                      className="text-purple-600 hover:text-purple-800"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">{customerSummary}</p>
+                </div>
+              )}
 
               {/* Customer Details */}
               <div className="p-6 space-y-6">
@@ -207,10 +254,7 @@ export function CustomerManagement({
                         <div key={product.id} className="bg-gray-50 rounded-lg p-3">
                           <div className="flex items-center justify-between">
                             <div>
-                              <span className="font-medium text-gray-900">{product.name}</span>
-                              {product.version && (
-                                <span className="text-sm text-gray-600 ml-2">v{product.version}</span>
-                              )}
+                              <span className="font-medium text-gray-900">{product.name}{product.version ? ` v${product.version}` : ''}</span>
                             </div>
                             {product.status && (
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -345,6 +389,78 @@ export function CustomerManagement({
                     )}
                   </div>
                 </div>
+
+                {/* Migration Opportunity Information */}
+                {(selectedCustomerData?.existingMigrationOpp || selectedCustomerData?.migrationNotes || selectedCustomerData?.migrationComplexity) && (
+                  <div className="border-t border-gray-200 pt-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Migration Opportunity Information</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {selectedCustomerData.existingMigrationOpp && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Migration Opp</label>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            ['yes', 'YES', 'y', 'Y'].includes(selectedCustomerData.existingMigrationOpp.toLowerCase())
+                              ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {selectedCustomerData.existingMigrationOpp}
+                          </span>
+                        </div>
+                      )}
+                      {selectedCustomerData.perpetualOrSubscription && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">License</label>
+                          <p className="text-sm text-gray-900 font-medium">
+                            {selectedCustomerData.perpetualOrSubscription}
+                          </p>
+                        </div>
+                      )}
+                      {selectedCustomerData.hostingLocation && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Hosting</label>
+                          <p className="text-sm text-gray-900 font-medium">
+                            {selectedCustomerData.hostingLocation}
+                          </p>
+                        </div>
+                      )}
+                      {selectedCustomerData.frontEndTech && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Front End</label>
+                          <p className="text-sm text-gray-900 font-medium">
+                            {selectedCustomerData.frontEndTech}
+                          </p>
+                        </div>
+                      )}
+                      {selectedCustomerData.migrationComplexity && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Complexity</label>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            selectedCustomerData.migrationComplexity.toLowerCase() === 'high' ? 'bg-red-100 text-red-800' :
+                            selectedCustomerData.migrationComplexity.toLowerCase() === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                          }`}>
+                            {selectedCustomerData.migrationComplexity}
+                          </span>
+                        </div>
+                      )}
+                      {selectedCustomerData.compellingEvent && (
+                        <div className="md:col-span-2">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Compelling Event</label>
+                          <p className="text-sm text-gray-900 font-medium">
+                            {selectedCustomerData.compellingEvent}
+                          </p>
+                        </div>
+                      )}
+                      {(selectedCustomerData.migrationNotes || selectedCustomerData.mergedNotes) && (
+                        <div className="md:col-span-3">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Migration Notes</label>
+                          <p className="text-sm text-gray-900 bg-gray-50 rounded-lg p-2">
+                            {selectedCustomerData.migrationNotes || selectedCustomerData.mergedNotes}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Customer Profile */}
                 <div className="border-t border-gray-200 pt-6">

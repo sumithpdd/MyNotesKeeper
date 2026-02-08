@@ -58,12 +58,14 @@ export class CustomerNotesService {
     }
   }
 
-  async createNote(data: CreateCustomerNoteData): Promise<string> {
+  async createNote(data: CreateCustomerNoteData, userId: string): Promise<string> {
     try {
       const now = new Date();
       const docData = {
         ...data,
         noteDate: Timestamp.fromDate(data.noteDate),
+        createdBy: userId,
+        updatedBy: userId,
         createdAt: Timestamp.fromDate(now),
         updatedAt: Timestamp.fromDate(now),
       };
@@ -76,13 +78,21 @@ export class CustomerNotesService {
     }
   }
 
-  async updateNote(data: UpdateCustomerNoteData): Promise<void> {
+  async updateNote(data: UpdateCustomerNoteData, userId: string): Promise<void> {
     try {
       const { id, ...updateData } = data;
       const docRef = doc(db, COLLECTION_NAME, id);
       
-      const docData: any = {
+      // Check if document exists before updating
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        console.error(`Document ${id} does not exist in ${COLLECTION_NAME}`);
+        throw new Error(`Cannot update note: Document with id "${id}" does not exist. It may have been deleted.`);
+      }
+      
+      const docData: Record<string, any> = {
         ...updateData,
+        updatedBy: userId,
         updatedAt: Timestamp.fromDate(new Date()),
       };
 
@@ -92,9 +102,14 @@ export class CustomerNotesService {
       }
 
       await updateDoc(docRef, docData);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating note:', error);
-      throw new Error('Failed to update note');
+      // If it's already our custom error, just re-throw it
+      if (error.message.includes('does not exist')) {
+        throw error;
+      }
+      // Otherwise wrap it
+      throw new Error(`Failed to update note: ${error.message || 'Unknown error'}`);
     }
   }
 

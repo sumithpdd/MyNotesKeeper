@@ -11,6 +11,22 @@ export interface Customer {
   salesforceLink: string;
   additionalLink?: string;
   additionalInfo?: string;
+  // Migration Opportunity Fields
+  existingMigrationOpp?: string; // Flag: 'yes', 'no', 'YES', 'n', 'N' - determines if this is a migration opp
+  perpetualOrSubscription?: 'Perpetual' | 'Subscription' | 'Churn';
+  hostingLocation?: string;
+  frontEndTech?: string;
+  exmUser?: 'yes' | 'no' | 'Yes' | 'No' | boolean;
+  marketingAutomationUser?: 'yes' | 'no' | 'Yes' | 'No' | boolean;
+  integrations?: string;
+  heavilyCustomisedCE?: 'yes' | 'no' | 'Yes' | 'No' | boolean;
+  migrationComplexity?: string;
+  customerAwareOfXMC?: 'yes' | 'no' | 'Y' | 'N' | 'YES' | boolean;
+  compellingEvent?: string;
+  managedCloud?: 'yes' | 'no' | 'Yes' | 'No' | boolean;
+  dateAnalysed?: string;
+  mergedNotes?: string; // Merged notes field
+  migrationNotes?: string; // Migration-specific notes
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,6 +56,8 @@ export interface CustomerProfile {
   seInvolvement: boolean;
   seNotesLastUpdated: Date;
   seProductFitAssessment: 'Green' | 'Yellow' | 'Red' | '';
+  seProductNotGreenReason: string;
+  seConfidenceNotGreenReason: string;
   // Success Planning (static)
   customerObjective1: string;
   customerObjective2: string;
@@ -114,6 +132,22 @@ export interface CreateCustomerData {
   salesforceLink: string;
   additionalLink?: string;
   additionalInfo?: string;
+  // Migration Opportunity Fields
+  existingMigrationOpp?: string;
+  perpetualOrSubscription?: 'Perpetual' | 'Subscription' | 'Churn';
+  hostingLocation?: string;
+  frontEndTech?: string;
+  exmUser?: 'yes' | 'no' | 'Yes' | 'No' | boolean;
+  marketingAutomationUser?: 'yes' | 'no' | 'Yes' | 'No' | boolean;
+  integrations?: string;
+  heavilyCustomisedCE?: 'yes' | 'no' | 'Yes' | 'No' | boolean;
+  migrationComplexity?: string;
+  customerAwareOfXMC?: 'yes' | 'no' | 'Y' | 'N' | 'YES' | boolean;
+  compellingEvent?: string;
+  managedCloud?: 'yes' | 'no' | 'Yes' | 'No' | boolean;
+  dateAnalysed?: string;
+  mergedNotes?: string;
+  migrationNotes?: string;
 }
 
 export interface CreateCustomerProfileData {
@@ -139,6 +173,8 @@ export interface CreateCustomerProfileData {
   seInvolvement: boolean;
   seNotesLastUpdated: Date;
   seProductFitAssessment: 'Green' | 'Yellow' | 'Red' | '';
+  seProductNotGreenReason: string;
+  seConfidenceNotGreenReason: string;
   // Success Planning (static)
   customerObjective1: string;
   customerObjective2: string;
@@ -177,4 +213,22 @@ export interface AIGenerationRequest {
 export interface AIGenerationResponse {
   content: string;
   suggestions?: string[];
+}
+
+// User and Authentication Types
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  initials: string;
+  photoURL?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
 }
