@@ -12,6 +12,8 @@ import { CustomerForm } from '@/components/CustomerForm';
 import { UserHeader } from '@/components/UserHeader';
 import { ChatbotInterface } from '@/components/ChatbotInterface';
 import { PromptLibrary } from '@/components/PromptLibrary';
+import { AIChatPanel } from '@/components/AIChatPanel';
+import { FloatingAIButton } from '@/components/FloatingAIButton';
 import { useAuth } from '@/lib/auth';
 import { customerService } from '@/lib/customerService';
 import { customerNotesService } from '@/lib/customerNotes';
@@ -32,8 +34,9 @@ export default function HomePage() {
   const [viewingNote, setViewingNote] = useState<CustomerNote | null>(null);
   const [editingMigrationCustomer, setEditingMigrationCustomer] = useState<Customer | null>(null);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<'notes' | 'entities' | 'migration' | 'chatbot' | 'prompts'>('notes');
+  const [activeTab, setActiveTab] = useState<'notes' | 'entities' | 'migration'>('notes');
   const [loading, setLoading] = useState(true);
+  const [showAIChat, setShowAIChat] = useState(false);
 
   // Load data from Firebase when user is authenticated
   useEffect(() => {
@@ -416,32 +419,6 @@ export default function HomePage() {
                 Migration Opportunities
               </div>
             </button>
-            <button
-              onClick={() => setActiveTab('chatbot')}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'chatbot'
-                  ? 'border-blue-500 text-blue-600 bg-blue-50'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" />
-                AI Chatbot
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('prompts')}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'prompts'
-                  ? 'border-blue-500 text-blue-600 bg-blue-50'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <BookOpen className="h-4 w-4" />
-                Prompt Library
-              </div>
-            </button>
           </div>
         </div>
 
@@ -471,29 +448,6 @@ export default function HomePage() {
             onEdit={(customer) => {
               setEditingMigrationCustomer(customer);
               setShowCustomerForm(true);
-            }}
-          />
-        ) : activeTab === 'chatbot' ? (
-          <ChatbotInterface
-            customers={customers}
-            onSaveNote={handleSaveNote}
-            onSaveCustomer={handleSaveCustomerManagement}
-            onUpdateCustomer={handleSaveCustomerManagement}
-            onUpdateProfile={async (profileUpdate) => {
-              const existingProfile = customerProfiles.find(p => p.customerId === profileUpdate.customerId);
-              if (existingProfile) {
-                const updated = { ...existingProfile, ...profileUpdate };
-                await customerProfileService.updateProfile(existingProfile.id, updated, user!.id);
-                setCustomerProfiles(prev => prev.map(p => p.id === existingProfile.id ? updated : p));
-              }
-            }}
-            currentUser={{ id: user?.id || '', name: user?.name || 'User' }}
-          />
-        ) : activeTab === 'prompts' ? (
-          <PromptLibrary
-            onUsePromptInChatbot={(prompt) => {
-              // Switch to chatbot tab when a prompt is selected
-              setActiveTab('chatbot');
             }}
           />
         ) : (
@@ -536,6 +490,31 @@ export default function HomePage() {
             </div>
           </div>
         )}
+
+        {/* AI Chat Panel - Slide out from right */}
+        <AIChatPanel
+          isOpen={showAIChat}
+          onClose={() => setShowAIChat(false)}
+          customers={customers}
+          onSaveNote={handleSaveNote}
+          onSaveCustomer={handleSaveCustomerManagement}
+          onUpdateCustomer={handleSaveCustomerManagement}
+          onUpdateProfile={async (profileUpdate) => {
+            const existingProfile = customerProfiles.find(p => p.customerId === profileUpdate.customerId);
+            if (existingProfile) {
+              const updated = { ...existingProfile, ...profileUpdate };
+              await customerProfileService.updateProfile(existingProfile.id, updated, user!.id);
+              setCustomerProfiles(prev => prev.map(p => p.id === existingProfile.id ? updated : p));
+            }
+          }}
+          currentUser={{ id: user?.id || '', name: user?.name || user?.email || 'User' }}
+        />
+
+        {/* Floating AI Button */}
+        <FloatingAIButton
+          onClick={() => setShowAIChat(!showAIChat)}
+          isOpen={showAIChat}
+        />
 
         </div>
       )}

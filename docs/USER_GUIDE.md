@@ -26,15 +26,15 @@ Complete guide to using the Customer Engagement Hub for managing customers, note
 
 ### Interface Overview
 
-The app has 5 main tabs:
+The app has 3 main tabs:
 
 | Tab | Purpose |
 |-----|---------|
-| **📊 Dashboard** | Overview and quick stats |
 | **👥 Customer Management** | Manage customers, notes, and profiles |
-| **🎯 Opportunities** | Track sales opportunities |
-| **🤖 AI Chatbot** | Natural language data entry |
 | **⚙️ Entity Management** | Manage contacts, products, partners |
+| **🎯 Migration Opportunities** | Track migration opportunities |
+
+**Plus a floating AI Assistant button** in the bottom-right corner for quick access to AI features!
 
 ---
 
@@ -315,14 +315,30 @@ Opportunities progress through 9 stages:
 
 ---
 
-## AI Chatbot
+## AI Assistant
 
-Use natural language to add notes, update customers, and manage data.
+Use natural language to add notes, update customers, and manage data - all from a convenient slide-out panel!
 
-### Getting Started with the Chatbot
+### Opening the AI Assistant
 
-1. Click the **"AI Chatbot"** tab
-2. You'll see a chat interface with example prompts
+**Method 1: Floating Button (Recommended)**
+- Look for the blue sparkle ✨ button in the **bottom-right corner**
+- Click it to open the AI Assistant panel
+- The panel slides in from the right side
+- Click the X or the button again to close
+
+**Features:**
+- Always accessible from any screen
+- Doesn't interrupt your workflow
+- Quick access to AI chat and prompt library
+
+### Using the Chat Interface
+
+1. Click the floating AI button (bottom-right)
+2. Select the **"Chat"** tab (should be default)
+3. Type your request naturally or select a prompt from the library
+4. Review the AI's interpretation
+5. Click **"Confirm"** to apply or **"Cancel"** to reject
 
 ### Example Commands
 
@@ -339,6 +355,11 @@ Update XYZ Company, add product CDP, add contact John Smith with email john@xyz.
 **Creating Customers:**
 ```
 Create a new customer named Global Tech, website globaltech.com, products XM Cloud and Search
+```
+
+**Creating Opportunities:**
+```
+Create opportunity for ABC Corp: Platform Upgrade 2026, stage Discover, value $500k, probability 60%
 ```
 
 **Updating Profiles:**

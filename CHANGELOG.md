@@ -2,6 +2,95 @@
 
 All notable changes and fixes to this project.
 
+## [2.1.0] - February 2026 - AI Chat Panel Redesign
+
+### Major UI Redesign
+- **🎨 New Slide-Out AI Panel** - Modern slide-out design replacing tab-based interface
+  - Slides in from right side (similar to Sitecore AI assistant UX)
+  - Always accessible via floating action button
+  - Doesn't interrupt current workflow
+  - Clean, modern animation and transitions
+  
+- **✨ Floating Action Button** - Bottom-right corner for quick AI access
+  - Sparkle icon with "AI" badge
+  - Animated pulse effect
+  - Hover tooltip
+  - Toggle open/close with smooth transition
+  
+- **📚 Integrated Prompt Library** - Two-tab interface in panel
+  - **Chat Tab:** Natural language conversation interface
+  - **Prompt Library Tab:** Browse and manage 28+ prompts
+  - Seamless switching between tabs
+  - Context preserved when switching
+
+### Custom Prompt Management
+- **➕ Create Custom Prompts** - Team-specific prompt templates
+  - Modal form for easy creation
+  - All standard fields (title, description, entity, operation, examples)
+  - Purple "Custom" badge for identification
+  
+- **💾 Local Storage Persistence** - Custom prompts saved in browser
+  - Automatic save on creation
+  - Automatic load on app start
+  - Survives page refreshes and sessions
+  
+- **🗑️ Delete Custom Prompts** - Remove unwanted custom prompts
+  - Trash icon button on custom prompts
+  - Confirmation dialog for safety
+  - Cannot delete built-in prompts
+
+### Enhanced Prompt Library
+- **🎨 Visual Redesign** - Modern card-based layout
+  - Left sidebar with prompt cards
+  - Right panel with detailed view
+  - Color-coded entity badges (blue=customer, green=note, purple=profile, etc.)
+  - Operation icons (➕ create, ✏️ update, 🗑️ delete, etc.)
+  
+- **🔍 Advanced Search** - Find prompts instantly
+  - Real-time search as you type
+  - Searches title, description, and examples
+  - Filter by entity type dropdown
+  - Shows result count
+  
+- **📋 Better Example Handling** - Multiple ways to use examples
+  - Copy button (📋) to clipboard
+  - Send to chat button (▶️) for immediate use
+  - "Use This Prompt" button loads first example
+  - Visual confirmation (✅) when copied
+
+### Improved Chat Interface
+- **👤 Better Message Display** - Clear sender identification
+  - Bot avatar with blue background
+  - User avatar with gray background
+  - System messages for status updates
+  - Timestamps on all messages
+  
+- **✅ Enhanced Confirmations** - Better review workflow
+  - Extracted data shown in blue card
+  - Green "Confirm" and red "Cancel" buttons
+  - Field-by-field display of parsed data
+  - Clear status indicators
+
+### Navigation Simplification
+- **Removed Chatbot/Prompts tabs** from main navigation
+- **Streamlined to 3 main tabs:** Customer Management, Entity Management, Migration Opportunities
+- **AI features now accessible anywhere** via floating button
+- **Better UX flow** - less tab switching
+
+### Technical Improvements
+- New component: `AIChatPanel.tsx` (520+ lines) - Main panel container
+- New component: `FloatingAIButton.tsx` (60+ lines) - Floating action button
+- New component: `CustomPromptModal.tsx` (embedded) - Prompt creation form
+- Enhanced state management for panel open/close
+- LocalStorage integration for custom prompts
+- Improved TypeScript types for custom prompts
+
+### Documentation Updates
+- Updated `USER_GUIDE.md` - New AI Assistant section
+- Updated `FEATURES.md` - Redesigned AI features documentation
+- Updated `CHANGELOG.md` - This entry
+- All references to tab-based chatbot replaced with slide-out panel
+
 ## [2.0.0] - February 2026 - Documentation & Code Simplification
 
 ### Documentation Reorganization

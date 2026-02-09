@@ -9,6 +9,7 @@ Welcome! This guide helps you get started and find what you need quickly.
 | **[QUICKSTART.md](QUICKSTART.md)** | Get running in 5 minutes | Everyone |
 | **[SETUP.md](SETUP.md)** | Complete setup guide | First-time users |
 | **[USER_GUIDE.md](USER_GUIDE.md)** | How to use the app | Users/SEs |
+| **[AI_CHAT_PANEL_GUIDE.md](AI_CHAT_PANEL_GUIDE.md)** | AI Assistant & Prompt Library | Everyone |
 | **[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)** | Development guide | Developers |
 | **[JUNIOR_DEVELOPER_GUIDE.md](JUNIOR_DEVELOPER_GUIDE.md)** | Learn React/Next.js/TypeScript | Junior devs |
 | **[ARCHITECTURE.md](ARCHITECTURE.md)** | Technical architecture | Technical team |
@@ -43,7 +44,8 @@ Welcome! This guide helps you get started and find what you need quickly.
 - **Set up Firebase** → [SETUP.md](SETUP.md#firebase-setup)
 - **Configure AI** → [SETUP.md](SETUP.md#ai-setup)
 - **Add a customer** → [USER_GUIDE.md](USER_GUIDE.md#customer-management)
-- **Use AI chatbot** → [FEATURES.md](FEATURES.md#ai-chatbot)
+- **Use AI Assistant** → [AI_CHAT_PANEL_GUIDE.md](AI_CHAT_PANEL_GUIDE.md)
+- **Create custom prompts** → [AI_CHAT_PANEL_GUIDE.md](AI_CHAT_PANEL_GUIDE.md#custom-prompts)
 - **Learn React/Next.js/TypeScript** → [JUNIOR_DEVELOPER_GUIDE.md](JUNIOR_DEVELOPER_GUIDE.md)
 - **Understand the code** → [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)
 - **Add a feature** → [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md#adding-features)

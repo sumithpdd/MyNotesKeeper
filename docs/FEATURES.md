@@ -241,48 +241,99 @@ Use conversational commands instead of forms:
 
 ---
 
-## Prompt Library
+## Prompt Library Tab
 
-Pre-built prompts for common tasks.
+Comprehensive library of 28+ pre-built prompts with custom prompt creation.
 
-### Purpose
-Browse 28+ ready-to-use prompts organized by category.
+### Overview
 
-### Categories
+**Layout:**
+- **Left sidebar:** List of all prompts (built-in + custom)
+- **Right panel:** Detailed view of selected prompt
+- **Top bar:** Search and filter controls + "Add Custom" button
 
-**Customer CRUD:**
-- Create new customer
-- Update customer info
-- Delete customer
+### Built-in Prompts (28+)
 
-**Profile Management:**
-- Update business details
-- Change SE assessments
-- Update objectives/use cases
+Organized by **Entity** and **Operation**:
 
-**Note Management:**
-- Add customer note
-- Update SE confidence
-- Add follow-up notes
+**Entities:**
+- 👥 Customer (4 prompts)
+- 📝 Note (3 prompts)
+- 📋 Profile (2 prompts)
+- 🎯 Opportunity (4 prompts)
+- 📦 Product (1 prompt)
+- 🤝 Partner (1 prompt)
+- 👤 Contact (1 prompt)
+- 📊 Report/Special (2 prompts)
 
-**Opportunity Management:**
-- Create opportunity
-- Update stage
-- Change values
+**Operations:**
+- ➕ Create - Add new records
+- 👁️ Read - View/get information
+- ✏️ Update - Modify existing records
+- 🗑️ Delete - Remove records
+- 📋 List - Show multiple records
+- 🔍 Search - Find records by criteria
+- ⭐ Special - Advanced operations (stage changes, reports)
 
 ### Features
-- **Search** - Find prompts by keyword
-- **Filter** - By category
-- **Examples** - Multiple examples per prompt
-- **Copy** - Copy example to clipboard
-- **Use in Chatbot** - One-click to chatbot tab
 
-### How to Use
-1. Browse or search for prompt
-2. Read examples
-3. Click "Use in Chatbot" or copy example
-4. Customize for your needs
-5. Submit to chatbot
+**Search & Filter:**
+- 🔍 **Search bar** - Find prompts by keyword (searches title, description, examples)
+- 📂 **Entity filter** - Show only prompts for specific entities
+- 🏷️ **Category badges** - Visual entity type indicators with colors
+
+**Prompt Details:**
+- **Title & description** - What the prompt does
+- **Entity & operation badges** - Clear categorization
+- **Fields extracted** - Which data fields will be captured
+- **3+ example commands** - Real-world usage examples
+- **System prompt** - Advanced: See the actual AI prompt (expandable)
+
+**Actions:**
+- ✨ **"Use This Prompt"** button - Loads first example into chat
+- 📋 **Copy button** - Copy individual examples to clipboard
+- ▶️ **Send to chat** - Click send icon on examples to use immediately
+- ✅ **Copy confirmation** - Green checkmark shows when copied
+
+### Custom Prompts
+
+**Creating Custom Prompts:**
+
+1. Click **"Add Custom"** button (top-right)
+2. Fill out the modal form:
+   - **Title*** - Name your prompt (e.g., "Create Customer with SLA")
+   - **Description*** - What does it do?
+   - **Entity*** - Select entity type (Customer, Note, etc.)
+   - **Operation*** - Select operation (Create, Update, etc.)
+   - **Example Commands** - Add examples (one per line)
+3. Click **"Save Prompt"**
+4. Custom prompt appears with purple "Custom" badge
+
+**Managing Custom Prompts:**
+- **View:** Custom prompts show purple "Custom" badge in list
+- **Use:** Work exactly like built-in prompts
+- **Delete:** Click trash icon (🗑️) when viewing a custom prompt (confirmation required)
+- **Storage:** Saved in browser's localStorage (persists across sessions)
+- **Not synced:** Custom prompts are local to your browser only
+
+**Custom Prompt Benefits:**
+- 🎯 Team-specific workflows
+- 🔄 Frequently used commands
+- 📝 Complex multi-field operations
+- 🏢 Company-specific terminology
+- ♻️ Reusable templates
+
+### Tips
+
+**💡 Start with Search:** Type what you want to do in the search bar
+
+**💡 Browse by Entity:** Use the filter dropdown to see all prompts for a specific entity
+
+**💡 Learn from Examples:** Read examples to understand natural language patterns
+
+**💡 Copy and Modify:** Copy an example, then customize it with your data
+
+**💡 Create Shortcuts:** Save your most-used commands as custom prompts
 
 ---
 
