@@ -38,6 +38,12 @@ const customerSchema = z.object({
     role: z.string().optional(),
     email: z.string().optional(),
   })),
+  accountExecutive: z.object({
+    id: z.string(),
+    name: z.string(),
+    role: z.string().optional(),
+    email: z.string().optional(),
+  }).optional(),
   partners: z.array(z.object({
     id: z.string(),
     name: z.string(),
@@ -94,6 +100,7 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
       products: customer.products,
       customerContacts: customer.customerContacts,
       internalContacts: customer.internalContacts,
+      accountExecutive: customer.accountExecutive,
       partners: customer.partners,
       sharePointUrl: customer.sharePointUrl,
       salesforceLink: customer.salesforceLink,
@@ -118,6 +125,7 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
       products: [],
       customerContacts: [],
       internalContacts: [],
+      accountExecutive: undefined,
       partners: [],
       sharePointUrl: '',
       salesforceLink: '',
@@ -280,6 +288,27 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
                 setValue('internalContacts', [...watchedValues.internalContacts, newContact]);
               }}
             />
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Account Executive
+              </label>
+              <select
+                value={watchedValues.accountExecutive?.id || ''}
+                onChange={(e) => {
+                  const selectedExec = customInternalContacts.find(c => c.id === e.target.value);
+                  setValue('accountExecutive', selectedExec || undefined);
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+              >
+                <option value="">Select Account Executive...</option>
+                {customInternalContacts.map(contact => (
+                  <option key={contact.id} value={contact.id}>
+                    {contact.name}{contact.role ? ` - ${contact.role}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <MultiSelect
               options={customProducts}

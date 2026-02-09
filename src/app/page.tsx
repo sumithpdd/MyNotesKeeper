@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { FileText, Users, Calendar, TrendingUp, Settings, Target, MessageSquare, BookOpen } from 'lucide-react';
-import { CustomerNote, Customer, CustomerContact, InternalContact, Product, Partner, CustomerProfile } from '@/types';
+import { CustomerNote, Customer, CustomerContact, InternalContact, Product, Partner, CustomerProfile, Opportunity, OpportunityStage } from '@/types';
 import { generateDummyCustomers, generateDummyNotes, generateDummyCustomerProfiles, dummyCustomerContacts, dummyInternalContacts, dummyProducts, dummyPartners } from '../../data/dummyData';
 import { SlideOutPanel } from '@/components/SlideOutPanel';
 import { CustomerManagement } from '@/components/CustomerManagement';
@@ -16,12 +16,14 @@ import { useAuth } from '@/lib/auth';
 import { customerService } from '@/lib/customerService';
 import { customerNotesService } from '@/lib/customerNotes';
 import { customerProfileService } from '@/lib/customerProfileService';
+import { opportunityService } from '@/lib/opportunityService';
 
 export default function HomePage() {
   const { user } = useAuth();
   const [notes, setNotes] = useState<CustomerNote[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerProfiles, setCustomerProfiles] = useState<CustomerProfile[]>([]);
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [customerContacts, setCustomerContacts] = useState<CustomerContact[]>(dummyCustomerContacts);
   const [internalContacts, setInternalContacts] = useState<InternalContact[]>(dummyInternalContacts);
   const [products, setProducts] = useState<Product[]>(dummyProducts);
@@ -43,9 +45,10 @@ export default function HomePage() {
   const loadFirebaseData = async () => {
     try {
       setLoading(true);
-      const [customersData, notesData] = await Promise.all([
+      const [customersData, notesData, opportunitiesData] = await Promise.all([
         customerService.getAllCustomers(),
-        customerNotesService.getAllNotes()
+        customerNotesService.getAllNotes(),
+        opportunityService.getAllOpportunities()
       ]);
       
       // Ensure all customers have required fields with default values
@@ -76,6 +79,9 @@ export default function HomePage() {
       
       setNotes(notesWithDefaults);
       
+      // Set opportunities
+      setOpportunities(opportunitiesData);
+      
       // Load customer profiles for each customer
       const profiles = await Promise.all(
         customersWithDefaults.map(customer => 
@@ -89,6 +95,7 @@ export default function HomePage() {
       setCustomers(generateDummyCustomers());
       setNotes(generateDummyNotes());
       setCustomerProfiles(generateDummyCustomerProfiles());
+      setOpportunities([]);
     } finally {
       setLoading(false);
     }
@@ -203,8 +210,75 @@ export default function HomePage() {
       setCustomers(prev => prev.filter(c => c.id !== customerId));
       // Also remove related notes
       setNotes(prev => prev.filter(n => n.customerId !== customerId));
+      // Also remove related opportunities
+      await opportunityService.deleteOpportunitiesByCustomer(customerId);
+      setOpportunities(prev => prev.filter(o => o.customerId !== customerId));
     } catch (error) {
       console.error('Error deleting customer:', error);
+    }
+  };
+
+  // Opportunity handlers
+  const handleSaveOpportunity = async (opportunity: Opportunity) => {
+    if (!user) return;
+    
+    try {
+      if (opportunities.find(o => o.id === opportunity.id)) {
+        // Update existing
+        await opportunityService.updateOpportunity(opportunity);
+        setOpportunities(prev => prev.map(o => o.id === opportunity.id ? opportunity : o));
+      } else {
+        // Create new
+        const newOpportunity = await opportunityService.createOpportunity({
+          customerId: opportunity.customerId,
+          opportunityName: opportunity.opportunityName,
+          description: opportunity.description,
+          currentStage: opportunity.currentStage,
+          estimatedValue: opportunity.estimatedValue,
+          currency: opportunity.currency,
+          probability: opportunity.probability,
+          expectedCloseDate: opportunity.expectedCloseDate,
+          products: opportunity.products,
+          owner: opportunity.owner,
+          priority: opportunity.priority,
+          type: opportunity.type,
+          competitorInfo: opportunity.competitorInfo,
+          nextSteps: opportunity.nextSteps,
+          createdBy: user.email,
+          updatedBy: user.email,
+        });
+        setOpportunities(prev => [...prev, newOpportunity]);
+      }
+    } catch (error) {
+      console.error('Error saving opportunity:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteOpportunity = async (opportunityId: string) => {
+    try {
+      await opportunityService.deleteOpportunity(opportunityId);
+      setOpportunities(prev => prev.filter(o => o.id !== opportunityId));
+    } catch (error) {
+      console.error('Error deleting opportunity:', error);
+    }
+  };
+
+  const handleChangeOpportunityStage = async (opportunityId: string, newStage: OpportunityStage, notes?: string) => {
+    if (!user) return;
+    
+    try {
+      const opportunity = opportunities.find(o => o.id === opportunityId);
+      if (!opportunity) return;
+
+      await opportunityService.changeStage(opportunity, newStage, user.email, notes);
+      
+      // Reload opportunities to get updated stage history
+      const updatedOpportunities = await opportunityService.getAllOpportunities();
+      setOpportunities(updatedOpportunities);
+    } catch (error) {
+      console.error('Error changing opportunity stage:', error);
+      throw error;
     }
   };
 
@@ -377,7 +451,9 @@ export default function HomePage() {
             customers={customers}
             customerProfiles={customerProfiles}
             notes={notes}
+            opportunities={opportunities}
             selectedCustomer={selectedCustomer}
+            currentUser={user?.email || 'Unknown User'}
             onSelectCustomer={setSelectedCustomer}
             onSaveCustomer={handleSaveCustomerManagement}
             onDeleteCustomer={handleDeleteCustomerManagement}
@@ -385,6 +461,9 @@ export default function HomePage() {
             onUpdateCustomerProfile={(profile) => setCustomerProfiles(prev => prev.map(p => p.id === profile.id ? profile : p))}
             onSaveNote={handleSaveNote}
             onDeleteNote={handleDeleteNote}
+            onSaveOpportunity={handleSaveOpportunity}
+            onDeleteOpportunity={handleDeleteOpportunity}
+            onChangeOpportunityStage={handleChangeOpportunityStage}
           />
         ) : activeTab === 'migration' ? (
           <MigrationOpportunitiesGrid

@@ -3,18 +3,23 @@
 import { useState } from 'react';
 import { Plus, Edit, Trash2, Eye, Building, Users, Calendar, FileText, ArrowLeft, Sparkles, X } from 'lucide-react';
 import { aiService } from '@/lib/ai';
-import { Customer, CustomerNote, CustomerProfile, CreateCustomerData, CreateCustomerNoteData, UpdateCustomerNoteData } from '@/types';
+import { Customer, CustomerNote, CustomerProfile, Opportunity, OpportunityStage, CreateCustomerData, CreateCustomerNoteData, UpdateCustomerNoteData } from '@/types';
 import { CustomerForm } from './CustomerForm';
 import { NoteForm } from './NoteForm';
 import { CustomerProfileForm } from './CustomerProfileForm';
 import { CustomerList } from './CustomerList';
 import { SlideOutPanel } from './SlideOutPanel';
+import { OpportunityList } from './OpportunityList';
+import { OpportunityForm } from './OpportunityForm';
+import { OpportunityDetail } from './OpportunityDetail';
 
 interface CustomerManagementProps {
   customers: Customer[];
   customerProfiles: CustomerProfile[];
   notes: CustomerNote[];
+  opportunities: Opportunity[];
   selectedCustomer: string | null;
+  currentUser: string;
   onSelectCustomer: (customerId: string | null) => void;
   onSaveCustomer: (customer: Customer) => void;
   onDeleteCustomer: (customerId: string) => void;
@@ -22,20 +27,28 @@ interface CustomerManagementProps {
   onUpdateCustomerProfile: (profile: CustomerProfile) => void;
   onSaveNote: (note: CustomerNote) => void;
   onDeleteNote: (noteId: string) => void;
+  onSaveOpportunity: (opportunity: Opportunity) => void;
+  onDeleteOpportunity: (opportunityId: string) => void;
+  onChangeOpportunityStage: (opportunityId: string, newStage: OpportunityStage, notes?: string) => void;
 }
 
 export function CustomerManagement({
   customers,
   customerProfiles,
   notes,
+  opportunities,
   selectedCustomer,
+  currentUser,
   onSelectCustomer,
   onSaveCustomer,
   onDeleteCustomer,
   onSaveCustomerProfile,
   onUpdateCustomerProfile,
   onSaveNote,
-  onDeleteNote
+  onDeleteNote,
+  onSaveOpportunity,
+  onDeleteOpportunity,
+  onChangeOpportunityStage,
 }: CustomerManagementProps) {
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | undefined>();
@@ -46,6 +59,11 @@ export function CustomerManagement({
   const [viewingNote, setViewingNote] = useState<CustomerNote | null>(null);
   const [customerSummary, setCustomerSummary] = useState<string | null>(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  
+  // Opportunity state
+  const [showOpportunityForm, setShowOpportunityForm] = useState(false);
+  const [editingOpportunity, setEditingOpportunity] = useState<Opportunity | undefined>();
+  const [viewingOpportunity, setViewingOpportunity] = useState<Opportunity | null>(null);
 
   const selectedCustomerData = customers.find(c => c.id === selectedCustomer);
   const selectedCustomerProfile = customerProfiles.find(p => p.customerId === selectedCustomer);
@@ -131,6 +149,40 @@ export function CustomerManagement({
       alert(error?.message || 'Failed to generate summary. Please check your API key at https://aistudio.google.com/app/apikey');
     } finally {
       setIsGeneratingSummary(false);
+    }
+  };
+
+  // Opportunity handlers
+  const handleSaveOpportunity = (opportunity: Opportunity) => {
+    onSaveOpportunity(opportunity);
+    setShowOpportunityForm(false);
+    setEditingOpportunity(undefined);
+  };
+
+  const handleEditOpportunity = (opportunity: Opportunity) => {
+    setEditingOpportunity(opportunity);
+    setShowOpportunityForm(true);
+  };
+
+  const handleDeleteOpportunity = (opportunityId: string) => {
+    onDeleteOpportunity(opportunityId);
+  };
+
+  const handleViewOpportunity = (opportunityId: string) => {
+    const opportunity = opportunities.find(opp => opp.id === opportunityId);
+    if (opportunity) {
+      setViewingOpportunity(opportunity);
+    }
+  };
+
+  const handleOpportunityStageChange = (newStage: OpportunityStage, notes?: string) => {
+    if (viewingOpportunity) {
+      onChangeOpportunityStage(viewingOpportunity.id, newStage, notes);
+      // Update local viewing state
+      const updatedOpportunity = opportunities.find(opp => opp.id === viewingOpportunity.id);
+      if (updatedOpportunity) {
+        setViewingOpportunity(updatedOpportunity);
+      }
     }
   };
 
@@ -240,6 +292,27 @@ export function CustomerManagement({
                     >
                       {selectedCustomerData.website}
                     </a>
+                  </div>
+                )}
+                
+                {/* Account Executive */}
+                {selectedCustomerData?.accountExecutive && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Account Executive</label>
+                    <div className="bg-purple-50 rounded-lg p-3 border border-purple-100">
+                      <div className="font-medium text-purple-900">{selectedCustomerData.accountExecutive.name}</div>
+                      {selectedCustomerData.accountExecutive.role && (
+                        <div className="text-sm text-purple-700 mt-1">{selectedCustomerData.accountExecutive.role}</div>
+                      )}
+                      {selectedCustomerData.accountExecutive.email && (
+                        <a 
+                          href={`mailto:${selectedCustomerData.accountExecutive.email}`}
+                          className="text-sm text-purple-600 hover:text-purple-800 hover:underline mt-1 block"
+                        >
+                          {selectedCustomerData.accountExecutive.email}
+                        </a>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -707,6 +780,23 @@ export function CustomerManagement({
                 )}
               </div>
             </div>
+
+            {/* Opportunities Section */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="p-6">
+                <OpportunityList
+                  opportunities={opportunities}
+                  customerId={selectedCustomer}
+                  onSelectOpportunity={handleViewOpportunity}
+                  onEditOpportunity={handleEditOpportunity}
+                  onDeleteOpportunity={handleDeleteOpportunity}
+                  onAddOpportunity={() => {
+                    setEditingOpportunity(undefined);
+                    setShowOpportunityForm(true);
+                  }}
+                />
+              </div>
+            </div>
           </div>
         </div>
       ) : (
@@ -759,6 +849,40 @@ export function CustomerManagement({
           customer={selectedCustomerData || null}
           customerProfile={selectedCustomerProfile || null}
           onClose={() => setViewingNote(null)}
+        />
+      )}
+
+      {/* Opportunity Modals */}
+      {showOpportunityForm && selectedCustomer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-40 overflow-y-auto">
+          <div className="min-h-screen flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <OpportunityForm
+                opportunity={editingOpportunity}
+                customerId={selectedCustomer}
+                customerName={selectedCustomerData?.customerName || 'Unknown Customer'}
+                currentUser={currentUser}
+                onSave={handleSaveOpportunity}
+                onCancel={() => {
+                  setShowOpportunityForm(false);
+                  setEditingOpportunity(undefined);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewingOpportunity && (
+        <OpportunityDetail
+          opportunity={viewingOpportunity}
+          onClose={() => setViewingOpportunity(null)}
+          onEdit={() => {
+            setEditingOpportunity(viewingOpportunity);
+            setViewingOpportunity(null);
+            setShowOpportunityForm(true);
+          }}
+          onStageChange={handleOpportunityStageChange}
         />
       )}
     </div>

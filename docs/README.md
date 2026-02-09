@@ -1,150 +1,83 @@
 # Customer Engagement Hub - Documentation
 
-Welcome to the Customer Engagement Hub documentation! This comprehensive guide will help you understand, use, and develop the application.
+Welcome! This guide helps you get started and find what you need quickly.
 
-> **⚡ Just want to run it?** See [QUICKSTART.md](../QUICKSTART.md) for 5-minute setup!  
-> **📋 Want the overview?** See [PROJECT_OVERVIEW.md](../PROJECT_OVERVIEW.md) for complete project brief!
+## 📚 Documentation
 
----
-
-## 📖 Full Documentation Index
-
-### 🚀 Quick Start
-- **[QUICKSTART.md](../QUICKSTART.md)** - Get running in 5 minutes
-- **[PROJECT_OVERVIEW.md](../PROJECT_OVERVIEW.md)** - Complete project brief and tech stack
-
-### 👨‍💼 For New Developers
-Start here if you're new to the project:
-1. **[Getting Started](developer-guide/GETTING_STARTED.md)** - Quick start guide for developers
-2. **[React Concepts](developer-guide/REACT_CONCEPTS.md)** - React patterns and concepts used
-3. **[Architecture Overview](architecture/OVERVIEW.md)** - High-level system architecture
-
-### 🎨 Features Documentation
-Learn about specific features:
-- **[AI Chatbot](features/CHATBOT.md)** - Natural language interface for data entry
-- **[AI Features](features/AI_FEATURES.md)** - Text enhancement and AI-powered tools
-- **[Migration Opportunities](features/MIGRATION_OPPORTUNITIES.md)** - Customer migration tracking
-- **[SE Notes & Templates](features/SE_NOTES.md)** - Solution Engineer note templates
-
-### ⚙️ Setup Guides
-Get the application running:
-- **[Firebase Setup](setup/FIREBASE_SETUP.md)** - Authentication and database configuration
-- **[Environment Configuration](setup/ENVIRONMENT.md)** - API keys and environment variables
-
-### 🏗️ Architecture Documentation
-Understand how things work:
-- **[System Architecture](architecture/OVERVIEW.md)** - Application structure and design
-- **[Data Models](architecture/DATA_MODELS.md)** - Database schema and relationships
-- **[Chatbot Architecture](architecture/CHATBOT_ARCHITECTURE.md)** - AI chatbot implementation
-
-### 👥 User Guides
-Learn how to use the application:
-- **[SE Notes Usage](user-guides/SE_NOTES_USAGE.md)** - How to use SE note templates
-- **[Customer Management](user-guides/CUSTOMER_MANAGEMENT.md)** - Managing customers and notes
-
-## 🎯 Quick Navigation
-
-### 🆕 I'm New Here
-**Start with these in order:**
-1. [QUICKSTART.md](../QUICKSTART.md) - Get running in 5 minutes
-2. [PROJECT_OVERVIEW.md](../PROJECT_OVERVIEW.md) - Understand the project
-3. [Getting Started Guide](developer-guide/GETTING_STARTED.md) - Developer setup
-4. [React Concepts](developer-guide/REACT_CONCEPTS.md) - React patterns used
-
-### 👨‍💻 I'm a Developer
-**Jump to what you need:**
-- [Project Structure](developer-guide/GETTING_STARTED.md#project-structure) - File organization
-- [Architecture Overview](architecture/OVERVIEW.md) - System design
-- [Data Models](architecture/DATA_MODELS.md) - Database schema
-- [Environment Setup](setup/ENVIRONMENT.md) - Configuration guide
-- [Firebase Setup](setup/FIREBASE_SETUP.md) - Firebase config
-
-### 👤 I'm a User
-**Learn how to use features:**
-- [Customer Management](user-guides/CUSTOMER_MANAGEMENT.md) - Complete user guide
-- [AI Chatbot](features/CHATBOT.md) - Natural language interface
-- [SE Notes](features/SE_NOTES.md) - Solution Engineer templates
-- [AI Features](features/AI_FEATURES.md) - Text enhancement
-
-### 🔧 I'm Working on a Feature
-**Technical documentation:**
-- [Chatbot Architecture](architecture/CHATBOT_ARCHITECTURE.md) - AI implementation
-- [Migration Opportunities](features/MIGRATION_OPPORTUNITIES.md) - Migration tracking
-- [React Patterns](developer-guide/REACT_CONCEPTS.md) - Code patterns
+| Guide | Purpose | For |
+|-------|---------|-----|
+| **[QUICKSTART.md](QUICKSTART.md)** | Get running in 5 minutes | Everyone |
+| **[SETUP.md](SETUP.md)** | Complete setup guide | First-time users |
+| **[USER_GUIDE.md](USER_GUIDE.md)** | How to use the app | Users/SEs |
+| **[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)** | Development guide | Developers |
+| **[JUNIOR_DEVELOPER_GUIDE.md](JUNIOR_DEVELOPER_GUIDE.md)** | Learn React/Next.js/TypeScript | Junior devs |
+| **[ARCHITECTURE.md](ARCHITECTURE.md)** | Technical architecture | Technical team |
+| **[FEATURES.md](FEATURES.md)** | Feature documentation | Everyone |
+| **[../CHANGELOG.md](../CHANGELOG.md)** | Version history & fixes | Everyone |
 
 ---
 
-## 🎯 Quick Links
-### Common Tasks
+## 🚀 Quick Start Paths
 
-| I want to... | Go here... |
-|-------------|------------|
-| **Get started quickly** | [QUICKSTART.md](../QUICKSTART.md) |
-| **Understand the project** | [PROJECT_OVERVIEW.md](../PROJECT_OVERVIEW.md) |
-| **Set up development** | [Getting Started](developer-guide/GETTING_STARTED.md) |
-| **Configure Firebase** | [Firebase Setup](setup/FIREBASE_SETUP.md) |
-| **Use the AI chatbot** | [Chatbot Guide](features/CHATBOT.md) |
-| **Understand data flow** | [Data Models](architecture/DATA_MODELS.md) |
-| **Learn React patterns** | [React Concepts](developer-guide/REACT_CONCEPTS.md) |
-| **Add new features** | [Architecture Overview](architecture/OVERVIEW.md) |
-| **Use as an end user** | [User Guide](user-guides/CUSTOMER_MANAGEMENT.md) |
+**Never used this before?**
 
----
+1. [QUICKSTART.md](QUICKSTART.md) → Get it running (5 min)
+2. [SETUP.md](SETUP.md) → Configure Firebase & AI (10 min)
+3. [USER_GUIDE.md](USER_GUIDE.md) → Learn how to use it (15 min)
 
----
+**Developer joining the team?**
 
-## 🚀 Application Overview
-
-The Customer Engagement Hub is a comprehensive Next.js application for Sales Solution Engineers to manage customer relationships, track engagement progress, and maintain detailed customer notes.
-
-### Key Technologies
-- **Framework**: Next.js 15 with App Router
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **Database**: Firebase Firestore
-- **AI**: Google Gemini API
-- **Authentication**: Firebase Auth (Google OAuth)
-
-### Core Features
-1. **Customer Management** - CRUD operations for customers
-2. **Notes Management** - Dynamic customer interaction notes
-3. **Customer Profiles** - Static business information
-4. **AI Chatbot** - Natural language data entry
-5. **AI Enhancement** - Text improvement and generation
-6. **Migration Opportunities** - Track customer migrations
+1. [QUICKSTART.md](QUICKSTART.md) → Get it running (5 min)
+2. [SETUP.md](SETUP.md) → Environment setup (10 min)
+3. [JUNIOR_DEVELOPER_GUIDE.md](JUNIOR_DEVELOPER_GUIDE.md) → Learn concepts (45 min)
+4. [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) → Code structure (20 min)
+5. [ARCHITECTURE.md](ARCHITECTURE.md) → System design (15 min)
 
 ---
 
-## 📖 Documentation Guidelines
+## 🎯 Find What You Need
 
-This documentation is organized to help you:
-- **Understand** the application architecture
-- **Learn** React and Next.js patterns used
-- **Set up** the development environment
-- **Use** the application features
-- **Extend** the application with new features
+### I want to...
 
----
-
-## 🆘 Getting Help
-
-1. Check the relevant documentation section
-2. Review code examples in the guides
-3. Look at component implementations
-4. Check the main [README.md](../README.md) for project overview
+- **Run the app** → [QUICKSTART.md](QUICKSTART.md)
+- **Set up Firebase** → [SETUP.md](SETUP.md#firebase-setup)
+- **Configure AI** → [SETUP.md](SETUP.md#ai-setup)
+- **Add a customer** → [USER_GUIDE.md](USER_GUIDE.md#customer-management)
+- **Use AI chatbot** → [FEATURES.md](FEATURES.md#ai-chatbot)
+- **Learn React/Next.js/TypeScript** → [JUNIOR_DEVELOPER_GUIDE.md](JUNIOR_DEVELOPER_GUIDE.md)
+- **Understand the code** → [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)
+- **Add a feature** → [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md#adding-features)
+- **Fix an error** → [SETUP.md](SETUP.md#troubleshooting)
+- **See version history** → [../CHANGELOG.md](../CHANGELOG.md)
 
 ---
 
-## 📝 Contributing to Documentation
+## 📖 About This App
 
-When adding new features or making changes:
-1. Update relevant documentation files
-2. Add examples and code snippets
-3. Keep documentation concise and clear
-4. Focus on helping developers understand concepts
+**Customer Engagement Hub** helps Sales Solution Engineers manage customer relationships, track engagement, and maintain detailed notes - powered by AI.
+
+**Key Features:**
+- ✅ Customer & opportunity management
+- ✅ AI-powered chatbot for data entry
+- ✅ Note templates and generation
+- ✅ Firebase cloud storage
+- ✅ Responsive design
+
+**Tech Stack:**
+- **Frontend:** Next.js 15, React 19, TypeScript, Tailwind CSS
+- **Backend:** Firebase Firestore, Google Gemini AI
+- **Auth:** Firebase Authentication (Google OAuth)
 
 ---
 
-**Last Updated**: November 2025  
-**Version**: 1.2.0
+## 💡 Support
 
+**Need help?**
+- Check [SETUP.md](SETUP.md#troubleshooting) for common issues
+- Review [USER_GUIDE.md](USER_GUIDE.md) for usage questions
+- See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md#debugging) for code issues
+- Check [CHANGELOG.md](../CHANGELOG.md) for known fixes
+
+---
+
+**Choose your path above and get started! 🚀**
