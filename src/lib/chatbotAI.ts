@@ -21,7 +21,7 @@ export class ChatbotAIService {
       }
       
       if (!apiKey.startsWith('AIza')) {
-        throw new Error('Invalid API key format. The key should start with "AIza..."');
+        throw new Error('Invalid API key format. Please check your key from https://aistudio.google.com/app/apikey');
       }
       
       genAI = new GoogleGenerativeAI(apiKey);

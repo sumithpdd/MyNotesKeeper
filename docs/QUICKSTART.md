@@ -97,13 +97,13 @@ Navigate to **http://localhost:3000**
 
 ### Learn the Basics
 1. **Explore the app** - Click around, try different tabs
-2. **Read the docs** - [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) for complete guide
-3. **Try a feature** - [AI Chatbot Guide](features/CHATBOT.md)
+2. **Read the docs** - [docs/README.md](README.md) for complete guide
+3. **Try a feature** - [AI_CHAT_PANEL_GUIDE.md](AI_CHAT_PANEL_GUIDE.md)
 
 ### For Developers
-1. **Understand the code** - [Getting Started Guide](developer-guide/GETTING_STARTED.md)
-2. **Learn React patterns** - [React Concepts](developer-guide/REACT_CONCEPTS.md)
-3. **Study architecture** - [Architecture Overview](architecture/OVERVIEW.md)
+1. **Understand the code** - [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)
+2. **Learn React patterns** - [JUNIOR_DEVELOPER_GUIDE.md](JUNIOR_DEVELOPER_GUIDE.md)
+3. **Study architecture** - [ARCHITECTURE.md](ARCHITECTURE.md)
 
 ## Troubleshooting
 
@@ -167,13 +167,13 @@ MyNotesKeeper/
 ## Getting Help
 
 1. **Check docs**: [README.md](README.md)
-2. **Common issues**: [Getting Started](developer-guide/GETTING_STARTED.md#common-issues)
-3. **Full guide**: [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md)
+2. **Common issues**: [SETUP.md](SETUP.md#troubleshooting)
+3. **Full guide**: [docs/README.md](README.md)
 
 ---
 
-**Ready to build?** Start with [Developer Guide](developer-guide/GETTING_STARTED.md) →
+**Ready to build?** Start with [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)
 
-**Want to use it?** Check [User Guide](user-guides/CUSTOMER_MANAGEMENT.md) →
+**Want to use it?** Check [USER_GUIDE.md](USER_GUIDE.md)
 
-**Need features?** See [Features Documentation](features/) →
+**Need features?** See [FEATURES.md](FEATURES.md)

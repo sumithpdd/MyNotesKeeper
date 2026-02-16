@@ -14,7 +14,11 @@ Welcome! This guide helps you get started and find what you need quickly.
 | **[JUNIOR_DEVELOPER_GUIDE.md](JUNIOR_DEVELOPER_GUIDE.md)** | Learn React/Next.js/TypeScript | Junior devs |
 | **[ARCHITECTURE.md](ARCHITECTURE.md)** | Technical architecture | Technical team |
 | **[FEATURES.md](FEATURES.md)** | Feature documentation | Everyone |
-| **[../CHANGELOG.md](../CHANGELOG.md)** | Version history & fixes | Everyone |
+| **[CHANGELOG.md](CHANGELOG.md)** | Version history & fixes | Everyone |
+| **[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)** | Database migration | Developers |
+| **[SCRIPTS.md](SCRIPTS.md)** | Migration scripts | Developers |
+| **[NORMALIZATION_COMPLETE.md](NORMALIZATION_COMPLETE.md)** | Normalization report | Technical |
+| **[SECURITY.md](SECURITY.md)** | Security guidelines | Everyone |
 
 ---
 
@@ -50,7 +54,7 @@ Welcome! This guide helps you get started and find what you need quickly.
 - **Understand the code** → [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)
 - **Add a feature** → [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md#adding-features)
 - **Fix an error** → [SETUP.md](SETUP.md#troubleshooting)
-- **See version history** → [../CHANGELOG.md](../CHANGELOG.md)
+- **See version history** → [CHANGELOG.md](CHANGELOG.md)
 
 ---
 
@@ -78,7 +82,7 @@ Welcome! This guide helps you get started and find what you need quickly.
 - Check [SETUP.md](SETUP.md#troubleshooting) for common issues
 - Review [USER_GUIDE.md](USER_GUIDE.md) for usage questions
 - See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md#debugging) for code issues
-- Check [CHANGELOG.md](../CHANGELOG.md) for known fixes
+- Check [CHANGELOG.md](CHANGELOG.md) for known fixes
 
 ---
 

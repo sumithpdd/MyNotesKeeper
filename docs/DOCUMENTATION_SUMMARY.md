@@ -21,8 +21,8 @@ This project now has **9 comprehensive guides** organized for different audience
 | 9 | **FEATURES.md** | ~415 | Complete feature documentation | Everyone |
 
 **Plus:**
-- **../CHANGELOG.md** | ~250 | Version history, fixes, and changes | Everyone
-- **../README.md** | ~50 | Project entry point | Everyone
+- **CHANGELOG.md** | ~250 | Version history, fixes, and changes | Everyone
+- **README.md** (root) | ~50 | Project entry point | Everyone
 
 **Total:** 11 markdown files, ~3,500 lines of documentation
 
@@ -31,7 +31,7 @@ This project now has **9 comprehensive guides** organized for different audience
 ## 🎯 Documentation by Audience
 
 ### For Everyone (New Users)
-1. Start: **../README.md** (2 min)
+1. Start: **README.md** (root) (2 min)
 2. Quick start: **QUICKSTART.md** (5 min)
 3. Setup: **SETUP.md** (10 min)
 4. Basic usage: **USER_GUIDE.md** (15 min)

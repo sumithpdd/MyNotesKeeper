@@ -489,7 +489,7 @@ Operation: Create
 - ✅ Custom prompt creation and management
 - ✅ Modern, clean UI with animations
 - ✅ LocalStorage persistence
-- ✅ Better UX patterns (similar to Sitecore AI)
+- ✅ Better UX patterns
 
 ---
 

@@ -309,7 +309,7 @@ export const comprehensivePrompts: ComprehensivePromptTemplate[] = [
     category: 'product',
     examples: [
       'Add product Content Hub version 2.5',
-      'Create new product Sitecore Search',
+      'Create new product Search',
       'Add OrderCloud as a product'
     ],
     fields: ['name', 'version', 'description', 'status'],

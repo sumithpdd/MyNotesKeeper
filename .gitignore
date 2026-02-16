@@ -1,3 +1,11 @@
+# Firebase Admin (NEVER COMMIT!)
+serviceAccountKey.json
+
+# Migration Backups & Data (may contain sensitive info)
+backups/
+migration.csv
+singleCustomer.json
+
 # Logs
 logs
 *.log

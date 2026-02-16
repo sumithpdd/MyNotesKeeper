@@ -6,11 +6,16 @@ export interface Customer {
   id: string;
   customerName: string;
   website?: string;
-  products: Product[];
-  customerContacts: CustomerContact[];
-  internalContacts: InternalContact[];
-  accountExecutive?: InternalContact; // Account Executive from Internal Contacts
-  partners: Partner[];
+  productIds: string[]; // References to products collection
+  products?: Product[]; // Resolved for display only (not stored in DB)
+  customerContactIds: string[]; // References to customerContacts collection
+  customerContacts?: CustomerContact[]; // Resolved for display only (not stored in DB)
+  internalContactIds: string[]; // References to internalContacts collection
+  internalContacts?: InternalContact[]; // Resolved for display only (not stored in DB)
+  accountExecutiveId?: string; // Reference to internalContacts collection (role: Account Executive)
+  accountExecutive?: InternalContact; // Resolved for display only (not stored in DB)
+  partnerIds: string[]; // References to partners collection
+  partners?: Partner[]; // Resolved for display only (not stored in DB)
   sharePointUrl: string;
   salesforceLink: string;
   additionalLink?: string;
@@ -38,11 +43,16 @@ export interface Customer {
 export interface CreateCustomerData {
   customerName: string;
   website?: string;
-  products: Product[];
-  customerContacts: CustomerContact[];
-  internalContacts: InternalContact[];
-  accountExecutive?: InternalContact; // Account Executive from Internal Contacts
-  partners: Partner[];
+  productIds: string[]; // References only
+  products?: Product[]; // For backward compatibility
+  customerContactIds: string[]; // References only
+  customerContacts?: CustomerContact[]; // For backward compatibility
+  internalContactIds: string[]; // References only
+  internalContacts?: InternalContact[]; // For backward compatibility
+  accountExecutiveId?: string; // Reference only
+  accountExecutive?: InternalContact; // For backward compatibility
+  partnerIds: string[]; // References only
+  partners?: Partner[]; // For backward compatibility
   sharePointUrl: string;
   salesforceLink: string;
   additionalLink?: string;

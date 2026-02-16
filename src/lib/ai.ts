@@ -14,10 +14,9 @@ export class AIService {
       }
       
       if (!apiKey.startsWith('AIza')) {
-        throw new Error('Invalid API key format. The key should start with "AIza...". Please check your key from https://aistudio.google.com/app/apikey and update your .env.local file.');
+        throw new Error('Invalid API key format. Please check your key from https://aistudio.google.com/app/apikey and update your .env.local file.');
       }
       
-      console.log('Using Gemini API key:', apiKey.substring(0, 15) + '...');
       genAI = new GoogleGenerativeAI(apiKey);
     }
     return genAI;
@@ -168,8 +167,9 @@ export class AIService {
     mergedNotes?: string;
   }): Promise<string> {
     try {
-      console.log('🚀 Starting customer summary generation...');
-      console.log('Customer data:', JSON.stringify(customer, null, 2));
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🚀 Starting customer summary generation...');
+      }
       
       const prompt = `Generate a comprehensive customer summary for ${customer.customerName || 'this customer'}.
 
@@ -192,11 +192,9 @@ Please provide a concise, professional summary focusing on:
 
 Be specific and actionable.`;
 
-      console.log('📝 Calling Gemini API with prompt...');
       const result = await this.getModel().generateContent(prompt);
       const response = await result.response;
       const text = response.text();
-      console.log('✅ Successfully generated summary');
       return text;
     } catch (error: any) {
       console.error('❌ Error generating customer summary:', error);

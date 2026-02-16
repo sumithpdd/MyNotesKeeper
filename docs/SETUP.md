@@ -88,15 +88,15 @@ Firebase provides authentication and cloud database storage.
 2. Scroll to **"Your apps"** section
 3. Click **web icon** (</>) to create web app
 4. Register app with a nickname
-5. **Copy the config object** - you'll need these values:
+5. **Copy the config object** - you'll need these values (use placeholders, never commit real values):
    ```javascript
    const firebaseConfig = {
-     apiKey: "AIza...",
-     authDomain: "your-project.firebaseapp.com",
-     projectId: "your-project",
-     storageBucket: "your-project.appspot.com",
-     messagingSenderId: "123456789",
-     appId: "1:123456789:web:abc123",
+     apiKey: "your_api_key",
+     authDomain: "your-project-id.firebaseapp.com",
+     projectId: "your-project-id",
+     storageBucket: "your-project-id.appspot.com",
+     messagingSenderId: "your_sender_id",
+     appId: "your_app_id",
      measurementId: "G-XXXXXXXXXX"
    };
    ```
@@ -165,17 +165,17 @@ cp .env.example .env.local
 Edit `.env.local` with your actual values:
 
 ```env
-# Firebase Configuration
-NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyD...your_actual_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+# Firebase Configuration (get from Firebase Console)
+NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789012
-NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789012:web:abc123def456
-NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
 
-# Google Gemini AI Configuration
-NEXT_PUBLIC_GEMINI_API_KEY=AIzaSyC...your_actual_key
+# Google Gemini AI (get from Google AI Studio)
+NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key
 ```
 
 **Important:**
