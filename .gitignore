@@ -1,5 +1,6 @@
 # Firebase Admin (NEVER COMMIT!)
 serviceAccountKey.json
+*.bak
 
 # Migration Backups & Data (may contain sensitive info)
 backups/

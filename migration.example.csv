@@ -1,0 +1,23 @@
+,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,
+,Account Owner,Account Name,xM or XP?,Version,Perpetual or Subscription,Hosting Location,Front End Tech,EXM User?,Marketing Automation User?,Integrations?,Heavily customised CE,Migration Complexity,Customer aware of XMC?,Compelling Event?,Managed Cloud?,Date Analysed,Existing Migration Opp?,Notes,Managing Partner
+,AE One,Customer A Ltd,XP,10.x,Perpetual,in,mvc,no,no,,y,h,y,2026,n,?,n,,-
+,,Customer B plc,XP,10.2,Subscription,PaaS,mvc,no,no,no,y,h,y,"mid 2026",n,sept,n,,Partner A
+,,Customer C Ltd,XP,10.x,Subscription,PaaS,mvc,no,no,no,y,M,Y,NA,n,Sept,N,,Partner B
+,,Customer D,XP,,Churn,,,,,,churn,,,,,,,,-
+,,Customer E Ltd.,XP,10.2,Perpetual,PaaS,MVC,No,no,CRM,y,M,Y,NA,n,March,N,,-
+,,Customer F Ltd.,XP,10.2,Subscription,PaaS,MVC,No,no,no,y,M,Y,NA,n,OCT,N,,Partner A
+,,Customer G Ltd.,XP,10.2,Perpetual,PaaS,MVC,No,no,CRM,y,M,Y,NA,n,OCT,N,,-
+,,Customer H Ltd.,XP,10.2,Perpetual,PaaS,MVC,No,no,Dynamics,y,M,Y,NA,n,OCT,N,,Partner C
+,,Customer I Ltd.,XP,10.2,Perpetual,PaaS,MVC,No,no,CRM,y,M,Y,NA,n,OCT,N,,-
+,,Customer J Ltd.,XP,10.2,Perpetual,PaaS,MVC,No,no,CRM,y,M,Y,NA,n,Aug,N,,-
+,,,,,,,,,,,,,,,,,,,
+,AE Two,Customer K Ltd,XP,?,Subscription,,,no,,,,HIGH,YES,,,,,,-
+,,Customer L Ltd,XP,10.4,Subscription,Azure,,no,SF,,Yes,Very High,YES,,Yes,,,,Inhouse
+,,Customer M Ltd,XC,10.3,Subscription,Azure,MVC,no,SF,,No,HIGH,YES,,Yes,,YES,,Inhouse
+,,Customer N Ltd,XP,10.4,Subscription,Azure,,no,,,No,Moderate,YES,,Yes,,YES,,Partner C
+,,Customer O Ltd,XC,10.1,Subscription,Azure,MVC,Yes,SF,,Yes,HIGH,YES,,Yes,,,,Partner D
+,,Customer P Ltd.,XP,10.2,Subscription,AWS,,no,SF,,Yes,HIGH,YES,,,,YES,,Partner A
+,,Customer Q Ltd.,XP,10.3,Subscription,Azure,,no,SF,,No,Moderate,YES,,,YES,,Partner D
+,,Customer R Ltd.,XP,10.1,Subscription,Azure,,no,,,,,YES,,,,,,-
+,,Customer S Ltd.,XP,10.3,Subscription,,,,,,,,YES,,,,,,Partner D

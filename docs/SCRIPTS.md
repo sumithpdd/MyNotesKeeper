@@ -109,3 +109,32 @@ customers/customer1 {
 ---
 
 See [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) for quick start and [NORMALIZATION_COMPLETE.md](NORMALIZATION_COMPLETE.md) for full details.
+
+---
+
+## Merge duplicate customers
+
+```bash
+npm run merge:duplicates -- "DuplicateName" "PrimaryName"
+# or
+node scripts/mergeDuplicateCustomers.js "DuplicateName" "PrimaryName"
+```
+
+Keeps one customer record and merges overlapping fields.
+
+---
+
+## Demonstrator tasks seed (May-style calendar)
+
+Backfill tasks plus internal/customer contact links via Firebase Admin. **Synthetic data only**: fictional names, **`*.demo.invalid`** email addresses, **`https://crm.example.invalid/`** CRM URLs — no real roster in source.
+
+```bash
+node scripts/seedDemonstratorTasks.js your.email@company.com
+```
+
+**Requires:** `serviceAccountKey.json` in the project root; `firebase-admin` installed.
+
+Firestore `customerName` must match substring hints defined in **`scripts/seedDemonstratorTasks.js`** (for example accounts whose names contain **Demo Healthcare**, **Demo Charity**, **Demo Retail**, **Demo Hospitality**, **Demo Building Products**, **Demo Member Org** — see `TASK_DEFS.customerHints`).
+
+Optional: **`YEAR=2025`** for another calendar year. Skips duplicates (same normalized title + planning date). Refresh Tasks in the app after running.
+

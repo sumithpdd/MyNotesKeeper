@@ -1,29 +1,63 @@
 # Security Guidelines
 
-## Never Commit
+## Never commit
 
-- **`.env.local`** - Contains API keys and secrets
-- **`serviceAccountKey.json`** - Firebase admin credentials
-- **`migration.csv`** - May contain real customer data
-- **`singleCustomer.json`** - May contain real contact info
-- **`backups/`** - Database backups may contain sensitive data
+- **`.env.local`** — Contains API keys and secrets
+- **`serviceAccountKey.json`** — Firebase Admin private key downloads (never publish)
+
+- **`migration.csv`** (working copy — copy from **`migration.example.csv`**) — **Never** attach real-account migration extracts to Git (`git rm --cached migration.csv` if it slips in).
+
+- **`singleCustomer.json`** (working copy — copy from **`singleCustomer.example.json`**) — Treat as potentially sensitive (`git rm --cached singleCustomer.json` if tracked).
+
+- **`data/realCustomerData.ts`**, **`data/dummyData.ts`**, **`data/Customer*`** — Local/demo datasets (**gitignored**); do not add real-roster dumps to Git.
+
+- **`backups/`** — Database backups may contain sensitive data
 
 ## Configuration
 
-- All API keys must come from environment variables
-- Use `.env.example` as a template (no real values)
-- Never log API keys, even partially
-- Never hardcode project IDs, domains, or credentials
+- All API keys and secrets come from environment variables (see [SETUP.md](SETUP.md)).
+- Never log API keys, even partially (including Bearer tokens).
+- Never hardcode project IDs, domains, or credentials.
 
-## Firebase
+### `NEXT_PUBLIC_*` variables (browser-visible)
 
-- Use Firestore security rules for access control
-- Service account key is for scripts only (migration, backup)
-- Keep service account key out of version control
+Next.js exposes **`NEXT_PUBLIC_*`** variables in the **client JavaScript bundle**. That includes **`NEXT_PUBLIC_GEMINI_API_KEY`** and **`NEXT_PUBLIC_FIREBASE_*`**. Restrict Firebase keys in Google Cloud Console; treat **Gemini** keys as sensitive and **rotate** if you suspect leakage. Scripts such as **`check-env.js`** only report configured/missing — they do **not** print secret values.
 
-## Best Practices
+## Firebase (client)
 
-1. Copy `.env.example` to `.env.local` and add your values
-2. Add `.env.local` to `.gitignore` (already configured)
-3. Rotate keys if accidentally exposed
-4. Use different Firebase projects for dev/staging/production
+- Browser access uses Firebase Auth plus Firestore rules (`request.auth`).
+- Prefer separate Firebase projects for dev / staging / production.
+- Rotate keys if exposed; deploy rules after schema changes (`npm run deploy:rules`).
+- Rules today require **authenticated** users for most collections. **Multi-tenant isolation** (orgs, tenants) requires additional fields (`orgId`, `createdBy`-based constraints) — see comments in [`firestore.rules`](../firestore.rules).
+
+## REST API routes (`/api/*`)
+
+Several Next.js route handlers verify callers with **Firebase ID tokens** via **Firebase Admin**. Without service-account configuration, those routes return **503**, not an open API.
+
+### When verification is enabled
+
+Set **`FIREBASE_SERVICE_ACCOUNT_JSON`** *(single-line JSON)* or **`FIREBASE_SERVICE_ACCOUNT_PATH`** *(path to the downloaded key file)* in the environment where Next runs (`src/lib/server/firebaseAdmin.ts`). Hosted (Vercel, etc.): use **`FIREBASE_SERVICE_ACCOUNT_JSON`** as a secret. Local dev: **`FIREBASE_SERVICE_ACCOUNT_PATH=./serviceAccountKey.json`** avoids pasting JSON into `.env.local`.
+
+- **Workspace list:** With no `HUB_WORKSPACE_CUSTOMER_SCOPE` (default), **`GET /api/workspace`** includes **all** `customers` docs so the team shares one roster. **`HUB_WORKSPACE_CUSTOMER_SCOPE=mine`** restricts to `createdBy === uid` or `email` (see **SETUP.md**).
+
+If this variable is **not** set, protected hub routes respond with **503** — *Hub API unavailable* — until you add the secret. **Local development** should also set it (same value as production/staging for that project) if you want the app to load workspace data and run CRUD APIs.
+
+### Current behavior (summary)
+
+- **503** if **`FIREBASE_SERVICE_ACCOUNT_JSON`** is missing — Admin cannot verify tokens or access Firestore server-side.
+- **401** if the header is missing or the token is invalid.
+- **Mutations** that accept **`userId`** in the JSON body must use the same value as the verified token’s **`uid`** (**403** otherwise). **`POST /api/ai-chat`** is an exception: it only needs **`{ message }`**; mutations from tools use the authenticated **`uid`** from the token ([API_GUIDE.md](API_GUIDE.md)).
+- **GET /api/workspace** and other data routes require a valid Bearer token when Admin is configured.
+
+See [API_GUIDE.md](API_GUIDE.md) for which endpoints participate and fetch examples.
+
+### `/api/ai-command`
+
+Uses **`authorizeApiRequest`** plus **`forbidUserIdMismatch`**: send **`Authorization: Bearer <Firebase ID token>`** and set **`userId`** in the body to the token’s **`uid`**. If Admin is not configured, the route returns **503** like other hub APIs.
+
+## Best practices checklist
+
+1. Copy env template → `.env.local` and fill only local values (`SETUP.md`).
+2. Add `.env.local` to `.gitignore` (already done).
+3. Add **`FIREBASE_SERVICE_ACCOUNT_JSON`** only on secure server environments; restrict who can deploy.
+4. Use **least privilege** for the service account (only Firebase Admin scopes you need).

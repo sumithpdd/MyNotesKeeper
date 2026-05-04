@@ -19,15 +19,15 @@
   "internalContacts": [
     {
       "id": "sc-example-1",
-      "name": "Ibrahim Samy",
+      "name": "AE One",
       "role": "Account Executive",
-      "email": "ibrahim.samy@sitecore.com"
+      "email": "ae1@example.com"
     },
     {
       "id": "sc-example-2",
-      "name": "Steve Little",
-      "role": "Director SE UK and I",
-      "email": "steve.little@sitecore.com"
+      "name": "AE Two",
+      "role": "Director SE",
+      "email": "ae2@example.com"
     }
   ],
   "products": [
@@ -49,15 +49,15 @@
   "partners": [
     {
       "id": "partner-example-1",
-      "name": "DEPT",
+      "name": "Partner Alpha",
       "type": "Digital Agency",
-      "website": "https://www.deptagency.com"
+      "website": "https://www.example.com"
     },
     {
       "id": "partner-example-2",
-      "name": "Valtech",
+      "name": "Partner Beta",
       "type": "Digital Agency",
-      "website": "https://www.valtech.com"
+      "website": "https://www.example.com"
     }
   ],
   "sharePointUrl": "https://company.sharepoint.com/sites/opportunities/example-company",
