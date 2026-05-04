@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useCallback } from 'react';
 import { FileText, Users, Settings, Target, LayoutGrid, Sparkles, ChevronRight } from 'lucide-react';
-import type { Customer, CustomerProfile, CustomerNote, Product } from '@/types';
+import type { Customer, CustomerProfile, CustomerNote, MartechTool, Product } from '@/types';
 import { CustomerEditSlideOut } from '@/components/CustomerEditSlideOut';
 import { CustomerManagement } from '@/components/CustomerManagement';
 import { EntityManagement } from '@/components/EntityManagement';
@@ -221,6 +221,49 @@ export default function HomePage() {
     [getFirebaseIdToken, reloadWorkspace],
   );
 
+  const persistHubMartech = useCallback(
+    async (args: { action: 'create' | 'update' | 'delete'; tool: MartechTool }): Promise<boolean> => {
+      const token = await getFirebaseIdToken();
+      if (!token) {
+        alert('Sign in required');
+        return false;
+      }
+      try {
+        if (args.action === 'delete') {
+          await hubAuthFetch(`/api/martech?id=${encodeURIComponent(args.tool.id)}`, token, {
+            method: 'DELETE',
+          });
+          await reloadWorkspace();
+          return true;
+        }
+        if (args.action === 'create') {
+          await hubAuthJson<{ success: boolean }>('/api/martech', token, {
+            method: 'POST',
+            body: JSON.stringify({
+              tool: { name: args.tool.name, purpose: args.tool.purpose || '' },
+            }),
+          });
+          await reloadWorkspace();
+          return true;
+        }
+        await hubAuthJson('/api/martech', token, {
+          method: 'PUT',
+          body: JSON.stringify({
+            id: args.tool.id,
+            updates: { name: args.tool.name, purpose: args.tool.purpose || '' },
+          }),
+        });
+        await reloadWorkspace();
+        return true;
+      } catch (e) {
+        console.error(e);
+        alert(e instanceof Error ? e.message : 'Could not save martech tool');
+        return false;
+      }
+    },
+    [getFirebaseIdToken, reloadWorkspace],
+  );
+
   const activeWorkspaceTabId = MAIN_TAB_IDS[activeTab];
 
   const greetingLine = () => {
@@ -417,6 +460,7 @@ export default function HomePage() {
               opportunities={opportunities}
               tasks={tasks}
               persistHubProduct={persistHubProduct}
+              persistHubMartech={persistHubMartech}
               onUpdateCustomerContacts={setCustomerContacts}
               onUpdateInternalContacts={setInternalContacts}
               onUpdateProducts={setProducts}

@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import { toDate } from '@/lib/utils';
-import { martechToolService } from '@/lib/martechToolService';
 import { formatProductDisplayName } from '@/lib/productDisplay';
 import type { CustomerContact, InternalContact, Product, Partner, MartechTool } from '@/types';
 
@@ -125,35 +124,25 @@ export function useEntityManagement(
     if (!confirm('Are you sure you want to delete this item?')) return;
     const currentData = getCurrentData();
     if (activeTab === 'martechTools') {
-      try {
-        await martechToolService.deleteMartechTool(id);
-        const updated = (currentData as MartechTool[]).filter((item) => item.id !== id);
-        callbacks.onUpdateMartechTools?.(updated);
-      } catch (e) {
-        console.error('Failed to delete martech tool:', e);
-        alert('Failed to delete. Please try again.');
-      }
-    } else {
-      switch (activeTab) {
-        case 'customerContacts':
-          callbacks.onUpdateCustomerContacts(
-            data.customerContacts.filter((item) => item.id !== id)
-          );
-          break;
-        case 'internalContacts':
-          callbacks.onUpdateInternalContacts(
-            data.internalContacts.filter((item) => item.id !== id)
-          );
-          break;
-        case 'products':
-          callbacks.onUpdateProducts(data.products.filter((item) => item.id !== id));
-          break;
-        case 'partners':
-          callbacks.onUpdatePartners(data.partners.filter((item) => item.id !== id));
-          break;
-        default:
-          break;
-      }
+      const updated = (currentData as MartechTool[]).filter((item) => item.id !== id);
+      callbacks.onUpdateMartechTools?.(updated);
+      return;
+    }
+    switch (activeTab) {
+      case 'customerContacts':
+        callbacks.onUpdateCustomerContacts(data.customerContacts.filter((item) => item.id !== id));
+        break;
+      case 'internalContacts':
+        callbacks.onUpdateInternalContacts(data.internalContacts.filter((item) => item.id !== id));
+        break;
+      case 'products':
+        callbacks.onUpdateProducts(data.products.filter((item) => item.id !== id));
+        break;
+      case 'partners':
+        callbacks.onUpdatePartners(data.partners.filter((item) => item.id !== id));
+        break;
+      default:
+        break;
     }
   };
 

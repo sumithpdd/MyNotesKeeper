@@ -31,9 +31,9 @@ import { InternalContactForm } from './forms/InternalContactForm';
 import { ProductForm } from './forms/ProductForm';
 import { PartnerForm } from './forms/PartnerForm';
 import { MartechToolForm } from './forms/MartechToolForm';
-import { martechToolService } from '@/lib/martechToolService';
 import { formatProductDisplayName } from '@/lib/productDisplay';
 import { buildProductReferenceIndex } from '@/lib/productReferenceIndex';
+import { buildMartechReferenceIndex } from '@/lib/martechReferenceIndex';
 
 interface EntityManagementProps {
   customerContacts: CustomerContact[];
@@ -46,13 +46,17 @@ interface EntityManagementProps {
   onUpdateProducts: (products: Product[]) => void;
   onUpdatePartners: (partners: Partner[]) => void;
   onUpdateMartechTools?: (tools: MartechTool[]) => void;
-  /** Used to show product usage (accounts, opportunities, tasks). */
+  /** Wired into reference index (accounts referencing each tool via `martechToolIds`). */
   customers?: Customer[];
   opportunities?: Opportunity[];
   tasks?: EngagementTask[];
   persistHubProduct?: (args: {
     action: 'create' | 'update' | 'delete';
     product: Product;
+  }) => Promise<boolean>;
+  persistHubMartech?: (args: {
+    action: 'create' | 'update' | 'delete';
+    tool: MartechTool;
   }) => Promise<boolean>;
 }
 
@@ -73,11 +77,21 @@ export function EntityManagement({
   opportunities = [],
   tasks = [],
   persistHubProduct,
+  persistHubMartech,
 }: EntityManagementProps) {
   const productRefIndex = useMemo(
     () => buildProductReferenceIndex(customers, opportunities, tasks),
     [customers, opportunities, tasks],
   );
+  const martechRefIndex = useMemo(() => buildMartechReferenceIndex(customers), [customers]);
+
+  const formatMartechRefsSummary = (toolId: string) => {
+    const r = martechRefIndex.get(toolId);
+    if (!r) return '—';
+    const n = r.accounts.length;
+    if (n === 0) return '—';
+    return `${n} account${n === 1 ? '' : 's'}`;
+  };
   const {
     activeTab,
     setActiveTab,
@@ -122,6 +136,14 @@ export function EntityManagement({
 
   const handleDeleteClick = useCallback(
     async (item: EntityItem) => {
+      if (activeTab === 'martechTools' && persistHubMartech) {
+        if (!confirm('Are you sure you want to delete this martech tool?')) return;
+        const ok = await persistHubMartech({ action: 'delete', tool: item as MartechTool });
+        if (!ok) return;
+        onUpdateMartechTools(martechTools.filter((t) => t.id !== item.id));
+        if (selectedItem?.id === item.id) setSelectedItem(null);
+        return;
+      }
       if (activeTab === 'products' && persistHubProduct) {
         if (!confirm('Are you sure you want to delete this product?')) return;
         const ok = await persistHubProduct({ action: 'delete', product: item as Product });
@@ -135,8 +157,11 @@ export function EntityManagement({
     [
       activeTab,
       persistHubProduct,
+      persistHubMartech,
       products,
+      martechTools,
       onUpdateProducts,
+      onUpdateMartechTools,
       selectedItem?.id,
       setSelectedItem,
       handleDelete,
@@ -476,6 +501,11 @@ export function EntityManagement({
                     {activeTab === 'products' && (
                       <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Referenced</th>
                     )}
+                    {activeTab === 'martechTools' && (
+                      <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">
+                        Referenced
+                      </th>
+                    )}
                     <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Type</th>
                     <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Created</th>
                     <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3 w-28">Action</th>
@@ -547,6 +577,16 @@ export function EntityManagement({
                           </span>
                         </td>
                       )}
+                      {activeTab === 'martechTools' && (
+                        <td className="px-4 py-3 text-sm text-gray-600 max-w-[140px]">
+                          <span
+                            className="truncate block"
+                            title={formatMartechRefsSummary((item as MartechTool).id)}
+                          >
+                            {formatMartechRefsSummary((item as MartechTool).id)}
+                          </span>
+                        </td>
+                      )}
                       <td className="px-4 py-3">{renderTypeBadge(item)}</td>
                       <td className="px-4 py-3 text-sm text-gray-500">
                         {safeFormatDate('createdAt' in item ? item.createdAt : undefined)}
@@ -598,10 +638,12 @@ export function EntityManagement({
                     <p className="text-sm text-gray-600 mt-0.5 font-medium">
                       {activeTab === 'products'
                         ? (('status' in selectedItem ? selectedItem.status : undefined) as string | undefined) || '—'
-                        : ('role' in selectedItem ? selectedItem.role : undefined) ||
-                            ('type' in selectedItem ? selectedItem.type : undefined) ||
-                            ('status' in selectedItem ? selectedItem.status : undefined) ||
-                            '—'}
+                        : activeTab === 'martechTools'
+                          ? ((((selectedItem as MartechTool).purpose ?? '') as string).trim() || '—')
+                          : ('role' in selectedItem ? selectedItem.role : undefined) ||
+                              ('type' in selectedItem ? selectedItem.type : undefined) ||
+                              ('status' in selectedItem ? selectedItem.status : undefined) ||
+                              '—'}
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       {renderTypeBadge(selectedItem)}
@@ -685,6 +727,39 @@ export function EntityManagement({
                               Tasks referencing this product: <strong>{refs.taskCount}</strong>
                             </span>
                           </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                {activeTab === 'martechTools' &&
+                  (() => {
+                    const refs = martechRefIndex.get((selectedItem as MartechTool).id) ?? { accounts: [] };
+                    return (
+                      <div className="mb-6 rounded-lg border border-gray-200 bg-slate-50/80 p-4">
+                        <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                          <Tag className="h-4 w-4" />
+                          Where this martech tool is referenced
+                        </h3>
+                        <div className="space-y-3 text-sm">
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5 flex items-center gap-1.5">
+                              <Building2 className="h-3.5 w-3.5" />
+                              Accounts ({refs.accounts.length})
+                            </p>
+                            {refs.accounts.length ? (
+                              <ul className="list-disc pl-5 text-gray-700 space-y-1">
+                                {refs.accounts.map((a) => (
+                                  <li key={a.id}>{a.name}</li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-gray-500">No accounts attach this martech tool yet.</p>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 pt-2 border-t border-gray-200/80">
+                            Link tools when editing an account — Martech tools multi-select on the customer form.
+                          </p>
                         </div>
                       </div>
                     );
@@ -838,30 +913,30 @@ export function EntityManagement({
                 <MartechToolForm
                   martechTool={editingItem ? (editingItem as MartechTool) : undefined}
                   onSave={async (martechTool) => {
-                    try {
-                      if (editingItem?.id && !editingItem.id.startsWith('martech-')) {
-                        await martechToolService.updateMartechTool(editingItem.id, {
-                          name: martechTool.name,
-                          purpose: martechTool.purpose,
-                        });
-                      } else {
-                        const id = await martechToolService.createMartechTool({
-                          name: martechTool.name,
-                          purpose: martechTool.purpose,
-                        });
-                        martechTool = { ...martechTool, id };
-                      }
-                      const currentTools = getCurrentData();
-                      const updatedTools = editingItem 
-                        ? currentTools.map((t: any) => t.id === martechTool.id ? martechTool : t)
-                        : [...currentTools, martechTool];
-                      getUpdateFunction()(updatedTools);
+                    if (persistHubMartech) {
+                      const editing = editingItem as MartechTool | null;
+                      const isRealEdit = editing?.id && !String(editing.id).startsWith('martech-');
+                      const action = isRealEdit ? 'update' : 'create';
+                      const payload: MartechTool =
+                        action === 'update' && editing
+                          ? {
+                              ...martechTool,
+                              id: editing.id,
+                            }
+                          : martechTool;
+                      const ok = await persistHubMartech({ action, tool: payload });
+                      if (!ok) return;
                       setShowForm(false);
                       setEditingItem(null);
-                    } catch (e) {
-                      console.error('Failed to save martech tool:', e);
-                      alert('Failed to save. Please try again.');
+                      return;
                     }
+                    const currentTools = getCurrentData() as MartechTool[];
+                    const updatedTools = editingItem
+                      ? currentTools.map((t) => (t.id === martechTool.id ? martechTool : t))
+                      : [...currentTools, martechTool];
+                    (getUpdateFunction() as (tools: MartechTool[]) => void)(updatedTools);
+                    setShowForm(false);
+                    setEditingItem(null);
                   }}
                   onCancel={() => {
                     setShowForm(false);

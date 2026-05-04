@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { customerService } from '@/lib/customerService';
+import {
+  createCustomerAdmin,
+  deleteCustomerAdmin,
+  getAllCustomersAdmin,
+  updateCustomerAdmin,
+} from '@/lib/server/customersAdmin';
 import { authorizeApiRequest, forbidUserIdMismatch } from '@/lib/server/authorizeApiRequest';
 import type { CreateCustomerData } from '@/types';
 
@@ -13,7 +18,7 @@ export async function GET(request: NextRequest) {
   const auth = await authorizeApiRequest(request);
   if (auth instanceof NextResponse) return auth;
   try {
-    const customers = await customerService.getAllCustomers();
+    const customers = await getAllCustomersAdmin();
     return NextResponse.json({ success: true, data: customers });
   } catch (error: unknown) {
     console.error('GET /api/customers error:', error);
@@ -38,7 +43,7 @@ export async function POST(request: NextRequest) {
     const forbidden = forbidUserIdMismatch(auth.uid, userId);
     if (forbidden) return forbidden;
 
-    const customerId = await customerService.createCustomer(customer, userId);
+    const customerId = await createCustomerAdmin(customer, userId);
     return NextResponse.json({
       success: true,
       data: { id: customerId, ...customer },
@@ -73,7 +78,11 @@ export async function PUT(request: NextRequest) {
     const forbidden = forbidUserIdMismatch(auth.uid, userId);
     if (forbidden) return forbidden;
 
-    await customerService.updateCustomer(customerId, customer, userId);
+    await updateCustomerAdmin(
+      customerId,
+      customer as Partial<CreateCustomerData> & Record<string, unknown>,
+      userId,
+    );
     return NextResponse.json({ success: true, data: customer });
   } catch (error: unknown) {
     console.error('PUT /api/customers error:', error);
@@ -86,7 +95,7 @@ export async function PUT(request: NextRequest) {
         }
         const forbidden = forbidUserIdMismatch(auth.uid, userId);
         if (forbidden) return forbidden;
-        const newCustomerId = await customerService.createCustomer(customer as CreateCustomerData, userId);
+        const newCustomerId = await createCustomerAdmin(customer as CreateCustomerData, userId);
         return NextResponse.json({
           success: true,
           data: { id: newCustomerId, ...customer },
@@ -118,7 +127,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Customer ID required' }, { status: 400 });
     }
 
-    await customerService.deleteCustomer(customerId);
+    await deleteCustomerAdmin(customerId);
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     console.error('DELETE /api/customers error:', error);
