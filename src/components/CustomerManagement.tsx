@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, Edit, Trash2, Eye, Building, Users, Calendar, FileText, ArrowLeft, Sparkles, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Edit, Trash2, Eye, Building, Users, Calendar, FileText, ArrowLeft, Sparkles, X, CalendarDays, List, ClipboardList } from 'lucide-react';
+import { LinkWithCopy } from './ui/LinkWithCopy';
 import { aiService } from '@/lib/ai';
-import { Customer, CustomerNote, CustomerProfile, Opportunity, OpportunityStage, CreateCustomerData, CreateCustomerNoteData, UpdateCustomerNoteData } from '@/types';
+import { Customer, CustomerNote, CustomerProfile, Opportunity, OpportunityStage, EngagementTask, Product, Partner, MartechTool, InternalContact } from '@/types';
 import { CustomerForm } from './CustomerForm';
+import { CustomerEditSlideOut } from './CustomerEditSlideOut';
 import { NoteForm } from './NoteForm';
 import { CustomerProfileForm } from './CustomerProfileForm';
 import { CustomerList } from './CustomerList';
@@ -12,12 +14,27 @@ import { SlideOutPanel } from './SlideOutPanel';
 import { OpportunityList } from './OpportunityList';
 import { OpportunityForm } from './OpportunityForm';
 import { OpportunityDetail } from './OpportunityDetail';
+import { safeFormatDate } from '@/lib/utils';
+import { TypeBadge } from './ui/TypeBadge';
+import { getAccountExecutiveColor } from '@/lib/accountExecutiveColors';
+import { getMartechToolColor } from '@/lib/martechToolColors';
+import { formatProductDisplayName } from '@/lib/productDisplay';
+import { customerWebsiteList } from '@/lib/customerWebsites';
+import { ActivityCalendar } from './ActivityCalendar';
+import { buildActivities } from '@/lib/activityUtils';
+import { getLastAccountTaskAction, getTasksForCustomer } from '@/lib/taskAccountActivity';
+import { formatTaskPlanningWindow } from '@/lib/taskPlanningRange';
 
 interface CustomerManagementProps {
   customers: Customer[];
   customerProfiles: CustomerProfile[];
   notes: CustomerNote[];
+  tasks: EngagementTask[];
   opportunities: Opportunity[];
+  products?: Product[];
+  partners?: Partner[];
+  martechTools?: MartechTool[];
+  internalContacts?: InternalContact[];
   selectedCustomer: string | null;
   currentUser: string;
   onSelectCustomer: (customerId: string | null) => void;
@@ -30,13 +47,21 @@ interface CustomerManagementProps {
   onSaveOpportunity: (opportunity: Opportunity) => void;
   onDeleteOpportunity: (opportunityId: string) => void;
   onChangeOpportunityStage: (opportunityId: string, newStage: OpportunityStage, notes?: string) => void;
+  /** When set together with matching `selectedCustomer`, opens optional opportunity detail (e.g. from Tasks). */
+  workspaceFocus?: { customerId: string; opportunityId?: string | null } | null;
+  onWorkspaceFocusConsumed?: () => void;
 }
 
 export function CustomerManagement({
   customers,
   customerProfiles,
   notes,
+  tasks,
   opportunities,
+  products = [],
+  partners = [],
+  martechTools = [],
+  internalContacts = [],
   selectedCustomer,
   currentUser,
   onSelectCustomer,
@@ -49,6 +74,8 @@ export function CustomerManagement({
   onSaveOpportunity,
   onDeleteOpportunity,
   onChangeOpportunityStage,
+  workspaceFocus,
+  onWorkspaceFocusConsumed,
 }: CustomerManagementProps) {
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | undefined>();
@@ -64,10 +91,37 @@ export function CustomerManagement({
   const [showOpportunityForm, setShowOpportunityForm] = useState(false);
   const [editingOpportunity, setEditingOpportunity] = useState<Opportunity | undefined>();
   const [viewingOpportunity, setViewingOpportunity] = useState<Opportunity | null>(null);
+  const [listViewMode, setListViewMode] = useState<'list' | 'calendar'>('list');
 
   const selectedCustomerData = customers.find(c => c.id === selectedCustomer);
+  const activities = buildActivities(customers, notes, customerProfiles, opportunities);
   const selectedCustomerProfile = customerProfiles.find(p => p.customerId === selectedCustomer);
   const customerNotes = selectedCustomer ? notes.filter(note => note.customerId === selectedCustomer) : [];
+
+  const accountOppIds = selectedCustomer
+    ? new Set(opportunities.filter((o) => o.customerId === selectedCustomer).map((o) => o.id))
+    : new Set<string>();
+  const lastTaskAction =
+    selectedCustomer ? getLastAccountTaskAction(selectedCustomer, tasks, accountOppIds) : null;
+
+  const customerRelatedTasks = selectedCustomer
+    ? [...getTasksForCustomer(selectedCustomer, tasks, accountOppIds)].sort(
+        (a, b) => b.lastActionedAt.getTime() - a.lastActionedAt.getTime(),
+      )
+    : [];
+
+  useEffect(() => {
+    if (!workspaceFocus || selectedCustomer !== workspaceFocus.customerId) return;
+    const oid = workspaceFocus.opportunityId?.trim();
+    if (oid) {
+      const opp = opportunities.find((o) => o.id === oid && o.customerId === selectedCustomer);
+      if (opp) setViewingOpportunity(opp);
+      else setViewingOpportunity(null);
+    } else {
+      setViewingOpportunity(null);
+    }
+    onWorkspaceFocusConsumed?.();
+  }, [workspaceFocus, selectedCustomer, opportunities, onWorkspaceFocusConsumed]);
 
   const handleSaveCustomer = (customer: Customer) => {
     onSaveCustomer(customer);
@@ -191,8 +245,8 @@ export function CustomerManagement({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Customer Management</h1>
-          <p className="text-gray-600">Manage customers and their notes in one unified interface</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Customer Management</h1>
+          <p className="text-base text-gray-600 mt-1 leading-relaxed">Manage customers and their notes in one unified interface</p>
         </div>
         <button
           onClick={() => {
@@ -212,26 +266,47 @@ export function CustomerManagement({
           {/* Left Side - Customer Information */}
           <div className="space-y-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-              {/* Customer Header */}
-              <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+              {/* Customer Header - Card style with prominent Edit */}
+              <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 via-indigo-50/80 to-white">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
                     <button
                       onClick={() => onSelectCustomer(null)}
-                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors shrink-0 mt-0.5"
                       title="Back to Customer Directory"
                     >
                       <ArrowLeft className="h-4 w-4" />
                     </button>
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Building className="h-5 w-5 text-blue-600" />
+                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-lg font-bold shrink-0">
+                      {selectedCustomerData?.customerName?.slice(0, 2).toUpperCase() || '?'}
                     </div>
                     <div>
-                      <h2 className="text-xl font-semibold text-gray-900">{selectedCustomerData?.customerName}</h2>
-                      <p className="text-sm text-gray-600">Customer Information</p>
+                      <h2 className="text-xl font-bold text-gray-900 tracking-tight">{selectedCustomerData?.customerName}</h2>
+                      <p className="text-sm text-gray-600 mt-0.5 font-medium">Customer Details</p>
+                      <code className="text-xs font-mono text-gray-500 mt-1 block" title="Firestore document ID">
+                        {selectedCustomerData?.id}
+                      </code>
+                      <p className="text-xs mt-2 text-gray-600">
+                        {lastTaskAction ? (
+                          <>
+                            <span className="text-gray-500">Last task action on account: </span>
+                            <span className="font-semibold text-gray-900">{safeFormatDate(lastTaskAction)}</span>
+                          </>
+                        ) : (
+                          <span className="text-gray-400">No linked tasks touched yet — add tasks from Tasks & Kanban.</span>
+                        )}
+                      </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={() => handleEditCustomer(selectedCustomerData!)}
+                      className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
+                      title="Edit Customer Details"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Edit Customer Details
+                    </button>
                     <button
                       onClick={handleGenerateSummary}
                       disabled={isGeneratingSummary}
@@ -240,13 +315,6 @@ export function CustomerManagement({
                     >
                       <Sparkles className="h-4 w-4" />
                       <span className="text-sm font-medium">AI Summary</span>
-                    </button>
-                    <button
-                      onClick={() => handleEditCustomer(selectedCustomerData!)}
-                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Edit Customer"
-                    >
-                      <Edit className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDeleteCustomer(selectedCustomer)}
@@ -278,56 +346,144 @@ export function CustomerManagement({
                 </div>
               )}
 
+              {/* Key Info - Two Column Layout (like reference) */}
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  {(() => {
+                    const sites = selectedCustomerData ? customerWebsiteList(selectedCustomerData) : [];
+                    if (sites.length === 0) return null;
+                    return (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                          Website{sites.length > 1 ? 's' : ''}
+                        </p>
+                        <div className="space-y-2">
+                          {sites.map((url) => (
+                            <LinkWithCopy
+                              key={url}
+                              url={url}
+                              label={url.replace(/^https?:\/\//, '')}
+                              linkClassName="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  {(() => {
+                    const contacts = selectedCustomerData?.accountExecutives?.length
+                      ? selectedCustomerData.accountExecutives
+                      : selectedCustomerData?.internalContacts?.length
+                        ? selectedCustomerData.internalContacts
+                        : selectedCustomerData?.accountExecutive
+                          ? [selectedCustomerData.accountExecutive]
+                          : [];
+                    const primary = contacts[0];
+                    if (!primary) return null;
+                    return (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Representative</p>
+                        <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-100">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-sm font-bold">
+                            {primary.name?.slice(0, 2).toUpperCase() || '?'}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{primary.name}</p>
+                            <p className="text-xs text-gray-600">{primary.role || 'Account Executive'}</p>
+                            {primary.email && (
+                              <a href={`mailto:${primary.email}`} className="text-xs text-blue-600 hover:underline">{primary.email}</a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
               {/* Customer Details */}
-              <div className="p-6 space-y-6">
-                {/* Website */}
-                {selectedCustomerData?.website && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
-                    <a
-                      href={selectedCustomerData.website.startsWith('http') ? selectedCustomerData.website : `https://${selectedCustomerData.website}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 hover:underline text-sm"
-                    >
-                      {selectedCustomerData.website}
-                    </a>
-                  </div>
-                )}
+              <div className="px-6 pb-6 space-y-6">
                 
-                {/* Account Executive */}
-                {selectedCustomerData?.accountExecutive && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Account Executive</label>
-                    <div className="bg-purple-50 rounded-lg p-3 border border-purple-100">
-                      <div className="font-medium text-purple-900">{selectedCustomerData.accountExecutive.name}</div>
-                      {selectedCustomerData.accountExecutive.role && (
-                        <div className="text-sm text-purple-700 mt-1">{selectedCustomerData.accountExecutive.role}</div>
-                      )}
-                      {selectedCustomerData.accountExecutive.email && (
-                        <a 
-                          href={`mailto:${selectedCustomerData.accountExecutive.email}`}
-                          className="text-sm text-purple-600 hover:text-purple-800 hover:underline mt-1 block"
-                        >
-                          {selectedCustomerData.accountExecutive.email}
-                        </a>
-                      )}
+                {/* Sitecore Contacts (Name - Role) with color coding */}
+                {(() => {
+                  const contacts = selectedCustomerData?.accountExecutives?.length
+                    ? selectedCustomerData.accountExecutives
+                    : selectedCustomerData?.internalContacts?.length
+                      ? selectedCustomerData.internalContacts
+                      : selectedCustomerData?.accountExecutive
+                        ? [selectedCustomerData.accountExecutive]
+                        : [];
+                  if (contacts.length === 0) return null;
+                  return (
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-800 mb-2">Sitecore Contacts</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {contacts.map((c) => {
+                          const label = c.role ? `${c.name} - ${c.role}` : c.name;
+                          const aeColor = getAccountExecutiveColor(c.name);
+                          return (
+                            <div
+                              key={c.id}
+                              className={`rounded-lg p-3 border ${aeColor.badge} flex flex-col gap-1`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className={`w-2 h-2 rounded-full ${aeColor.dot}`} />
+                                <span className="font-medium">{label}</span>
+                              </div>
+                              {c.email && (
+                                <a
+                                  href={`mailto:${c.email}`}
+                                  className="text-sm hover:underline"
+                                >
+                                  {c.email}
+                                </a>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Martech Tools */}
+                {(selectedCustomerData?.martechTools?.length ?? 0) > 0 && (
+                <div>
+                  <h3 className="text-sm font-bold text-gray-800 mb-3">
+                    Martech Tools ({selectedCustomerData?.martechTools?.length || 0})
+                  </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedCustomerData!.martechTools!.map((t) => {
+                        const c = getMartechToolColor(t.name);
+                        return (
+                          <span
+                            key={t.id}
+                            className={`inline-flex px-3 py-1.5 rounded-lg text-sm font-medium ${c.bg} ${c.text}`}
+                            title={t.purpose ? `${t.name} — ${t.purpose}` : t.name}
+                          >
+                            {t.name}
+                            {t.purpose && (
+                              <span className="ml-1.5 opacity-80 text-xs">— {t.purpose}</span>
+                            )}
+                          </span>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
 
                 {/* Products */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Products ({selectedCustomerData?.products.length || 0})
-                  </label>
-                  {selectedCustomerData?.products.length ? (
+                  <h3 className="text-sm font-bold text-gray-800 mb-3">
+                    Products ({(selectedCustomerData?.products ?? []).length})
+                  </h3>
+                  {(selectedCustomerData?.products ?? []).length ? (
                     <div className="space-y-2">
-                      {selectedCustomerData.products.map((product) => (
+                      {(selectedCustomerData?.products ?? []).map((product) => (
                         <div key={product.id} className="bg-gray-50 rounded-lg p-3">
                           <div className="flex items-center justify-between">
                             <div>
-                              <span className="font-medium text-gray-900">{product.name}{product.version ? ` v${product.version}` : ''}</span>
+                              <span className="font-medium text-gray-900">{formatProductDisplayName(product)}</span>
                             </div>
                             {product.status && (
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -353,14 +509,17 @@ export function CustomerManagement({
 
                 {/* Customer Contacts */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Customer Contacts ({selectedCustomerData?.customerContacts.length || 0})
-                  </label>
-                  {selectedCustomerData?.customerContacts.length ? (
+                  <h3 className="text-sm font-bold text-gray-800 mb-3">
+                    Customer Contacts ({(selectedCustomerData?.customerContacts ?? []).length})
+                  </h3>
+                  {(selectedCustomerData?.customerContacts ?? []).length ? (
                     <div className="space-y-2">
-                      {selectedCustomerData.customerContacts.map((contact) => (
+                      {(selectedCustomerData?.customerContacts ?? []).map((contact) => (
                         <div key={contact.id} className="bg-gray-50 rounded-lg p-3">
                           <div className="font-medium text-gray-900">{contact.name}</div>
+                          {contact.companyName && (
+                            <div className="text-sm text-gray-600 mt-1">{contact.companyName}</div>
+                          )}
                           {contact.role && (
                             <div className="text-sm text-gray-600 mt-1">{contact.role}</div>
                           )}
@@ -378,38 +537,15 @@ export function CustomerManagement({
                   )}
                 </div>
 
-                {/* Internal Contacts */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Internal Contacts ({selectedCustomerData?.internalContacts.length || 0})
-                  </label>
-                  {selectedCustomerData?.internalContacts.length ? (
-                    <div className="space-y-2">
-                      {selectedCustomerData.internalContacts.map((contact) => (
-                        <div key={contact.id} className="bg-gray-50 rounded-lg p-3">
-                          <div className="font-medium text-gray-900">{contact.name}</div>
-                          {contact.role && (
-                            <div className="text-sm text-gray-600 mt-1">{contact.role}</div>
-                          )}
-                          {contact.email && (
-                            <div className="text-sm text-gray-600 mt-1">{contact.email}</div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-500">No internal contacts</p>
-                  )}
-                </div>
 
                 {/* Partners */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Partners ({selectedCustomerData?.partners.length || 0})
-                  </label>
-                  {selectedCustomerData?.partners.length ? (
+                  <h3 className="text-sm font-bold text-gray-800 mb-3">
+                    Partners ({(selectedCustomerData?.partners ?? []).length})
+                  </h3>
+                  {(selectedCustomerData?.partners ?? []).length ? (
                     <div className="space-y-2">
-                      {selectedCustomerData.partners.map((partner) => (
+                      {(selectedCustomerData?.partners ?? []).map((partner) => (
                         <div key={partner.id} className="bg-gray-50 rounded-lg p-3">
                           <div className="font-medium text-gray-900">{partner.name}</div>
                           {partner.type && (
@@ -426,39 +562,71 @@ export function CustomerManagement({
                   )}
                 </div>
 
+                {/* Related engagement tasks */}
+                <div className="border-t border-gray-200 pt-4">
+                  <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <ClipboardList className="h-4 w-4 text-violet-600" aria-hidden />
+                    Related tasks ({customerRelatedTasks.length})
+                  </h3>
+                  {customerRelatedTasks.length === 0 ? (
+                    <p className="text-sm text-gray-500">
+                      No tasks linked to this account or its opportunities. Assign an account or opportunity on the task
+                      form.
+                    </p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {customerRelatedTasks.slice(0, 12).map((t) => {
+                        const windowLabel = formatTaskPlanningWindow(t);
+                        return (
+                          <li key={t.id} className="rounded-lg border border-gray-100 bg-gray-50/90 px-3 py-2">
+                            <p className="font-medium text-gray-900 text-sm">{t.title}</p>
+                            {windowLabel ? (
+                              <p className="text-xs text-violet-800 font-semibold mt-0.5">{windowLabel}</p>
+                            ) : null}
+                            <p className="text-[11px] text-gray-500 capitalize mt-0.5">
+                              {String(t.status).replace(/_/g, ' ')} · last action{' '}
+                              {safeFormatDate(t.lastActionedAt)}
+                            </p>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  {customerRelatedTasks.length > 12 ? (
+                    <p className="text-xs text-gray-400 mt-2">Showing twelve most recently actioned tasks. View Tasks for full board filters.</p>
+                  ) : null}
+                </div>
+
                 {/* Quick Links */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Quick Links</label>
+                  <h3 className="text-sm font-bold text-gray-800 mb-3">Quick Links</h3>
                   <div className="space-y-2">
                     {selectedCustomerData?.sharePointUrl && (
-                      <a
-                        href={selectedCustomerData.sharePointUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block text-green-600 hover:text-green-800 hover:underline text-sm"
-                      >
-                        SharePoint
-                      </a>
+                      <div className="block">
+                        <LinkWithCopy
+                          url={selectedCustomerData.sharePointUrl}
+                          label="SharePoint"
+                          linkClassName="text-green-600 hover:text-green-800 text-sm"
+                        />
+                      </div>
                     )}
                     {selectedCustomerData?.salesforceLink && (
-                      <a
-                        href={selectedCustomerData.salesforceLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block text-orange-600 hover:text-orange-800 hover:underline text-sm"
-                      >
-                        Salesforce
-                      </a>
+                      <div className="block">
+                        <LinkWithCopy
+                          url={selectedCustomerData.salesforceLink}
+                          label="Salesforce"
+                          linkClassName="text-orange-600 hover:text-orange-800 text-sm"
+                        />
+                      </div>
                     )}
                     {selectedCustomerData?.additionalLink && (
-                      <a
-                        href={selectedCustomerData.additionalLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block text-purple-600 hover:text-purple-800 hover:underline text-sm"
-                      >
-                        Additional Link
-                      </a>
+                      <div className="block">
+                        <LinkWithCopy
+                          url={selectedCustomerData.additionalLink}
+                          label="Additional Link"
+                          linkClassName="text-purple-600 hover:text-purple-800 text-sm"
+                        />
+                      </div>
                     )}
                   </div>
                 </div>
@@ -692,75 +860,86 @@ export function CustomerManagement({
                 </div>
               </div>
 
-              {/* Notes List */}
+              {/* Notes Table */}
               <div className="p-6">
                 {customerNotes.length > 0 ? (
-                  <div className="space-y-4">
-                    {customerNotes.map((note) => (
-                      <div key={note.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Calendar className="h-4 w-4 text-gray-400" />
-                              <span className="text-sm text-gray-600">
-                                {new Date(note.noteDate).toLocaleDateString()}
-                              </span>
-                              <span className="text-sm text-gray-500">•</span>
-                              <Users className="h-4 w-4 text-gray-400" />
-                              <span className="text-sm text-gray-600">{note.createdBy}</span>
-                            </div>
-                            <p className="text-sm text-gray-900 line-clamp-3 mb-3">
-                              {note.notes}
-                            </p>
-                            <div className="flex items-center gap-2">
-                              {note.seConfidence && (
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  note.seConfidence === 'Green' ? 'bg-green-100 text-green-800' :
-                                  note.seConfidence === 'Yellow' ? 'bg-yellow-100 text-yellow-800' :
-                                  note.seConfidence === 'Red' ? 'bg-red-100 text-red-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  SE: {note.seConfidence}
-                                </span>
+                  <div className="overflow-x-auto rounded-lg border border-gray-200">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gradient-to-r from-green-50 to-emerald-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Author</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Preview</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">SE Confidence</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Profile Fit</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-100">
+                        {customerNotes.map((note) => (
+                          <tr key={note.id} className="hover:bg-green-50/30 transition-colors">
+                            <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                              {safeFormatDate(note.noteDate)}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900">
+                              {note.createdBy}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-600 max-w-xs">
+                              <p className="line-clamp-2">{note.notes}</p>
+                            </td>
+                            <td className="px-4 py-3">
+                              {note.seConfidence ? (
+                                <TypeBadge
+                                  label={note.seConfidence}
+                                  variant={note.seConfidence === 'Green' ? 'green' : note.seConfidence === 'Yellow' ? 'amber' : 'red'}
+                                />
+                              ) : (
+                                <span className="text-gray-400 text-sm">—</span>
                               )}
-                              {selectedCustomerProfile?.seProductFitAssessment && (
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  selectedCustomerProfile.seProductFitAssessment === 'Green' ? 'bg-green-100 text-green-800' :
-                                  selectedCustomerProfile.seProductFitAssessment === 'Yellow' ? 'bg-yellow-100 text-yellow-800' :
-                                  selectedCustomerProfile.seProductFitAssessment === 'Red' ? 'bg-red-100 text-red-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  Fit: {selectedCustomerProfile.seProductFitAssessment}
-                                </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              {selectedCustomerProfile?.seProductFitAssessment ? (
+                                <TypeBadge
+                                  label={selectedCustomerProfile.seProductFitAssessment}
+                                  variant={
+                                    selectedCustomerProfile.seProductFitAssessment === 'Green' ? 'green' :
+                                    selectedCustomerProfile.seProductFitAssessment === 'Yellow' ? 'amber' : 'red'
+                                  }
+                                />
+                              ) : (
+                                <span className="text-gray-400 text-sm">—</span>
                               )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 ml-4">
-                            <button
-                              onClick={() => setViewingNote(note)}
-                              className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="View Note"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => handleEditNote(note)}
-                              className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                              title="Edit Note"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteNote(note.id)}
-                              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Delete Note"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => setViewingNote(note)}
+                                  className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="View Note"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleEditNote(note)}
+                                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
+                                  title="Edit Note"
+                                >
+                                  <Edit className="h-3.5 w-3.5" />
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteNote(note.id)}
+                                  className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Delete Note"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 ) : (
                   <div className="text-center py-12">
@@ -787,6 +966,7 @@ export function CustomerManagement({
                 <OpportunityList
                   opportunities={opportunities}
                   customerId={selectedCustomer}
+                  accountExecutiveName={selectedCustomerData?.accountExecutives?.[0]?.name || selectedCustomerData?.accountExecutive?.name}
                   onSelectOpportunity={handleViewOpportunity}
                   onEditOpportunity={handleEditOpportunity}
                   onDeleteOpportunity={handleDeleteOpportunity}
@@ -800,27 +980,61 @@ export function CustomerManagement({
           </div>
         </div>
       ) : (
-        <div className="space-y-6">
-          {/* Customer Directory */}
-          <CustomerList
-            customers={customers}
-            selectedCustomer={selectedCustomer}
-            onSelectCustomer={onSelectCustomer}
-          />
+        <div className="space-y-4 min-w-0">
+          {/* View Toggle: List / Calendar */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setListViewMode('list')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                listViewMode === 'list' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <List className="h-4 w-4" />
+              Customer List
+            </button>
+            <button
+              onClick={() => setListViewMode('calendar')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                listViewMode === 'calendar' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <CalendarDays className="h-4 w-4" />
+              Activity Calendar
+            </button>
+          </div>
+
+          {listViewMode === 'list' ? (
+            <CustomerList
+              customers={customers}
+              notes={notes}
+              selectedCustomer={selectedCustomer}
+              onSelectCustomer={onSelectCustomer}
+              onEditCustomer={handleEditCustomer}
+              onDeleteCustomer={handleDeleteCustomer}
+            />
+          ) : (
+            <ActivityCalendar
+              activities={activities}
+              onSelectCustomer={(id) => onSelectCustomer(id)}
+            />
+          )}
         </div>
       )}
 
-      {/* Modals */}
-      {showCustomerForm && (
-        <CustomerForm
-          customer={editingCustomer}
-          onSave={handleSaveCustomer}
-          onCancel={() => {
-            setShowCustomerForm(false);
-            setEditingCustomer(undefined);
-          }}
-        />
-      )}
+      {/* Customer Edit Slide-Out Panel (Nexus-style - keeps list visible) */}
+      <CustomerEditSlideOut
+        customer={editingCustomer}
+        products={products}
+        partners={partners}
+        martechTools={martechTools}
+        internalContacts={internalContacts}
+        isOpen={showCustomerForm}
+        onClose={() => {
+          setShowCustomerForm(false);
+          setEditingCustomer(undefined);
+        }}
+        onSave={handleSaveCustomer}
+      />
 
       {showNoteForm && (
         <NoteForm

@@ -1,7 +1,16 @@
-import { Customer, CustomerContact, InternalContact, Product, Partner } from '@/types';
+import { Customer, CustomerContact, InternalContact, Product, Partner, MartechTool } from '@/types';
 import { customerContactService, internalContactService } from './contactService';
 import { productService } from './productService';
 import { partnerService } from './partnerService';
+import { martechToolService } from './martechToolService';
+
+export interface ResolverIndexes {
+  customerContactsById: Map<string, CustomerContact>;
+  internalContactsById: Map<string, InternalContact>;
+  productsById: Map<string, Product>;
+  partnersById: Map<string, Partner>;
+  martechById: Map<string, MartechTool>;
+}
 
 /**
  * Helper service to resolve contact references
@@ -55,6 +64,23 @@ export const contactResolver = {
   },
 
   /**
+   * Resolve multiple account executive IDs to full contact objects
+   */
+  async resolveAccountExecutives(accountExecutiveIds?: string[]): Promise<InternalContact[]> {
+    if (!accountExecutiveIds?.length) return [];
+    
+    try {
+      const allContacts = await internalContactService.getAllInternalContacts();
+      return accountExecutiveIds
+        .map(id => allContacts.find(c => c.id === id))
+        .filter((c): c is InternalContact => !!c);
+    } catch (error) {
+      console.error('Error resolving account executives:', error);
+      return [];
+    }
+  },
+
+  /**
    * Resolve product IDs to full product objects
    */
   async resolveProducts(productIds: string[]): Promise<Product[]> {
@@ -85,24 +111,43 @@ export const contactResolver = {
   },
 
   /**
+   * Resolve martech tool IDs to full martech tool objects
+   */
+  async resolveMartechTools(martechToolIds: string[]): Promise<MartechTool[]> {
+    if (!martechToolIds || martechToolIds.length === 0) return [];
+    
+    try {
+      const allTools = await martechToolService.getAllMartechTools();
+      return allTools.filter(tool => martechToolIds.includes(tool.id));
+    } catch (error) {
+      console.error('Error resolving martech tools:', error);
+      return [];
+    }
+  },
+
+  /**
    * Enrich a customer with full contact objects from IDs
    */
   async enrichCustomer(customer: Customer): Promise<Customer> {
-    const [customerContacts, internalContacts, accountExecutive, products, partners] = await Promise.all([
+    const [customerContacts, internalContacts, accountExecutive, accountExecutives, products, partners, martechTools] = await Promise.all([
       this.resolveCustomerContacts(customer.customerContactIds || []),
       this.resolveInternalContacts(customer.internalContactIds || []),
       this.resolveAccountExecutive(customer.accountExecutiveId),
+      this.resolveAccountExecutives(customer.accountExecutiveIds?.length ? customer.accountExecutiveIds : (customer.accountExecutiveId ? [customer.accountExecutiveId] : [])),
       this.resolveProducts(customer.productIds || []),
-      this.resolvePartners(customer.partnerIds || [])
+      this.resolvePartners(customer.partnerIds || []),
+      this.resolveMartechTools(customer.martechToolIds || [])
     ]);
 
     return {
       ...customer,
-      customerContacts, // Add resolved contacts for display
-      internalContacts, // Add resolved contacts for display
-      accountExecutive, // Add resolved account executive for display
-      products,         // Add resolved products for display
-      partners          // Add resolved partners for display
+      customerContacts,
+      internalContacts,
+      accountExecutive: accountExecutive || accountExecutives[0],
+      accountExecutives: accountExecutives.length > 0 ? accountExecutives : (accountExecutive ? [accountExecutive] : []),
+      products,
+      partners,
+      martechTools
     };
   },
 
@@ -114,22 +159,86 @@ export const contactResolver = {
   },
 
   /**
+   * Resolve references using catalog maps loaded on the server (no client Firestore).
+   */
+  enrichCustomersFromIndexes(customers: Customer[], indexes: ResolverIndexes): Customer[] {
+    return customers.map((customer) => {
+      const customerContacts = this.resolveCustomerContactsIndexed(
+        customer.customerContactIds || [],
+        indexes.customerContactsById,
+      );
+      const internalContacts = this.resolveInternalContactsIndexed(
+        customer.internalContactIds || [],
+        indexes.internalContactsById,
+      );
+      const aeIds =
+        customer.accountExecutiveIds?.length
+          ? customer.accountExecutiveIds
+          : customer.accountExecutiveId
+            ? [customer.accountExecutiveId]
+            : [];
+      const accountExecutive = aeIds.length
+        ? indexes.internalContactsById.get(customer.accountExecutiveId || aeIds[0])
+        : undefined;
+      const accountExecutives = aeIds
+        .map((id) => indexes.internalContactsById.get(id))
+        .filter((c): c is InternalContact => !!c);
+
+      const products = (customer.productIds || [])
+        .map((id) => indexes.productsById.get(id))
+        .filter((p): p is Product => !!p);
+      const partners = (customer.partnerIds || [])
+        .map((id) => indexes.partnersById.get(id))
+        .filter((p): p is Partner => !!p);
+      const martechTools = (customer.martechToolIds || [])
+        .map((id) => indexes.martechById.get(id))
+        .filter((m): m is MartechTool => !!m);
+
+      return {
+        ...customer,
+        customerContacts,
+        internalContacts,
+        accountExecutive: accountExecutive || accountExecutives[0],
+        accountExecutives: accountExecutives.length > 0 ? accountExecutives : accountExecutive ? [accountExecutive] : [],
+        products,
+        partners,
+        martechTools,
+      };
+    });
+  },
+
+  resolveCustomerContactsIndexed(ids: string[], byId: Map<string, CustomerContact>): CustomerContact[] {
+    return ids.map((id) => byId.get(id)).filter((c): c is CustomerContact => !!c);
+  },
+
+  resolveInternalContactsIndexed(ids: string[], byId: Map<string, InternalContact>): InternalContact[] {
+    return ids.map((id) => byId.get(id)).filter((c): c is InternalContact => !!c);
+  },
+
+  /**
    * Convert customer with full contacts to customer with only IDs (for saving)
    */
   prepareCustomerForSave(customer: Customer): Customer {
+    const aeIds = customer.accountExecutives?.length
+      ? customer.accountExecutives.map(c => c.id)
+      : customer.accountExecutiveIds || (customer.accountExecutive?.id ? [customer.accountExecutive.id] : []);
+    const allInternalIds = [...new Set([
+      ...(customer.internalContacts?.map(c => c.id) || customer.internalContactIds || []),
+      ...aeIds
+    ])];
     return {
       ...customer,
       customerContactIds: customer.customerContacts?.map(c => c.id) || customer.customerContactIds || [],
-      internalContactIds: customer.internalContacts?.map(c => c.id) || customer.internalContactIds || [],
-      accountExecutiveId: customer.accountExecutive?.id || customer.accountExecutiveId,
-      productIds: customer.products?.map(p => p.id) || customer.productIds || [],
-      partnerIds: customer.partners?.map(p => p.id) || customer.partnerIds || [],
-      // Remove full objects before saving
+      internalContactIds: allInternalIds,
+      accountExecutiveId: aeIds[0] || customer.accountExecutive?.id || customer.accountExecutiveId,
+      accountExecutiveIds: aeIds,
       customerContacts: undefined,
       internalContacts: undefined,
       accountExecutive: undefined,
+      accountExecutives: undefined,
       products: undefined,
-      partners: undefined
+      partners: undefined,
+      martechTools: undefined
     };
   }
 };

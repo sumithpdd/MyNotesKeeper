@@ -10,8 +10,13 @@ export * from './contacts';
 // Product types
 export * from './product';
 
-// Opportunity and sales pipeline types
+// Martech tools
+export * from './martechTool';
+
 export * from './opportunity';
+
+// Tasks (Kanban / calendar)
+export * from './task';
 
 // User and authentication types
 export * from './user';

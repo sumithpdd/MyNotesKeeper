@@ -14,4 +14,6 @@ export interface AuthContextType {
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  /** Use for authenticated Hub API routes (Firebase ID token). */
+  getFirebaseIdToken: () => Promise<string | null>;
 }

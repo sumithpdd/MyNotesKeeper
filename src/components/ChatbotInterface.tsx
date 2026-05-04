@@ -188,14 +188,22 @@ export function ChatbotInterface({
   };
 
   const executeAddCustomer = async (data: any) => {
+    const products = data.products || [];
+    const customerContacts = data.customerContacts || [];
+    const internalContacts = data.internalContacts || [];
+    const partners = data.partners || [];
     const customer: Customer = {
       id: '',
       customerName: data.customerName,
       website: data.website || '',
-      products: data.products || [],
-      customerContacts: data.customerContacts || [],
-      internalContacts: data.internalContacts || [],
-      partners: data.partners || [],
+      productIds: products.map((p: { id: string }) => p.id),
+      products,
+      customerContactIds: customerContacts.map((c: { id: string }) => c.id),
+      customerContacts,
+      internalContactIds: internalContacts.map((c: { id: string }) => c.id),
+      internalContacts,
+      partnerIds: partners.map((p: { id: string }) => p.id),
+      partners,
       sharePointUrl: data.sharePointUrl || '',
       salesforceLink: data.salesforceLink || '',
       additionalLink: data.additionalLink || '',

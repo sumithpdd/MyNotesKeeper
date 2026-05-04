@@ -50,7 +50,7 @@ export const comprehensivePrompts: ComprehensivePromptTemplate[] = [
       'accountExecutive', 'partners', 'sharePointUrl', 'salesforceLink', 'additionalLink', 'additionalInfo'
     ],
     requiredFields: ['customerName'],
-    systemPrompt: `Extract customer creation data with fields: customerName (required), website, products (array), customerContacts (array with name, email, phone, role), internalContacts (array), accountExecutive (single contact), partners (array), sharePointUrl, salesforceLink, additionalLink, additionalInfo`,
+    systemPrompt: `Extract customer creation data with fields: customerName (required), website, products (array), customerContacts (array with name, companyName?, email, phone, role), internalContacts (array), accountExecutive (single contact), partners (array), sharePointUrl, salesforceLink, additionalLink, additionalInfo`,
     intent: 'create_customer',
     confidence: 0.95
   },

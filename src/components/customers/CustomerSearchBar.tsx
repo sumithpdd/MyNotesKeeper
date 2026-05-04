@@ -61,8 +61,8 @@ export function CustomerSearchBar({
         className="px-4 py-3 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="name">Sort by Name</option>
+        <option value="updated">Sort by Last Updated</option>
         <option value="created">Sort by Created Date</option>
-        <option value="updated">Sort by Updated Date</option>
         <option value="products">Sort by Products Count</option>
       </select>
     </div>

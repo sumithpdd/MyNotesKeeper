@@ -4,15 +4,17 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Save, X, Package, Tag, FileText, Activity } from 'lucide-react';
+import { Save, X, Package, Tag, FileText, Activity, Globe } from 'lucide-react';
 import { Product } from '@/types';
 import { dummyProducts } from '../../../data/dummyData';
 import { PRODUCT_STATUS_OPTIONS } from '../../../data/dxpPools';
+import { formatProductDisplayName, PRODUCT_VERSION_PRESETS_DESC } from '@/lib/productDisplay';
 
 const productSchema = z.object({
   name: z.string().min(1, 'Product name is required'),
   version: z.string().optional(),
   description: z.string().optional(),
+  website: z.string().optional(),
   status: z.enum(['Active', 'Inactive', 'Planned', 'Deprecated']).optional(),
 });
 
@@ -20,7 +22,7 @@ type ProductFormData = z.infer<typeof productSchema>;
 
 interface ProductFormProps {
   product?: Product;
-  onSave: (product: Product) => void;
+  onSave: (product: Product) => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -40,16 +42,19 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
       name: product.name,
       version: product.version || '',
       description: product.description || '',
+      website: product.website || '',
       status: product.status || 'Active',
     } : {
       name: '',
       version: '',
       description: '',
+      website: '',
       status: 'Active',
     }
   });
 
   const watchedName = watch('name');
+  const watchedVersion = watch('version');
 
   const onSubmit = async (data: ProductFormData) => {
     try {
@@ -58,6 +63,7 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
         name: data.name as any,
         version: data.version || undefined,
         description: data.description || undefined,
+        website: data.website?.trim() || undefined,
         status: data.status || 'Active',
       };
 
@@ -100,9 +106,36 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
         <input
           {...register('version')}
           type="text"
-          placeholder="e.g., 10.3, 1.0, 2.1.4"
+          list="product-version-suggestions"
+          placeholder="e.g. 10.4, 9.1, or Latest"
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
         />
+        <datalist id="product-version-suggestions">
+          {PRODUCT_VERSION_PRESETS_DESC.map((v) => (
+            <option key={v} value={v} />
+          ))}
+          <option value="Latest" />
+        </datalist>
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            <Globe className="h-4 w-4 inline mr-2" />
+            Website
+          </label>
+          <input
+            {...register('website')}
+            type="url"
+            placeholder="https://…"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+          />
+        </div>
+        {watchedName?.trim() ? (
+          <p className="mt-1.5 text-xs text-gray-600">
+            Shown in the app as:{' '}
+            <span className="font-semibold text-gray-800">
+              {formatProductDisplayName({ name: watchedName, version: watchedVersion })}
+            </span>
+          </p>
+        ) : null}
       </div>
 
       {/* Description */}

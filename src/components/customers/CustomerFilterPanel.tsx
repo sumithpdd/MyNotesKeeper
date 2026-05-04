@@ -3,6 +3,8 @@
 import { Calendar, Package, ExternalLink, User } from 'lucide-react';
 import { FilterOptions } from '@/hooks';
 
+import { formatProductDisplayName } from '@/lib/productDisplay';
+
 interface CustomerFilterPanelProps {
   // Filter Values
   selectedYear: string;
@@ -131,7 +133,7 @@ export function CustomerFilterPanel({
                   onChange={() => onToggleProduct(product.id)}
                   className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
-                <span className="text-sm">{product.name}</span>
+                <span className="text-sm">{formatProductDisplayName(product)}</span>
               </label>
             ))}
             {filterOptions.allProducts.length === 0 && (

@@ -41,15 +41,15 @@ export function useCustomerFilters(customers: Customer[]) {
       yearsSet.add(new Date(customer.updatedAt).getFullYear());
       
       // Products
-      customer.products.forEach(p => productsMap.set(p.id, p));
+      (customer.products ?? []).forEach(p => productsMap.set(p.id, p));
       
       // Partners
-      customer.partners.forEach(p => partnersMap.set(p.id, p));
+      (customer.partners ?? []).forEach(p => partnersMap.set(p.id, p));
       
       // Account Executives
-      if (customer.accountExecutive) {
-        accountExecsMap.set(customer.accountExecutive.id, customer.accountExecutive);
-      }
+      (customer.accountExecutives || (customer.accountExecutive ? [customer.accountExecutive] : [])).forEach(ae => {
+        if (ae) accountExecsMap.set(ae.id, ae);
+      });
     });
     
     return {
@@ -135,22 +135,23 @@ export function useCustomerFilters(customers: Customer[]) {
     // Products filter
     if (selectedProducts.length > 0) {
       filtered = filtered.filter(customer =>
-        customer.products.some(p => selectedProducts.includes(p.id))
+        (customer.products ?? []).some(p => selectedProducts.includes(p.id))
       );
     }
     
     // Partners filter
     if (selectedPartners.length > 0) {
       filtered = filtered.filter(customer =>
-        customer.partners.some(p => selectedPartners.includes(p.id))
+        (customer.partners ?? []).some(p => selectedPartners.includes(p.id))
       );
     }
     
     // Account Executive filter
     if (selectedAccountExecs.length > 0) {
-      filtered = filtered.filter(customer =>
-        customer.accountExecutive && selectedAccountExecs.includes(customer.accountExecutive.id)
-      );
+      filtered = filtered.filter(customer => {
+        const aes = customer.accountExecutives || (customer.accountExecutive ? [customer.accountExecutive] : []);
+        return aes.some(ae => ae && selectedAccountExecs.includes(ae.id));
+      });
     }
     
     return filtered;

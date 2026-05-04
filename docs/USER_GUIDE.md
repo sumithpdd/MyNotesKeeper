@@ -5,13 +5,15 @@ Complete guide to using the Customer Engagement Hub for managing customers, note
 ## 📋 Table of Contents
 
 1. [Getting Started](#getting-started)
-2. [Customer Management](#customer-management)
-3. [Customer Profiles](#customer-profiles)
-4. [Notes Management](#notes-management)
-5. [Opportunity Tracking](#opportunity-tracking)
-6. [AI Chatbot](#ai-chatbot)
-7. [Entity Management](#entity-management)
-8. [Tips & Best Practices](#tips--best-practices)
+2. [Customer Engagement Journey (overview)](#customer-engagement-journey-overview)
+3. [Customer Management](#customer-management)
+4. [Customer Profiles](#customer-profiles)
+5. [Notes Management](#notes-management)
+6. [Opportunity Tracking](#opportunity-tracking)
+7. [Tasks & Kanban](#tasks--kanban)
+8. [AI Chatbot](#ai-assistant)
+9. [Entity Management](#entity-management)
+10. [Tips & Best Practices](#tips--best-practices)
 
 ---
 
@@ -26,15 +28,32 @@ Complete guide to using the Customer Engagement Hub for managing customers, note
 
 ### Interface Overview
 
-The app has 3 main tabs:
+The app has these main dashboard tabs (**left to right** in the workspace bar). The hub **opens on Tasks & Kanban** by default.
 
 | Tab | Purpose |
 |-----|---------|
-| **👥 Customer Management** | Manage customers, notes, and profiles |
-| **⚙️ Entity Management** | Manage contacts, products, partners |
-| **🎯 Migration Opportunities** | Track migration opportunities |
+| **Tasks & Kanban** | **Main runway** — board, calendar, filters; link accounts and optionally opportunities |
+| **Customer Management** | Customers, notes, profiles, opportunities |
+| **Entity Management** | Global contacts, internal roster, products, partners, martech tools |
+| **Migration Opportunities** | Migration-specific customer view |
+
+**Deal stages and “time in stage”** → **[OPPORTUNITY_STAGES.md](OPPORTUNITY_STAGES.md)** (also surfaced as help inside the opportunity form and detail).
 
 **Plus a floating AI Assistant button** in the bottom-right corner for quick access to AI features!
+
+For how these areas connect in a typical week, see **[CUSTOMER_JOURNEY.md](CUSTOMER_JOURNEY.md)**.
+
+---
+
+## Customer Engagement Journey (overview)
+
+- **Tasks & Kanban** is where most users **start**: due dates on the calendar, statuses on the board, link accounts and opportunities.
+- **Customer Management** is the account cockpit: timeline, profile, pipeline.
+- **Entity Management** is the shared catalogue: products and people reused across accounts.
+
+Use **[OPPORTUNITY_STAGES.md](OPPORTUNITY_STAGES.md)** when you align Hub stages with Salesforce or need **time-in-stage** definitions.
+
+Diagrams: **[CUSTOMER_JOURNEY.md](CUSTOMER_JOURNEY.md)**.
 
 ---
 
@@ -234,27 +253,37 @@ Notes are **dynamic interaction records** - created after each customer engageme
 
 ## Opportunity Tracking
 
-Track sales opportunities through their lifecycle with stage management and history.
+Track sales opportunities through their lifecycle with stage management and history. See **[OPPORTUNITY_STAGES.md](OPPORTUNITY_STAGES.md)** for full definitions and how **time in the current stage** is calculated.
 
 ### Opportunity Stages
 
-Opportunities progress through 9 stages:
+The Hub uses **nine stages** (see link above). In the app, changing the stage:
 
-1. **Plan** - Initial planning
-2. **Prospect** - Prospecting and qualification
-3. **Qualify** - Qualification
-4. **Discover** - Discovery phase
-5. **Differentiate** - Differentiation
-6. **Propose** - Proposal stage
-7. **Close** - Closing stage
-8. **Delivery and Success** - Post-sale delivery
-9. **Expand** - Expansion opportunities
+- Appends a row to **Stage history**
+- Computes how long you were in the previous stage (**duration** days)
+- Resets **time in current stage** visible on the opportunity list and detail header
+
+Rough mapping to common Salesforce wording (informal — your org may vary):
+
+
+| Hub stage | Often similar Salesforce label |
+|-----------|--------------------------------|
+| Plan | Early plan / qualify motion |
+| Qualify | Qualify |
+| Discover | Discover |
+| Differentiate | Differentiate |
+| Propose | Propose & Commit |
+| Close | Closing / contracting |
+| Delivery and Success | Post-close delivery |
+
 
 ### Adding an Opportunity
 
 1. Select a customer
-2. In the **"Opportunities"** section, click **"Add Opportunity"**
-3. Fill out the form:
+2. In the **"Opportunities"** section, click **"New Opportunity"** (this opens the hub form).
+3. Use the **question-mark help icons** beside fields for explanations. Expand **“Reference: all nine stages…”** for stage wording.
+
+4. Fill out the form:
 
 **Required:**
 - **Opportunity Name** - Descriptive name
@@ -295,7 +324,7 @@ Opportunities progress through 9 stages:
 ### Viewing Opportunity History
 
 1. Click **"View"** on an opportunity
-2. Scroll to **"Stage History"** section
+2. Scroll to **"Stage history"** section
 3. See complete timeline of stage changes
 
 **History shows:**
@@ -312,6 +341,43 @@ Opportunities progress through 9 stages:
 - **Owner** - Filter by opportunity owner
 - **Type** - Filter by opportunity type
 - **Priority** - High, Medium, Low, Critical
+
+---
+
+## Tasks & Kanban
+
+The workspace **opens here by default** — use it as your weekly cockpit. The top of the tab includes a short explainer; each field in the task drawer has a **?** help hint when you create or edit.
+
+### Basics
+
+1. You should land on **Tasks & Kanban** when you open the hub; if not, select it **first** in the workspace tab bar (see [Interface Overview](#interface-overview)).
+2. Switch between **Board** (Kanban) and **Month** (calendar); the toggle uses your current filters in both views.
+3. Create a task with a **title**, **category**, optional **description** and **due date**, optional links to a **customer** and/or **opportunity**, and optional **products** (from Entity Management—the same catalogue used on accounts).
+
+### Status columns
+
+Kanban columns: **To do**, **In progress**, **Done**, and **Cancelled**. Drag cards between columns to update status (order within a column is saved). Tasks marked **Cancelled** are excluded from the dashboard **Open tasks** count on the home page.
+
+### Search and filters
+
+- **Search:** Matches title, description, category name, linked account name, opportunity name, and product names on the task.
+- **Filters:** Status, category, account, and **product** (tasks that include that product).
+- Use **Clear filters** when filters hide everything you expected to see.
+
+When filters narrow the board, reordering still updates the underlying task—hidden tasks keep their positions until you change them.
+
+### Categories
+
+- Pick a category (e.g. demo prep, AE support, generic call) or add your own labels.
+- Categories are shared across users in the same Firebase project.
+
+### Customer context
+
+- In **Customer Management**, account views can reflect **recent task activity** when tasks are linked to that customer or to that customer’s opportunities.
+
+### Optional bulk seed
+
+For a scripted import of demo schedules (Firebase Admin / service account), see **[SCRIPTS.md](SCRIPTS.md)**.
 
 ---
 

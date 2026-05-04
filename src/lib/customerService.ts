@@ -102,6 +102,20 @@ export class CustomerService {
     }
   }
 
+  async getCustomerByName(customerName: string): Promise<Customer | null> {
+    try {
+      const all = await this.getAllCustomers();
+      const match = all.find(
+        (c) =>
+          c.customerName?.toLowerCase() === customerName.trim().toLowerCase() ||
+          c.customerName?.toLowerCase().includes(customerName.trim().toLowerCase())) ?? null;
+      return match;
+    } catch (error) {
+      console.error('Error fetching customer by name:', error);
+      return null;
+    }
+  }
+
   async searchCustomers(searchTerm: string): Promise<Customer[]> {
     try {
       const q = query(

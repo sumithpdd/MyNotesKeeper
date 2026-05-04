@@ -8,10 +8,11 @@ Complete documentation of all features in the Customer Engagement Hub.
 2. [Customer Profiles](#customer-profiles)
 3. [Notes Management](#notes-management)
 4. [Opportunity Tracking](#opportunity-tracking)
-5. [AI Chatbot](#ai-chatbot)
-6. [Prompt Library](#prompt-library)
-7. [Entity Management](#entity-management)
-8. [Search & Filter](#search--filter)
+5. [Tasks & Kanban](#tasks--kanban)
+6. [AI Chatbot](#ai-chatbot)
+7. [Prompt Library](#prompt-library)
+8. [Entity Management](#entity-management)
+9. [Search & Filter](#search--filter)
 
 ---
 
@@ -24,7 +25,7 @@ Comprehensive CRUD (Create, Read, Update, Delete) operations for managing custom
 - ✅ Rich customer profiles with products, contacts, partners
 - ✅ Quick links to SharePoint and Salesforce
 - ✅ Account executive assignment
-- ✅ Real-time updates via Firebase
+- ✅ Updates via authenticated Hub APIs (workspace reload)
 
 ### Customer Fields
 - **Basic Info:** Name, website, dates
@@ -187,6 +188,37 @@ Track sales opportunities through their lifecycle with complete stage history.
 
 ---
 
+## Tasks & Kanban
+
+Engagement tasks for follow-ups (demos, AE support, presentations, calls, etc.) with optional links to **customers** and **opportunities**.
+
+### Where to use it
+
+- Open the **Tasks & Kanban** tab on the home dashboard.
+- Switch **Board** (Kanban, four statuses) or **Month** (tasks with due dates).
+
+### Features
+
+- **Statuses** — `todo`, `in_progress`, `done`, **`cancelled`** (drag-and-drop between columns; order per column is saved).
+- **Products on tasks** — Attach catalogue products to a task; cards show product badges; filter the board by product.
+- **Search & filters** — Text search (title, description, category, linked account/opportunity, product names on the task) plus filters for status, category, account, and product.
+- **Dashboard** — **Open tasks** count excludes **Done** and **Cancelled**.
+- **Categories** — User-defined task categories (seeded defaults; add your own).
+- **Linking** — Tasks can be tied to an **opportunity** and/or **customer**, or left unlinked for generic work.
+- **Filtered board** — When filters narrow visible tasks, drag-merge still updates the full underlying list.
+- **Last actioned on account** — When viewing a customer, recent task activity can surface from tasks linked to that account or its opportunities (driven by task `lastActionedAt`).
+- **Cleanup** — Deleting a customer or opportunity removes related engagement tasks (domain rules in `src/domain/engagement-hub/`).
+
+### Data
+
+- Firestore collections: **`engagementTasks`** (optional `productIds` array), **`taskCategories`** (see deployed [Firestore rules](DEPLOY_FIRESTORE_RULES.md)).
+
+### Scripts
+
+Optional demonstrator schedule seed: [SCRIPTS.md](SCRIPTS.md#demonstrator-tasks-seed).
+
+---
+
 ## AI Chatbot
 
 Natural language interface for data entry and updates.
@@ -199,11 +231,17 @@ Use conversational commands instead of forms:
 
 ### How It Works
 
-1. **Type command** in natural language
-2. **AI parses** to extract structured data
-3. **Preview** shows what will be created/updated
-4. **Confirm** to apply or **Cancel** to discard
-5. **Changes saved** automatically to Firebase
+**Instant assistant replies (LLM + tools on the server):**
+
+1. You type in the chat tab while signed in.
+2. **`AIChatPanel`** calls **`POST /api/ai-chat`** with your Firebase **Bearer** token and JSON **`{ message }`** (see [API_GUIDE.md](API_GUIDE.md)). Gemini runs **server-side**; writes use your verified **`uid`**.
+
+**Rule-based drafts with confirm:**
+
+1. For certain parsed intents the UI may **preview** structured changes before apply.
+2. **Confirm** runs the Hub CRUD callbacks (customers, contacts, entities, profiles, notes) backed by **`/api/*`** routes, or **Cancel** to discard.
+
+For both flows, persisted data flows through authenticated APIs (Firestore on the backend), not arbitrary client databases.
 
 ### Capabilities
 

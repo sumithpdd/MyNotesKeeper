@@ -4,7 +4,7 @@ import { Customer } from '@/types';
 export type SortBy = 'name' | 'created' | 'updated' | 'products';
 
 export function useCustomerSort() {
-  const [sortBy, setSortBy] = useState<SortBy>('name');
+  const [sortBy, setSortBy] = useState<SortBy>('updated');
 
   const sortCustomers = (customers: Customer[]): Customer[] => {
     return [...customers].sort((a, b) => {
@@ -16,7 +16,7 @@ export function useCustomerSort() {
         case 'updated':
           return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
         case 'products':
-          return b.products.length - a.products.length;
+          return (b.products ?? []).length - (a.products ?? []).length;
         default:
           return 0;
       }

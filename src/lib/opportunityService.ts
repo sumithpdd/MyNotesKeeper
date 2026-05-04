@@ -4,6 +4,7 @@ import {
   updateDoc, 
   deleteDoc, 
   doc, 
+  getDoc,
   getDocs, 
   query, 
   where,
@@ -60,6 +61,19 @@ export const opportunityService = {
     } catch (error) {
       console.error('Error getting opportunities:', error);
       return [];
+    }
+  },
+
+  // Get opportunity by ID
+  async getOpportunityById(opportunityId: string): Promise<Opportunity | null> {
+    try {
+      const docRef = doc(db, COLLECTION_NAME, opportunityId);
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) return null;
+      return convertToOpportunity(docSnap.id, docSnap.data());
+    } catch (error) {
+      console.error('Error getting opportunity by ID:', error);
+      return null;
     }
   },
 

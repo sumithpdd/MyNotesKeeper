@@ -35,6 +35,28 @@ export class CustomerNotesService {
     }
   }
 
+  async getNotesByCustomer(customerId: string): Promise<CustomerNote[]> {
+    try {
+      const q = query(
+        collection(db, COLLECTION_NAME),
+        where('customerId', '==', customerId)
+      );
+      const querySnapshot = await getDocs(q);
+      const notes = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        noteDate: doc.data().noteDate?.toDate() || new Date(),
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
+        updatedAt: doc.data().updatedAt?.toDate() || new Date(),
+      })) as CustomerNote[];
+      notes.sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+      return notes;
+    } catch (error) {
+      console.error('Error fetching notes by customer:', error);
+      return [];
+    }
+  }
+
   async getNoteById(id: string): Promise<CustomerNote | null> {
     try {
       const docRef = doc(db, COLLECTION_NAME, id);

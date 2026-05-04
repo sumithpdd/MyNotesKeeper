@@ -176,7 +176,24 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
 
 # Google Gemini AI (get from Google AI Studio)
 NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key
+
+# Easiest locally: put the downloaded key in project root as serviceAccountKey.json (gitignored) and uncomment:
+FIREBASE_SERVICE_ACCOUNT_PATH=./serviceAccountKey.json
+
+# Hosted (single line JSON):
+# FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account","project_id":"...",...}
 ```
+
+### Firebase Admin & Hub REST (`FIREBASE_SERVICE_ACCOUNT_*`)
+
+Use **one** of:
+
+| Variable | When to use |
+|----------|--------------|
+| **`FIREBASE_SERVICE_ACCOUNT_PATH`** | **Local:** path to the downloaded `.json` key (e.g. `./serviceAccountKey.json`). Resolved relative to the project directory if not absolute. |
+| **`FIREBASE_SERVICE_ACCOUNT_JSON`** | **Vercel / CI:** entire service account JSON as a **single line** string. |
+
+**Who sees which customers:** Omit **`HUB_WORKSPACE_CUSTOMER_SCOPE`** (default) to load **every** customer document for the shared team hub. Set **`HUB_WORKSPACE_CUSTOMER_SCOPE=mine`** in `.env.local` to only return customers whose **`createdBy`** equals your Firebase **`uid`** or **email** (private / per-creator mode).
 
 **Important:**
 - Never commit `.env.local` to git

@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Save, X, Building, Users, ExternalLink } from 'lucide-react';
-import { Customer, CreateCustomerData } from '@/types';
+import { Save, X, Building, Users, ExternalLink, Globe, Link2, GitBranch } from 'lucide-react';
+import { Customer, CreateCustomerData, MartechTool } from '@/types';
 import { MultiSelect } from './ui/MultiSelect';
 import { AIButton } from './ui/AIButton';
 import { 
@@ -14,10 +14,13 @@ import {
   dummyInternalContacts,
   dummyPartners 
 } from '../../data/dummyData';
+import { formatProductDisplayName } from '@/lib/productDisplay';
+import { customerWebsiteList, parseWebsitesFromFormText } from '@/lib/customerWebsites';
 
 const customerSchema = z.object({
   customerName: z.string().min(1, 'Customer name is required'),
-  website: z.string().optional(),
+  /** One public site URL per line */
+  websitesText: z.string().optional(),
   products: z.array(z.object({
     id: z.string(),
     name: z.string(),
@@ -28,6 +31,7 @@ const customerSchema = z.object({
   customerContacts: z.array(z.object({
     id: z.string(),
     name: z.string(),
+    companyName: z.string().optional(),
     email: z.string().optional(),
     phone: z.string().optional(),
     role: z.string().optional(),
@@ -38,18 +42,23 @@ const customerSchema = z.object({
     role: z.string().optional(),
     email: z.string().optional(),
   })),
-  accountExecutive: z.object({
+  accountExecutives: z.array(z.object({
     id: z.string(),
     name: z.string(),
     role: z.string().optional(),
     email: z.string().optional(),
-  }).optional(),
+  })),
   partners: z.array(z.object({
     id: z.string(),
     name: z.string(),
     type: z.string().optional(),
     website: z.string().optional(),
   })),
+  martechTools: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    purpose: z.string(),
+  })).optional(),
   sharePointUrl: z.string(),
   salesforceLink: z.string(),
   additionalLink: z.string().optional(),
@@ -75,17 +84,22 @@ type CustomerFormData = z.infer<typeof customerSchema>;
 
 interface CustomerFormProps {
   customer?: Customer;
+  products?: { id: string; name: string; version?: string }[];
+  partners?: { id: string; name: string; type?: string }[];
+  martechTools?: MartechTool[];
+  internalContacts?: { id: string; name: string; role?: string; email?: string }[];
   onSave: (customer: Customer) => void;
   onCancel: () => void;
 }
 
-export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) {
-  console.log('CustomerForm rendered with customer:', customer);
-  
+export function CustomerForm({ customer, products = [], partners = [], martechTools = [], internalContacts = [], onSave, onCancel }: CustomerFormProps) {
   const [customProducts, setCustomProducts] = useState(dummyProducts);
   const [customCustomerContacts, setCustomCustomerContacts] = useState(dummyCustomerContacts);
-  const [customInternalContacts, setCustomInternalContacts] = useState(dummyInternalContacts);
+  const [customInternalContacts, setCustomInternalContacts] = useState(internalContacts.length > 0 ? internalContacts : dummyInternalContacts);
   const [customPartners, setCustomPartners] = useState(dummyPartners);
+  const formProducts = products.length > 0 ? products : customProducts;
+  const formPartners = partners.length > 0 ? partners : customPartners;
+  const formInternalContacts = internalContacts.length > 0 ? internalContacts : customInternalContacts;
 
   const {
     register,
@@ -97,11 +111,13 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
     resolver: zodResolver(customerSchema),
     defaultValues: customer ? {
       customerName: customer.customerName,
+      websitesText: customerWebsiteList(customer).join('\n'),
       products: customer.products,
       customerContacts: customer.customerContacts,
       internalContacts: customer.internalContacts,
-      accountExecutive: customer.accountExecutive,
+      accountExecutives: customer.accountExecutives?.length ? customer.accountExecutives : (customer.accountExecutive ? [customer.accountExecutive] : []),
       partners: customer.partners,
+      martechTools: customer.martechTools || [],
       sharePointUrl: customer.sharePointUrl,
       salesforceLink: customer.salesforceLink,
       additionalLink: customer.additionalLink,
@@ -122,11 +138,13 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
       migrationNotes: customer.migrationNotes || '',
     } : {
       customerName: '',
+      websitesText: '',
       products: [],
       customerContacts: [],
       internalContacts: [],
-      accountExecutive: undefined,
+      accountExecutives: [],
       partners: [],
+      martechTools: [],
       sharePointUrl: '',
       salesforceLink: '',
       additionalLink: '',
@@ -157,13 +175,27 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
       console.log('Customer ID:', customer?.id);
       console.log('Form validation errors:', errors);
       
-      const customerData: CreateCustomerData = {
-        ...data,
-      };
+      const products = data.products || [];
+      const customerContacts = data.customerContacts || [];
+      const internalContacts = data.internalContacts || [];
+      const partners = data.partners || [];
+      const { websitesText, ...rest } = data;
+      const { website, websiteUrls } = parseWebsitesFromFormText(websitesText || '');
+      const customerData = {
+        ...rest,
+        website,
+        websiteUrls,
+        productIds: products.map((p: { id: string }) => p.id),
+        customerContactIds: customerContacts.map((c: { id: string }) => c.id),
+        internalContactIds: internalContacts.map((c: { id: string }) => c.id),
+        partnerIds: partners.map((p: { id: string }) => p.id),
+        martechToolIds: (data.martechTools || []).map((t: { id: string }) => t.id),
+      } as CreateCustomerData;
 
       const savedCustomer: Customer = {
         id: customer?.id || crypto.randomUUID(),
         ...customerData,
+        martechTools: data.martechTools,
         createdAt: customer?.createdAt || new Date(),
         updatedAt: new Date(),
       };
@@ -177,22 +209,33 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
   };
 
   return (
-    <div className="p-6">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <div className="p-6 max-w-4xl">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         {/* Basic Information */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Building className="h-5 w-5 mr-2" />
+        <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <h2 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Building className="h-5 w-5 text-blue-600" />
+            </div>
             Customer Information
-          </h3>
+          </h2>
+          {customer?.id && (
+            <div className="mb-5 p-3 bg-gray-50 rounded-lg">
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Collection ID</label>
+              <code className="text-sm font-mono text-gray-700" title="customers/{customer.id}">
+                {customer.id}
+              </code>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <Building className="h-4 w-4 text-gray-500" />
                 Customer Name *
               </label>
               <input
                 {...register('customerName')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                className="input-field"
                 placeholder="Enter customer name"
               />
               {errors.customerName && (
@@ -200,63 +243,82 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
               )}
             </div>
 
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <Globe className="h-4 w-4 text-blue-600" />
+                Website URLs
+              </label>
+              <textarea
+                {...register('websitesText')}
+                rows={3}
+                className="input-field resize-y min-h-[5rem]"
+                placeholder={'https://www.company.com\nhttps://www.company.co.uk'}
+              />
+              <p className="mt-1 text-xs text-gray-500">Enter one URL per line for accounts with multiple sites.</p>
+            </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <Link2 className="h-4 w-4 text-emerald-600" />
                 SharePoint URL
               </label>
               <div className="relative">
                 <input
                   {...register('sharePointUrl')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                  className="input-field pr-10"
                   placeholder="https://company.sharepoint.com/sites/..."
                 />
-                <ExternalLink className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <ExternalLink className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <ExternalLink className="h-4 w-4 text-amber-600" />
                 Salesforce Link
               </label>
               <div className="relative">
                 <input
                   {...register('salesforceLink')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                  className="input-field pr-10"
                   placeholder="https://company.lightning.force.com/..."
                 />
-                <ExternalLink className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <ExternalLink className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <Link2 className="h-4 w-4 text-violet-600" />
                 Additional Link
               </label>
               <div className="relative">
                 <input
                   {...register('additionalLink')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                  className="input-field pr-10"
                   placeholder="https://loop.microsoft.com/... or other document links"
                 />
-                <ExternalLink className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <ExternalLink className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Contacts and Products */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Users className="h-5 w-5 mr-2" />
+        <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <h2 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2">
+            <div className="p-2 bg-indigo-100 rounded-lg">
+              <Users className="h-5 w-5 text-indigo-600" />
+            </div>
             Contacts & Products
-          </h3>
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <MultiSelect
               options={customCustomerContacts}
               selected={watchedValues.customerContacts.map(c => typeof c === 'string' ? c : c.id)}
               onChange={(selected) => {
                 const selectedObjects = selected.map(id => 
-                  customCustomerContacts.find(c => c.id === id) || { id, name: id, email: '', role: '' }
+                  customCustomerContacts.find(c => c.id === id) || { id, name: id, companyName: '', email: '', role: '' }
                 );
                 setValue('customerContacts', selectedObjects);
               }}
@@ -264,7 +326,7 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
               placeholder="Select customer contacts..."
               allowCustom
               onAddCustom={(value) => {
-                const newContact = { id: `custom-${Date.now()}`, name: value, email: '', role: '' };
+                const newContact = { id: `custom-${Date.now()}`, name: value, companyName: '', email: '', role: '' };
                 setCustomCustomerContacts([...customCustomerContacts, newContact]);
                 setValue('customerContacts', [...watchedValues.customerContacts, newContact]);
               }}
@@ -289,29 +351,27 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
               }}
             />
             
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Account Executive
-              </label>
-              <select
-                value={watchedValues.accountExecutive?.id || ''}
-                onChange={(e) => {
-                  const selectedExec = customInternalContacts.find(c => c.id === e.target.value);
-                  setValue('accountExecutive', selectedExec || undefined);
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-              >
-                <option value="">Select Account Executive...</option>
-                {customInternalContacts.map(contact => (
-                  <option key={contact.id} value={contact.id}>
-                    {contact.name}{contact.role ? ` - ${contact.role}` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <MultiSelect
+              options={formInternalContacts.map(c => ({ id: c.id, name: `${c.name}${c.role ? ` - ${c.role}` : ''}`, description: c.email }))}
+              selected={(watchedValues.accountExecutives || []).map(c => typeof c === 'string' ? c : c.id)}
+              onChange={(selected) => {
+                const selectedObjects = selected.map(id =>
+                  formInternalContacts.find(c => c.id === id) || { id, name: id, role: '', email: '' }
+                );
+                setValue('accountExecutives', selectedObjects);
+              }}
+              label="Account Executives"
+              placeholder="Select Account Executive(s)..."
+              allowCustom={internalContacts.length === 0}
+              onAddCustom={internalContacts.length === 0 ? (value) => {
+                const newContact = { id: `custom-${Date.now()}`, name: value, role: 'Account Executive', email: '' };
+                setCustomInternalContacts(prev => [...prev, newContact]);
+                setValue('accountExecutives', [...(watchedValues.accountExecutives || []), newContact]);
+              } : undefined}
+            />
 
             <MultiSelect
-              options={customProducts}
+              options={formProducts.map(p => ({ id: p.id, name: p.name, version: p.version }))}
               selected={watchedValues.products.map(p => typeof p === 'string' ? p : p.id)}
               onChange={(selected) => {
                 const selectedObjects = selected.map(id => 
@@ -322,15 +382,28 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
               label="Products"
               placeholder="Select products..."
               allowCustom
-              onAddCustom={(value) => {
+              onAddCustom={products.length > 0 ? undefined : (value) => {
                 const newProduct = { id: `custom-${Date.now()}`, name: value, version: '' };
                 setCustomProducts([...customProducts, newProduct]);
                 setValue('products', [...watchedValues.products, newProduct]);
               }}
             />
 
+            {martechTools.length > 0 && (
+              <MultiSelect
+                options={martechTools.map(t => ({ id: t.id, name: t.name, description: t.purpose }))}
+                selected={(watchedValues.martechTools || []).map((t: { id: string }) => t.id)}
+                onChange={(selected) => {
+                  const selectedObjects = selected.map(id => martechTools.find(t => t.id === id)).filter(Boolean) as MartechTool[];
+                  setValue('martechTools', selectedObjects);
+                }}
+                label="Martech Tools"
+                placeholder="Select martech tools (e.g. Salesforce, DotMailer)..."
+              />
+            )}
+
             <MultiSelect
-              options={customPartners}
+              options={formPartners.map(p => ({ id: p.id, name: p.name, description: p.type }))}
               selected={watchedValues.partners.map(p => typeof p === 'string' ? p : p.id)}
               onChange={(selected) => {
                 const selectedObjects = selected.map(id => 
@@ -341,24 +414,29 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
               label="Partners"
               placeholder="Select partners..."
               allowCustom
-              onAddCustom={(value) => {
+              onAddCustom={partners.length > 0 ? undefined : (value) => {
                 const newPartner = { id: `custom-${Date.now()}`, name: value, type: '' };
                 setCustomPartners([...customPartners, newPartner]);
                 setValue('partners', [...watchedValues.partners, newPartner]);
               }}
             />
           </div>
-        </div>
+        </section>
 
         {/* Migration Opportunity Information */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Migration Opportunity Information</h3>
+        <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <h2 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2">
+            <div className="p-2 bg-amber-100 rounded-lg">
+              <GitBranch className="h-5 w-5 text-amber-600" />
+            </div>
+            Migration Opportunity Information
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Existing Migration Opp
               </label>
-              <select {...register('existingMigrationOpp')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white">
+              <select {...register('existingMigrationOpp')} className="select-field">
                 <option value="">Not Set</option>
                 <option value="yes">Yes</option>
                 <option value="no">No</option>
@@ -367,10 +445,10 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 License Type
               </label>
-              <select {...register('perpetualOrSubscription')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white">
+              <select {...register('perpetualOrSubscription')} className="select-field">
                 <option value="">Select...</option>
                 <option value="Perpetual">Perpetual</option>
                 <option value="Subscription">Subscription</option>
@@ -379,32 +457,32 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Hosting Location
               </label>
               <input
                 {...register('hostingLocation')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                className="input-field"
                 placeholder="e.g., Azure, AWS, PaaS"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Front End Tech
               </label>
               <input
                 {...register('frontEndTech')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                className="input-field"
                 placeholder="e.g., MVC, mv"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 EXM User
               </label>
-              <select {...register('exmUser')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white">
+              <select {...register('exmUser')} className="select-field">
                 <option value="">Not Set</option>
                 <option value="yes">Yes</option>
                 <option value="no">No</option>
@@ -412,10 +490,10 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Marketing Automation User
               </label>
-              <select {...register('marketingAutomationUser')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white">
+              <select {...register('marketingAutomationUser')} className="select-field">
                 <option value="">Not Set</option>
                 <option value="yes">Yes</option>
                 <option value="no">No</option>
@@ -423,21 +501,21 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Integrations
               </label>
               <input
                 {...register('integrations')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                className="input-field"
                 placeholder="e.g., Salesforce, Dynamics, CRM"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Heavily Customised CE
               </label>
-              <select {...register('heavilyCustomisedCE')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white">
+              <select {...register('heavilyCustomisedCE')} className="select-field">
                 <option value="">Not Set</option>
                 <option value="yes">Yes</option>
                 <option value="no">No</option>
@@ -445,10 +523,10 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Migration Complexity
               </label>
-              <select {...register('migrationComplexity')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white">
+              <select {...register('migrationComplexity')} className="select-field">
                 <option value="">Select...</option>
                 <option value="Low">Low</option>
                 <option value="Medium">Medium</option>
@@ -457,10 +535,10 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Customer Aware of XMC
               </label>
-              <select {...register('customerAwareOfXMC')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white">
+              <select {...register('customerAwareOfXMC')} className="select-field">
                 <option value="">Not Set</option>
                 <option value="yes">Yes</option>
                 <option value="no">No</option>
@@ -478,21 +556,21 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
                 <AIButton 
                   currentText={watchedValues.compellingEvent || ''} 
                   onGenerated={(text) => setValue('compellingEvent', text)}
-                  context={`Customer: ${watchedValues.customerName}, Products: ${watchedValues.products.map(p => p.name).join(', ')}`}
+                  context={`Customer: ${watchedValues.customerName}, Products: ${watchedValues.products.map((p) => formatProductDisplayName(p)).join(', ')}`}
                 />
               </div>
               <input
                 {...register('compellingEvent')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                className="input-field"
                 placeholder="e.g., 2026 upgrade, cost savings"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Managed Cloud
               </label>
-              <select {...register('managedCloud')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white">
+              <select {...register('managedCloud')} className="select-field">
                 <option value="">Not Set</option>
                 <option value="yes">Yes</option>
                 <option value="no">No</option>
@@ -500,13 +578,13 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Date Analysed
               </label>
               <input
                 type="date"
                 {...register('dateAnalysed')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                className="input-field"
               />
             </div>
 
@@ -525,29 +603,29 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
               <textarea
                 {...register('migrationNotes')}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                className="input-field"
                 placeholder="Add migration-specific notes here..."
               />
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Form Actions */}
         <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
           <button
             type="button"
             onClick={onCancel}
-            className="px-6 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+            className="flex items-center gap-2 px-5 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium transition-colors"
           >
-            <X className="h-4 w-4 mr-2" />
+            <X className="h-4 w-4" />
             Cancel
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="px-6 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-3 text-white bg-blue-600 rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50"
           >
-            <Save className="h-4 w-4 mr-2" />
+            <Save className="h-4 w-4" />
             {isSubmitting ? 'Saving...' : 'Save Customer'}
           </button>
         </div>

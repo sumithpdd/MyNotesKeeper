@@ -1,22 +1,40 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Download, Filter, Search, Calendar, Edit } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { Download, Filter, Search, Calendar, Edit, User, MoreVertical, Eye, Trash2 } from 'lucide-react';
 import { Customer } from '@/types';
+import { getAccountExecutiveColor } from '@/lib/accountExecutiveColors';
+import { getMartechToolColor } from '@/lib/martechToolColors';
+import { formatProductDisplayName } from '@/lib/productDisplay';
 
 interface MigrationOpportunitiesGridProps {
   customers: Customer[];
   onEdit?: (customer: Customer) => void;
   onDelete?: (id: string) => void;
+  onSelectCustomer?: (customerId: string) => void;
 }
 
 export function MigrationOpportunitiesGrid({ 
   customers, 
   onEdit, 
-  onDelete 
+  onDelete,
+  onSelectCustomer,
 }: MigrationOpportunitiesGridProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const [filter, setFilter] = useState<'all' | 'yes' | 'no'>('all');
+  const [filterAE, setFilterAE] = useState<string>('all');
   
   // Filter customers for migration opportunities
   const migrationOpportunities = useMemo(() => {
@@ -35,7 +53,12 @@ export function MigrationOpportunitiesGrid({
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(customer => 
         customer.customerName.toLowerCase().includes(term) ||
-        customer.products.some(p => p.name.toLowerCase().includes(term) || p.version?.toLowerCase().includes(term)) ||
+        (customer.products ?? []).some(
+          (p) =>
+            p.name.toLowerCase().includes(term) ||
+            p.version?.toLowerCase().includes(term) ||
+            formatProductDisplayName(p).toLowerCase().includes(term)
+        ) ||
         customer.migrationComplexity?.toLowerCase().includes(term) ||
         customer.mergedNotes?.toLowerCase().includes(term) ||
         customer.hostingLocation?.toLowerCase().includes(term) ||
@@ -49,16 +72,35 @@ export function MigrationOpportunitiesGrid({
     } else if (filter === 'no') {
       filtered = filtered.filter(customer => !customer.existingMigrationOpp || customer.existingMigrationOpp.toLowerCase() === 'no' || customer.existingMigrationOpp.toLowerCase() === 'n');
     }
+
+    // Filter by Account Executive (match by name)
+    if (filterAE !== 'all') {
+      filtered = filtered.filter(customer => {
+        const aes = customer.accountExecutives || (customer.accountExecutive ? [customer.accountExecutive] : []) || customer.internalContacts || [];
+        return aes.some(c => c?.name === filterAE);
+      });
+    }
     
     return filtered;
-  }, [migrationOpportunities, searchTerm, filter]);
+  }, [migrationOpportunities, searchTerm, filter, filterAE]);
+
+  const uniqueAEs = useMemo(() => {
+    const set = new Set<string>();
+    migrationOpportunities.forEach(c => {
+      const aes = c.accountExecutives || (c.accountExecutive ? [c.accountExecutive] : []) || c.internalContacts || [];
+      aes.forEach(ae => { if (ae?.name) set.add(ae.name); });
+    });
+    return Array.from(set).sort();
+  }, [migrationOpportunities]);
   
   // Export to CSV
   const handleExportCSV = () => {
     const headers = [
       'Customer Name',
+      'Account Executive',
       'Product',
       'Version',
+      'Martech Tools',
       'Perpetual or Subscription',
       'Hosting Location',
       'Front End Tech',
@@ -77,11 +119,20 @@ export function MigrationOpportunitiesGrid({
     
     const csvRows = [
       headers.join(','),
-      ...filteredOpportunities.map(customer => [
-        customer.customerName,
-        customer.products.map(p => p.name).join(', ') || '',
-        customer.products.map(p => p.version || '').join(', ') || '',
-        customer.perpetualOrSubscription || '',
+      ...filteredOpportunities.map(customer => {
+        const ae = customer.accountExecutive?.name || customer.internalContacts?.[0]?.name;
+        const aeLabel = customer.accountExecutive?.role
+          ? `${customer.accountExecutive.name} - ${customer.accountExecutive.role}`
+          : customer.internalContacts?.[0]?.role
+            ? `${customer.internalContacts[0].name} - ${customer.internalContacts[0].role}`
+            : ae;
+        return [
+          customer.customerName,
+          aeLabel || '',
+          (customer.products ?? []).map((p) => formatProductDisplayName(p)).join('; ') || '',
+          (customer.products ?? []).map((p) => p.version || '').join('; ') || '',
+          (customer.martechTools || []).map(t => t.name).join(', ') || '',
+          customer.perpetualOrSubscription || '',
         customer.hostingLocation || '',
         customer.frontEndTech || '',
         customer.exmUser || '',
@@ -95,7 +146,8 @@ export function MigrationOpportunitiesGrid({
         customer.dateAnalysed || '',
         customer.existingMigrationOpp || '',
         customer.migrationNotes || customer.mergedNotes || ''
-      ].map(val => `"${(val || '').toString().replace(/"/g, '""')}"`).join(','))
+        ];
+      }).map(row => row.map(val => `"${(val || '').toString().replace(/"/g, '""')}"`).join(','))
     ];
     
     const csvContent = csvRows.join('\n');
@@ -159,12 +211,41 @@ export function MigrationOpportunitiesGrid({
             onChange={(e) => setFilter(e.target.value as 'all' | 'yes' | 'no')}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-              <option value="all">All Migration Opportunities</option>
+            <option value="all">All Migration Opportunities</option>
             <option value="yes">With Migration Opp</option>
             <option value="no">Without Migration Opp</option>
           </select>
         </div>
+        <div className="flex items-center gap-2">
+          <User className="h-4 w-4 text-gray-400" />
+          <select
+            value={filterAE}
+            onChange={(e) => setFilterAE(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Account Executives</option>
+            {uniqueAEs.map(ae => (
+              <option key={ae} value={ae}>{ae}</option>
+            ))}
+          </select>
+        </div>
       </div>
+
+      {/* AE Color Legend */}
+      {uniqueAEs.length > 0 && (
+        <div className="flex flex-wrap gap-2 items-center text-xs">
+          <span className="text-gray-500 font-medium">By AE:</span>
+          {uniqueAEs.map(ae => {
+            const c = getAccountExecutiveColor(ae);
+            return (
+              <span key={ae} className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full ${c.badge}`}>
+                <span className={`w-2 h-2 rounded-full ${c.dot}`} />
+                {ae}
+              </span>
+            );
+          })}
+        </div>
+      )}
       
       {/* Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -173,24 +254,91 @@ export function MigrationOpportunitiesGrid({
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account Executive</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Products</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Martech Tools</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">License</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hosting</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Complexity</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Compelling Event</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Analysed</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">More</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredOpportunities.map((customer) => (
-                <tr key={customer.id} className="hover:bg-gray-50 transition-colors">
+              {filteredOpportunities.map((customer) => {
+                const contacts = customer.accountExecutives?.length
+                  ? customer.accountExecutives
+                  : customer.internalContacts?.length
+                    ? customer.internalContacts
+                    : customer.accountExecutive
+                      ? [customer.accountExecutive]
+                      : [];
+                const primaryContact = contacts[0];
+                const aeName = primaryContact?.name;
+                const aeLabel = primaryContact?.role ? `${primaryContact.name} - ${primaryContact.role}` : primaryContact?.name;
+                const aeColor = getAccountExecutiveColor(aeName);
+                return (
+                <tr
+                  key={customer.id}
+                  className={`hover:opacity-90 transition-all border-l-4 ${aeColor.border} ${aeColor.bg}`}
+                >
                   <td className="px-3 py-2 font-medium text-gray-900">{customer.customerName}</td>
-                  <td className="px-3 py-2 text-gray-900">{customer.products.map(p => `${p.name}${p.version ? ` v${p.version}` : ''}`).join(', ') || '-'}</td>
+                  <td className="px-3 py-2">
+                    <code className="text-xs text-gray-500 font-mono" title="customers/{customer.id}">{customer.id}</code>
+                  </td>
+                  <td className="px-3 py-2">
+                    {aeLabel ? (
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${aeColor.badge}`}>
+                        <span className={`w-2 h-2 rounded-full ${aeColor.dot}`} />
+                        {aeLabel}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-sm">—</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2">
+                    <div className="flex flex-wrap gap-1">
+                      {(customer.products ?? []).length > 0 ? (
+                        (customer.products ?? []).map((p) => (
+                          <span
+                            key={p.id}
+                            className="inline-flex px-2 py-0.5 rounded text-xs bg-white/80 text-gray-800 border border-gray-200 font-medium"
+                          >
+                            {formatProductDisplayName(p)}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2">
+                    <div className="flex flex-wrap gap-1">
+                      {(customer.martechTools || []).length > 0 ? (
+                        customer.martechTools!.map((t) => {
+                          const c = getMartechToolColor(t.name);
+                          return (
+                            <span
+                              key={t.id}
+                              className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${c.bg} ${c.text}`}
+                              title={t.purpose}
+                            >
+                              {t.name}
+                            </span>
+                          );
+                        })
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-3 py-2 text-gray-900">{customer.perpetualOrSubscription || '-'}</td>
                   <td className="px-3 py-2 text-gray-900">{customer.hostingLocation || '-'}</td>
                   <td className="px-3 py-2">
-                    {customer.migrationComplexity && (
+                    {customer.migrationComplexity ? (
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                         customer.migrationComplexity.toLowerCase() === 'high' ? 'bg-red-100 text-red-800' :
                         customer.migrationComplexity.toLowerCase() === 'medium' ? 'bg-yellow-100 text-yellow-800' :
@@ -198,6 +346,8 @@ export function MigrationOpportunitiesGrid({
                       }`}>
                         {customer.migrationComplexity}
                       </span>
+                    ) : (
+                      <span className="text-gray-400">—</span>
                     )}
                   </td>
                   <td className="px-3 py-2 text-gray-900 max-w-xs truncate" title={customer.compellingEvent || ''}>
@@ -206,20 +356,56 @@ export function MigrationOpportunitiesGrid({
                   <td className="px-3 py-2 text-gray-900 max-w-xs truncate" title={customer.migrationNotes || customer.mergedNotes || ''}>
                     {customer.migrationNotes || customer.mergedNotes || '-'}
                   </td>
+                  <td className="px-3 py-2 text-sm text-gray-600">
+                    {customer.dateAnalysed || '—'}
+                  </td>
                   <td className="px-3 py-2">
-                    {onEdit && (
+                    <div className="relative" ref={menuRef}>
                       <button
-                        onClick={() => onEdit(customer)}
-                        className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
-                        title="Edit Customer"
+                        onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === customer.id ? null : customer.id); }}
+                        className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="More actions"
                       >
-                        <Edit className="h-3 w-3 mr-1" />
-                        Edit
+                        <MoreVertical className="h-4 w-4" />
                       </button>
-                    )}
+                      {openMenuId === customer.id && (
+                        <div className="absolute right-0 top-full mt-1 py-1 bg-white rounded-lg shadow-lg border border-gray-200 z-20 min-w-[140px]">
+                          {onSelectCustomer && (
+                            <button
+                              onClick={() => { onSelectCustomer(customer.id); setOpenMenuId(null); }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            >
+                              <Eye className="h-4 w-4" />
+                              View Details
+                            </button>
+                          )}
+                          {onEdit && (
+                            <button
+                              onClick={() => { onEdit(customer); setOpenMenuId(null); }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            >
+                              <Edit className="h-4 w-4" />
+                              Edit
+                            </button>
+                          )}
+                          {onDelete && (
+                            <button
+                              onClick={() => {
+                                if (confirm('Delete this customer?')) { onDelete(customer.id); setOpenMenuId(null); }
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>

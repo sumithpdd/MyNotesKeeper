@@ -1,4 +1,5 @@
 import { Product } from './product';
+import { MartechTool } from './martechTool';
 import { CustomerContact, InternalContact, Partner } from './contacts';
 
 // Customer Information (static data per customer)
@@ -6,16 +7,22 @@ export interface Customer {
   id: string;
   customerName: string;
   website?: string;
+  /** Multiple public site URLs for one account (first URL also mirrored on `website` when saved from Hub). */
+  websiteUrls?: string[];
   productIds: string[]; // References to products collection
   products?: Product[]; // Resolved for display only (not stored in DB)
   customerContactIds: string[]; // References to customerContacts collection
   customerContacts?: CustomerContact[]; // Resolved for display only (not stored in DB)
   internalContactIds: string[]; // References to internalContacts collection
   internalContacts?: InternalContact[]; // Resolved for display only (not stored in DB)
-  accountExecutiveId?: string; // Reference to internalContacts collection (role: Account Executive)
-  accountExecutive?: InternalContact; // Resolved for display only (not stored in DB)
+  accountExecutiveId?: string; // Primary AE (backward compat)
+  accountExecutive?: InternalContact; // Primary AE (backward compat)
+  accountExecutiveIds?: string[]; // Multiple Account Executives
+  accountExecutives?: InternalContact[]; // Resolved for display (not stored in DB)
   partnerIds: string[]; // References to partners collection
   partners?: Partner[]; // Resolved for display only (not stored in DB)
+  martechToolIds?: string[]; // References to martechTools collection
+  martechTools?: MartechTool[]; // Resolved for display only (not stored in DB)
   sharePointUrl: string;
   salesforceLink: string;
   additionalLink?: string;
@@ -43,16 +50,21 @@ export interface Customer {
 export interface CreateCustomerData {
   customerName: string;
   website?: string;
+  websiteUrls?: string[];
   productIds: string[]; // References only
   products?: Product[]; // For backward compatibility
   customerContactIds: string[]; // References only
   customerContacts?: CustomerContact[]; // For backward compatibility
   internalContactIds: string[]; // References only
   internalContacts?: InternalContact[]; // For backward compatibility
-  accountExecutiveId?: string; // Reference only
+  accountExecutiveId?: string; // Primary AE (backward compat)
   accountExecutive?: InternalContact; // For backward compatibility
+  accountExecutiveIds?: string[]; // Multiple Account Executives
+  accountExecutives?: InternalContact[]; // For backward compatibility
   partnerIds: string[]; // References only
   partners?: Partner[]; // For backward compatibility
+  martechToolIds?: string[]; // References only
+  martechTools?: MartechTool[]; // For backward compatibility
   sharePointUrl: string;
   salesforceLink: string;
   additionalLink?: string;

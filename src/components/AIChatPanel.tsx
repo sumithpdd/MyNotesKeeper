@@ -22,6 +22,8 @@ interface AIChatPanelProps {
   isOpen: boolean;
   onClose: () => void;
   customers: Customer[];
+  notes?: CustomerNote[];
+  customerProfiles?: CustomerProfile[];
   customerContacts: CustomerContact[];
   internalContacts: InternalContact[];
   products: Product[];
@@ -32,15 +34,19 @@ interface AIChatPanelProps {
   onUpdateProfile?: (profile: Partial<CustomerProfile> & { customerId: string }) => Promise<void>;
   onAddCustomerContact?: (contact: CustomerContact) => Promise<CustomerContact>;
   onAddInternalContact?: (contact: InternalContact) => Promise<InternalContact>;
-  onAddProduct?: (product: Product) => void;
-  onAddPartner?: (partner: Partner) => void;
+  onAddProduct?: (product: Omit<Product, 'id'>) => Promise<Product | void>;
+  onAddPartner?: (partner: Omit<Partner, 'id'>) => Promise<Partner | void>;
   currentUser: { id: string; name: string };
+  getFirebaseIdToken: () => Promise<string | null>;
+  reloadWorkspace?: () => Promise<void>;
 }
 
 export function AIChatPanel({
   isOpen,
   onClose,
   customers,
+  notes = [],
+  customerProfiles = [],
   customerContacts,
   internalContacts,
   products,
@@ -53,14 +59,16 @@ export function AIChatPanel({
   onAddInternalContact,
   onAddProduct,
   onAddPartner,
-  currentUser
+  currentUser,
+  getFirebaseIdToken,
+  reloadWorkspace,
 }: AIChatPanelProps) {
   const [activeTab, setActiveTab] = useState<'chat' | 'prompts'>('chat');
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
       type: 'assistant',
-      content: `Hello! I'm your AI assistant. I can help you with:\n\n✓ Customer management\n✓ Notes and profiles\n✓ Opportunities tracking\n✓ Data entry and updates\n\nTry selecting a prompt from the Prompt Library or type your request naturally!`,
+      content: `Hello! I'm your AI assistant. I can help you with:\n\n✓ Customer lookup & summaries\n✓ Internal contacts (e.g. "Do I have internal contact [name]? If not create, they are Account Executive")\n✓ Customer contacts, products, partners\n✓ Notes and profiles\n✓ Create entities if not found\n\nTry a prompt from the library or type naturally!`,
       timestamp: new Date()
     }
   ]);
@@ -80,11 +88,45 @@ export function AIChatPanel({
 
   // Parse customer input with intelligent detection
   const parseCustomerInput = (input: string, existingCustomers: Customer[]) => {
-    const lowerInput = input.toLowerCase();
+    const lowerInput = input.toLowerCase().trim();
     
-    // Detect intent
+    // Detect LOOKUP intent first (do I have, tell me about, show me, summary of, etc.)
+    const isLookupQuery = 
+      /do\s+(?:i|we)\s+have\s+(?:a\s+)?customer\s+/i.test(input) ||
+      /do\s+(?:i|we)\s+have\s+[\"']?([A-Za-z\s&]+)[\"']?\s*\??$/i.test(input) ||
+      /(?:tell\s+me\s+about|show\s+me|info\s+about|information\s+about|summary\s+of|details\s+on)\s+([A-Za-z\s&]+)/i.test(input) ||
+      /(?:is\s+there\s+(?:a\s+)?customer\s+(?:named?\s+)?|customer\s+[\"']?)([A-Za-z\s&]+)/i.test(input);
+    
     let intent = '';
-    if (lowerInput.includes('create') || lowerInput.includes('add')) {
+    let customerName = '';
+    
+    if (isLookupQuery) {
+      intent = 'lookup_customer';
+      // Extract customer name from lookup patterns
+      const lookupPatterns = [
+        /do\s+(?:i|we)\s+have\s+(?:a\s+)?customer\s+[\"']?([A-Za-z\s&]+?)[\"']?\s*\??$/i,
+        /do\s+(?:i|we)\s+have\s+[\"']?([A-Za-z\s&]+?)[\"']?\s*\??$/i,
+        /(?:tell\s+me\s+about|show\s+me|info\s+about|information\s+about|summary\s+of|details\s+on)\s+[\"']?([A-Za-z\s&]+?)[\"']?\s*\??$/i,
+        /(?:is\s+there\s+(?:a\s+)?customer\s+(?:named?\s+)?|customer\s+)[\"']?([A-Za-z\s&]+?)[\"']?\s*\??$/i,
+        /[\"']([A-Za-z\s&]+)[\"']/  // Quoted name
+      ];
+      for (const pattern of lookupPatterns) {
+        const match = input.match(pattern);
+        if (match && match[1]) {
+          customerName = match[1].trim();
+          if (customerName.length > 2) break;
+        }
+      }
+      // Fallback: take the last substantial phrase (often the customer name)
+      if (!customerName && input.length > 10) {
+        const words = input.replace(/\?+$/, '').trim().split(/\s+/);
+        const skipWords = ['do', 'i', 'we', 'have', 'a', 'customer', 'the', 'tell', 'me', 'about', 'show', 'info', 'information', 'summary', 'of', 'details', 'on', 'is', 'there', 'named'];
+        const nameWords = words.filter(w => !skipWords.includes(w.toLowerCase()) && w.length > 1);
+        if (nameWords.length > 0) {
+          customerName = nameWords.join(' ');
+        }
+      }
+    } else if (lowerInput.includes('create') || lowerInput.includes('add')) {
       intent = 'create_customer';
     } else if (lowerInput.includes('update')) {
       intent = 'update_customer';
@@ -92,19 +134,19 @@ export function AIChatPanel({
       intent = 'create_note';
     }
     
-    // Extract customer name (look for common patterns)
-    let customerName = '';
-    const namePatterns = [
-      /(?:customer|record|account)\s+(?:for|named?)\s+([A-Z][A-Za-z\s&]+?)(?:\s+-|\s+with|\s+Stake|$)/i,
-      /(?:create|add|update)\s+([A-Z][A-Za-z\s&]+?)(?:\s+-|\s+with|\s+Stake|$)/i,
-      /^([A-Z][A-Za-z\s&]+?)(?:\s+-|\s+Stake)/i
-    ];
-    
-    for (const pattern of namePatterns) {
-      const match = input.match(pattern);
-      if (match && match[1]) {
-        customerName = match[1].trim();
-        break;
+    // Extract customer name for non-lookup intents
+    if (!customerName && intent !== 'lookup_customer') {
+      const namePatterns = [
+        /(?:customer|record|account)\s+(?:for|named?)\s+([A-Z][A-Za-z\s&]+?)(?:\s+-|\s+with|\s+Stake|$)/i,
+        /(?:create|add|update)\s+([A-Z][A-Za-z\s&]+?)(?:\s+-|\s+with|\s+Stake|$)/i,
+        /^([A-Z][A-Za-z\s&]+?)(?:\s+-|\s+Stake)/i
+      ];
+      for (const pattern of namePatterns) {
+        const match = input.match(pattern);
+        if (match && match[1]) {
+          customerName = match[1].trim();
+          break;
+        }
       }
     }
     
@@ -202,6 +244,9 @@ export function AIChatPanel({
     return {
       intent,
       data,
+      customerData: data,
+      customerContacts: data.customerContacts || [],
+      internalContacts: data.internalContacts || [],
       message,
       existingCustomer: existingCustomer || null
     };
@@ -276,7 +321,7 @@ export function AIChatPanel({
   const filteredPrompts = getFilteredPrompts();
   const selectedPrompt = allPrompts.find(p => p.id === selectedPromptId);
 
-  // Handle chat submission
+  // Hub assistant: LLM + tools execute only on `/api/ai-chat` with the signed-in user Bearer token (no client Gemini keys).
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isProcessing) return;
@@ -294,16 +339,47 @@ export function AIChatPanel({
     setIsProcessing(true);
 
     try {
-      // Parse the input to extract customer information
+      const token = await getFirebaseIdToken();
+      if (!token) throw new Error('Sign in required');
+
+      const apiRes = await fetch('/api/ai-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ message: userInput }),
+      });
+
+      const data = await apiRes.json();
+
+      if (!apiRes.ok || data?.success !== true) {
+        const err =
+          typeof data?.error === 'string'
+            ? data.error
+            : apiRes.statusText || 'Assistant request failed';
+        throw new Error(err);
+      }
+
+      if (data.text) {
+        const assistantMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: data.text as string,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+        await reloadWorkspace?.();
+        return;
+      }
+
+      // Fallback: rule-based parser for create/update (client-side draft; confirmations still use Hub APIs via callbacks)
       const parsedData = parseCustomerInput(userInput, customers);
       
       if (!parsedData.intent) {
         throw new Error("I couldn't understand what you want to do. Please try rephrasing or use a prompt from the library.");
       }
 
-      // Generate detailed response with extracted data
-      const extractedInfo = generateExtractedInfo(parsedData);
-      
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
@@ -314,11 +390,11 @@ export function AIChatPanel({
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'system',
-        content: `❌ ${error.message}\n\nTip: Try using a prompt from the Prompt Library tab for better results.`,
+        content: `❌ ${error instanceof Error ? error.message : 'Something went wrong'}\n\nTip: Try using a prompt from the Prompt Library tab for better results.`,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);

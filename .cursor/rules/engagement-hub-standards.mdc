@@ -1,0 +1,41 @@
+---
+description: Security, authenticated APIs, architecture (components + domain), clean code — Customer Engagement Hub
+alwaysApply: true
+---
+
+# MyNotesKeeper — hub standards
+
+## Secrets and credentials
+
+- **Never** commit or paste into source: `.env.local`, service account JSON, API keys, refresh tokens, or customer PII dumps.
+- **Never** hardcode Gemini/Firebase keys, project IDs tied to prod, or `FIREBASE_SERVICE_ACCOUNT_*` content in repo files.
+- Server-only secrets use **environment variables** (see `docs/SETUP.md`, `docs/SECURITY.md`). `NEXT_PUBLIC_*` is intentionally browser-visible — use restricted keys and avoid putting true secrets there.
+
+## Frontend data access — API first
+
+- **Hub workspace and mutations** MUST go through **Next.js `/api/*` routes** with **`Authorization: Bearer <Firebase ID token>`** — not Admin SDK from the browser.
+- **Do not** add new client-side Firestore/database writes for hub business data (tasks, customers, opportunities, workspace). Persist via existing API handlers and `hubAuthFetch` / equivalent.
+- Firebase **client** SDK is acceptable only for **Auth** (ID tokens) and **public web config** — not for holding service accounts or bypassing server checks.
+- When changing data paths, keep **Firestore rules** and **server authorization** (`authorizeApiRequest`, ownership checks) aligned with `docs/SECURITY.md`.
+
+## Component architecture
+
+- Prefer **small, focused components** under `src/components/` (and feature folders like `src/components/tasks/`).
+- **Compose** pages from components; keep `src/app/page.tsx` (and routes) thin — wiring, not business rules.
+- Shared UI in `src/components/ui/`; reuse before duplicating markup or behavior.
+
+## Domain-driven design
+
+- **Domain rules and pure logic** live under **`src/domain/`** (and small **`src/lib/`** helpers), not inside API route bodies or giant components.
+- **Types** reflect the domain (`src/types/`); API and UI map to those shapes.
+- **Server** boundary: `src/lib/server/*`, `src/app/api/*` — auth, Firestore Admin, validation. **Client** boundary: hooks, `hubAuthFetch`, presentation.
+
+## Clean code
+
+- **Minimal diffs**: change only what the task requires; avoid drive-by refactors and unrelated files.
+- **Readable names**, early returns, avoid deep nesting; match existing patterns (imports, formatting) in the file you edit.
+- **No silent failures** on security-sensitive paths — surface errors; do not log secrets or full tokens.
+
+## References
+
+- `docs/SECURITY.md`, `docs/API_GUIDE.md`, `firestore.rules`, `README.md` (Quick Start / env).

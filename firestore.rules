@@ -1,4 +1,6 @@
 rules_version = '2';
+// Auth required for all collections below. For tenant isolation, add fields (e.g. orgId) and
+// constrain writes with request.auth.uid + membership rules, or use createdBy on resources.
 service cloud.firestore {
   match /databases/{database}/documents {
     
@@ -39,6 +41,20 @@ service cloud.firestore {
     
     // Partners collection
     match /partners/{partnerId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Martech tools collection
+    match /martechTools/{toolId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Engagement tasks (Kanban / calendar; optional opp + customer link)
+    match /engagementTasks/{taskId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /taskCategories/{categoryId} {
       allow read, write: if request.auth != null;
     }
     

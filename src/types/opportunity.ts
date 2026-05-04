@@ -51,7 +51,9 @@ export interface Opportunity {
   type?: 'New Business' | 'Upsell' | 'Cross-sell' | 'Renewal' | 'Migration';
   competitorInfo?: string;
   nextSteps?: string;
-  
+  /** CRM record URL (e.g. Salesforce Lightning opportunity). */
+  crmOpportunityUrl?: string;
+
   // Metadata
   createdBy: string;
   updatedBy: string;
@@ -75,6 +77,7 @@ export interface CreateOpportunityData {
   type?: 'New Business' | 'Upsell' | 'Cross-sell' | 'Renewal' | 'Migration';
   competitorInfo?: string;
   nextSteps?: string;
+  crmOpportunityUrl?: string;
   createdBy: string;
   updatedBy: string;
 }

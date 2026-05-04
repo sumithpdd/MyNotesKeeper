@@ -75,7 +75,7 @@ Return a JSON object with these fields. Only include fields that are mentioned. 
 - customerName: The customer/company name (required)
 - website: Customer website URL
 - products: Array of product names (e.g., ["XM Cloud", "Personalize", "CDP", "XP", "XM", "OrderCloud", "Search"])
-- customerContacts: Array of contact objects with {name, email?, phone?, role?}
+- customerContacts: Array of contact objects with {name, companyName?, email?, phone?, role?}
 - internalContacts: Array of internal team member names
 - partners: Array of partner/implementation partner names
 - sharePointUrl: SharePoint link

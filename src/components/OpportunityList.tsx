@@ -1,12 +1,17 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Target, Plus, Edit, Trash2, Eye, TrendingUp, DollarSign, Calendar, Filter, ArrowUpDown } from 'lucide-react';
+import { Target, Plus, Edit, Trash2, Eye, TrendingUp, DollarSign, Calendar, Filter, ArrowUpDown, User, ExternalLink, Clock } from 'lucide-react';
 import { Opportunity, OpportunityStage } from '@/types';
+import { safeFormatDate } from '@/lib/utils';
+import { getAccountExecutiveColor } from '@/lib/accountExecutiveColors';
+import { formatProductDisplayName } from '@/lib/productDisplay';
+import { OPPORTUNITY_STAGE_ORDER, formatTimeInCurrentStage } from '@/lib/opportunityStages';
 
 interface OpportunityListProps {
   opportunities: Opportunity[];
   customerId: string;
+  accountExecutiveName?: string; // Fallback when opportunity.owner is not set
   onSelectOpportunity: (opportunityId: string) => void;
   onEditOpportunity: (opportunity: Opportunity) => void;
   onDeleteOpportunity: (opportunityId: string) => void;
@@ -35,6 +40,7 @@ const PRIORITY_COLORS = {
 export function OpportunityList({
   opportunities,
   customerId,
+  accountExecutiveName,
   onSelectOpportunity,
   onEditOpportunity,
   onDeleteOpportunity,
@@ -87,11 +93,9 @@ export function OpportunityList({
   };
 
   const getStageProgress = (stage: OpportunityStage): number => {
-    const stages: OpportunityStage[] = [
-      'Plan', 'Prospect', 'Qualify', 'Discover', 'Differentiate', 
-      'Propose', 'Close', 'Delivery and Success', 'Expand'
-    ];
-    return ((stages.indexOf(stage) + 1) / stages.length) * 100;
+    const idx = OPPORTUNITY_STAGE_ORDER.indexOf(stage);
+    const len = OPPORTUNITY_STAGE_ORDER.length;
+    return ((idx + 1) / len) * 100;
   };
 
   return (
@@ -102,6 +106,10 @@ export function OpportunityList({
           <h3 className="text-lg font-semibold text-gray-900">Opportunities</h3>
           <p className="text-sm text-gray-600">
             {filteredAndSortedOpportunities.length} of {customerOpportunities.length} opportunities
+          </p>
+          <p className="text-xs text-slate-500 mt-1 max-w-xl">
+            Stage shows where the deal sits in our nine-step path. Adding or editing an opportunity includes expandable stage definitions and CRM wording notes. Time in stage is calendar days since the last move into the current stage (see{' '}
+            <code className="text-[11px] bg-slate-100 px-1 rounded">docs/OPPORTUNITY_STAGES.md</code> in the repo).
           </p>
         </div>
         <button
@@ -123,15 +131,11 @@ export function OpportunityList({
             className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="All">All Stages</option>
-            <option value="Plan">Plan</option>
-            <option value="Prospect">Prospect</option>
-            <option value="Qualify">Qualify</option>
-            <option value="Discover">Discover</option>
-            <option value="Differentiate">Differentiate</option>
-            <option value="Propose">Propose</option>
-            <option value="Close">Close</option>
-            <option value="Delivery and Success">Delivery and Success</option>
-            <option value="Expand">Expand</option>
+            {OPPORTUNITY_STAGE_ORDER.map((stage) => (
+              <option key={stage} value={stage}>
+                {stage}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -153,10 +157,13 @@ export function OpportunityList({
       {/* Opportunities List */}
       {filteredAndSortedOpportunities.length > 0 ? (
         <div className="space-y-3">
-          {filteredAndSortedOpportunities.map((opportunity) => (
+          {filteredAndSortedOpportunities.map((opportunity) => {
+            const aeName = opportunity.owner?.name || accountExecutiveName;
+            const aeColor = getAccountExecutiveColor(aeName);
+            return (
             <div
               key={opportunity.id}
-              className="bg-white border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-all"
+              className={`border-l-4 rounded-lg p-4 transition-all ${aeColor.border} ${aeColor.bg} border border-gray-200/80 hover:shadow-md`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -171,11 +178,30 @@ export function OpportunityList({
                     <span className={`px-2 py-1 rounded-full text-xs font-medium border ${STAGE_COLORS[opportunity.currentStage]}`}>
                       {opportunity.currentStage}
                     </span>
+                    {opportunity.crmOpportunityUrl && (
+                      <a
+                        href={opportunity.crmOpportunityUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex p-1 rounded-lg text-blue-600 hover:bg-blue-50"
+                        title="Open in CRM"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    )}
                     {opportunity.priority && (
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${PRIORITY_COLORS[opportunity.priority]}`}>
                         {opportunity.priority}
                       </span>
                     )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-xs text-slate-600 mb-2">
+                    <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <span title="Calendar days since this deal last moved into the stage shown above.">
+                      {formatTimeInCurrentStage(opportunity)}
+                    </span>
                   </div>
 
                   {/* Progress Bar */}
@@ -210,34 +236,31 @@ export function OpportunityList({
                     {opportunity.expectedCloseDate && (
                       <div className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
-                        <span>Close: {new Date(opportunity.expectedCloseDate).toLocaleDateString()}</span>
+                        <span>Close: {safeFormatDate(opportunity.expectedCloseDate)}</span>
                       </div>
                     )}
 
-                    {opportunity.owner && (
+                    {(opportunity.owner || accountExecutiveName) && (
                       <div className="flex items-center gap-1">
-                        <TrendingUp className="h-4 w-4" />
-                        <span>{opportunity.owner.name}</span>
+                        <User className="h-4 w-4 text-gray-500" />
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${aeColor.badge}`}>
+                          {aeName || '—'}
+                        </span>
                       </div>
                     )}
                   </div>
 
-                  {/* Products */}
+                  {/* Products - expanded to show all */}
                   {opportunity.products.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {opportunity.products.slice(0, 3).map((product) => (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {opportunity.products.map((product) => (
                         <span
                           key={product.id}
-                          className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 text-gray-700"
+                          className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white/90 text-gray-800 border border-gray-200 shadow-sm"
                         >
-                          {product.name}
+                          {formatProductDisplayName(product)}
                         </span>
                       ))}
-                      {opportunity.products.length > 3 && (
-                        <span className="text-xs text-gray-500 px-1">
-                          +{opportunity.products.length - 3} more
-                        </span>
-                      )}
                     </div>
                   )}
 
@@ -279,7 +302,8 @@ export function OpportunityList({
                 </div>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
       ) : (
         <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">

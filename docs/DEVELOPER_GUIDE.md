@@ -66,58 +66,46 @@ npm start
 ```
 MyNotesKeeper/
 ├── src/
-│   ├── app/                    # Next.js App Router
-│   │   ├── page.tsx           # Main page (home)
-│   │   ├── layout.tsx         # Root layout
-│   │   ├── globals.css        # Global styles
-│   │   └── api/               # API routes
+│   ├── app/
+│   │   ├── page.tsx            # Engagement hub shell (tabs, stats, feature wiring)
+│   │   ├── layout.tsx
+│   │   ├── globals.css
+│   │   └── api/                # REST routes (Firebase Admin auth — see API_GUIDE.md)
 │   │
-│   ├── components/            # React components
-│   │   ├── customers/         # Customer-specific components
-│   │   │   ├── CustomerListHeader.tsx
-│   │   │   ├── CustomerSearchBar.tsx
-│   │   │   ├── CustomerFilterPanel.tsx
-│   │   │   ├── CustomerGridCard.tsx
-│   │   │   ├── CustomerGridView.tsx
-│   │   │   ├── CustomerTableView.tsx
-│   │   │   └── CustomerEmptyState.tsx
-│   │   ├── CustomerList.tsx   # Main customer list orchestrator
-│   │   ├── CustomerManagement.tsx
-│   │   ├── CustomerForm.tsx
-│   │   ├── OpportunityList.tsx
-│   │   ├── OpportunityForm.tsx
-│   │   ├── ChatbotInterface.tsx
-│   │   └── ui/                # Reusable UI components
+│   ├── domain/
+│   │   └── engagement-hub/     # Pure domain rules (task cascades, dashboard stats)
 │   │
-│   ├── hooks/                 # Custom React hooks
-│   │   ├── useCustomerFilters.ts
-│   │   ├── useCustomerSearch.ts
-│   │   └── useCustomerSort.ts
+│   ├── components/
+│   │   ├── ui/
+│   │   ├── home/               # Dashboard chrome (StatCard, HomeTabButton)
+│   │   ├── tasks/              # Kanban / calendar / task forms
+│   │   ├── customers/
+│   │   ├── forms/
+│   │   └── …                   # Orchestrators (CustomerManagement, EntityManagement, …)
 │   │
-│   ├── lib/                   # Utilities and services
-│   │   ├── firebase.ts        # Firebase config
-│   │   ├── customerService.ts  # Customer CRUD
-│   │   ├── opportunityService.ts
-│   │   ├── customerNotes.ts
-│   │   ├── ai.ts              # Gemini AI integration
-│   │   └── chatbotAI.ts       # Chatbot AI service
+│   ├── hooks/
+│   │   ├── useFirebaseData.ts
+│   │   ├── useFirestoreSnapshotSync.ts
+│   │   ├── useCustomerOperations.ts
+│   │   ├── useNoteOperations.ts
+│   │   ├── useOpportunityOperations.ts
+│   │   ├── useTaskOperations.ts
+│   │   ├── useEngagementDeletionHandlers.ts
+│   │   └── …
 │   │
-│   └── types/                 # TypeScript types (modular)
-│       ├── index.ts           # Central export
-│       ├── customer.ts        # Customer types
-│       ├── contacts.ts        # Contact types
-│       ├── product.ts         # Product types
-│       ├── opportunity.ts     # Opportunity types
-│       ├── user.ts            # User/Auth types
-│       └── ai.ts              # AI types
+│   ├── lib/
+│   │   ├── server/             # firebaseAdmin, authorizeApiRequest, adminFirestore, workspaceLoad, tasksAdmin
+│   │   ├── firebase.ts
+│   │   ├── customerService.ts
+│   │   ├── taskService.ts
+│   │   └── …
+│   │
+│   └── types/
 │
-├── data/                      # Data and seeds
-│   ├── dummyData.ts          # Dummy data generation
-│   └── dxpPools.ts           # DXP objectives/use cases
-│
-├── public/                    # Static assets
-├── docs/                      # Documentation
-└── scripts/                   # Utility scripts
+├── data/
+├── public/
+├── docs/
+└── scripts/
 ```
 
 ---
@@ -200,9 +188,12 @@ export function CustomerGridCard({ customer, isSelected, onClick }) {
 ### File Organization
 
 - **Keep components small** (< 200 lines ideal)
-- **Group related components** in folders (e.g., `customers/`)
+- **Use `ui/` components** for reusable primitives (TypeBadge, DetailRow, Avatar)
+- **Group related components** in folders (e.g., `customers/`, `forms/`)
 - **Export from index** files for clean imports
-- **Co-locate styles** if component-specific (though we use Tailwind)
+- **Extract logic to hooks** when component exceeds ~100 lines of logic
+
+📚 **See [COMPONENT_DESIGN.md](COMPONENT_DESIGN.md)** for full component patterns and reusability guide.
 
 ---
 
@@ -593,6 +584,7 @@ npm run dev
 ## Need Help?
 
 - **Architecture questions?** See [ARCHITECTURE.md](ARCHITECTURE.md)
+- **UX / journey across tabs?** See [CUSTOMER_JOURNEY.md](CUSTOMER_JOURNEY.md)
 - **Setup issues?** See [SETUP.md](SETUP.md)
 - **User features?** See [USER_GUIDE.md](USER_GUIDE.md)
 - **API reference?** Check the type files in `src/types/`

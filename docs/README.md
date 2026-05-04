@@ -9,16 +9,21 @@ Welcome! This guide helps you get started and find what you need quickly.
 | **[QUICKSTART.md](QUICKSTART.md)** | Get running in 5 minutes | Everyone |
 | **[SETUP.md](SETUP.md)** | Complete setup guide | First-time users |
 | **[USER_GUIDE.md](USER_GUIDE.md)** | How to use the app | Users/SEs |
+| **[OPPORTUNITY_STAGES.md](OPPORTUNITY_STAGES.md)** | **Deal stages**, CRM wording, **time in stage** | Everyone |
 | **[AI_CHAT_PANEL_GUIDE.md](AI_CHAT_PANEL_GUIDE.md)** | AI Assistant & Prompt Library | Everyone |
 | **[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)** | Development guide | Developers |
+| **[COMPONENT_DESIGN.md](COMPONENT_DESIGN.md)** | Component patterns & reusability | Developers |
 | **[JUNIOR_DEVELOPER_GUIDE.md](JUNIOR_DEVELOPER_GUIDE.md)** | Learn React/Next.js/TypeScript | Junior devs |
-| **[ARCHITECTURE.md](ARCHITECTURE.md)** | Technical architecture | Technical team |
+| **[ARCHITECTURE.md](ARCHITECTURE.md)** | Technical architecture & layering (domain, hooks, APIs) | Technical team |
+| **[API_GUIDE.md](API_GUIDE.md)** | REST APIs, **`GET /api/workspace`**, Firebase Admin Bearer auth | Developers / integrators |
 | **[FEATURES.md](FEATURES.md)** | Feature documentation | Everyone |
+| **[CUSTOMER_JOURNEY.md](CUSTOMER_JOURNEY.md)** | Engagement journey flows (how tabs fit together) | Everyone |
 | **[CHANGELOG.md](CHANGELOG.md)** | Version history & fixes | Everyone |
 | **[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)** | Database migration | Developers |
 | **[SCRIPTS.md](SCRIPTS.md)** | Migration scripts | Developers |
 | **[NORMALIZATION_COMPLETE.md](NORMALIZATION_COMPLETE.md)** | Normalization report | Technical |
-| **[SECURITY.md](SECURITY.md)** | Security guidelines | Everyone |
+| **[SECURITY.md](SECURITY.md)** | Security guidelines (env, APIs, Firebase) | Everyone |
+| **[DEPLOY_FIRESTORE_RULES.md](DEPLOY_FIRESTORE_RULES.md)** | Fix Firestore permissions | Developers |
 
 ---
 
@@ -51,9 +56,14 @@ Welcome! This guide helps you get started and find what you need quickly.
 - **Use AI Assistant** → [AI_CHAT_PANEL_GUIDE.md](AI_CHAT_PANEL_GUIDE.md)
 - **Create custom prompts** → [AI_CHAT_PANEL_GUIDE.md](AI_CHAT_PANEL_GUIDE.md#custom-prompts)
 - **Learn React/Next.js/TypeScript** → [JUNIOR_DEVELOPER_GUIDE.md](JUNIOR_DEVELOPER_GUIDE.md)
+- **Understand opportunity stages** → [OPPORTUNITY_STAGES.md](OPPORTUNITY_STAGES.md)
 - **Understand the code** → [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)
+- **Architecture & domain layer** → [ARCHITECTURE.md](ARCHITECTURE.md)
+- **Call REST APIs securely** → [API_GUIDE.md](API_GUIDE.md)
+- **Component patterns & reusability** → [COMPONENT_DESIGN.md](COMPONENT_DESIGN.md)
 - **Add a feature** → [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md#adding-features)
 - **Fix an error** → [SETUP.md](SETUP.md#troubleshooting)
+- **Fix Firestore permissions** → [DEPLOY_FIRESTORE_RULES.md](DEPLOY_FIRESTORE_RULES.md)
 - **See version history** → [CHANGELOG.md](CHANGELOG.md)
 
 ---
@@ -64,6 +74,7 @@ Welcome! This guide helps you get started and find what you need quickly.
 
 **Key Features:**
 - ✅ Customer & opportunity management
+- ✅ **Tasks & Kanban** — four statuses (incl. Cancelled), product tags, search & filters, calendar
 - ✅ AI-powered chatbot for data entry
 - ✅ Note templates and generation
 - ✅ Firebase cloud storage
@@ -71,7 +82,7 @@ Welcome! This guide helps you get started and find what you need quickly.
 
 **Tech Stack:**
 - **Frontend:** Next.js 15, React 19, TypeScript, Tailwind CSS
-- **Backend:** Firebase Firestore, Google Gemini AI
+- **Backend:** Firebase Firestore, Next.js **`/api/*`** + Firebase Admin, Google Gemini AI
 - **Auth:** Firebase Authentication (Google OAuth)
 
 ---

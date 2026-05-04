@@ -1,33 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Product, Partner } from '@/types';
+import { productService } from '@/lib/productService';
+import { partnerService } from '@/lib/partnerService';
+import { authorizeApiRequest } from '@/lib/server/authorizeApiRequest';
 
 /**
  * API Route: /api/entities
- * Handles products and partners management
- * Note: Currently uses in-memory state, can be extended to Firebase collections
+ * Handles products and partners management via Firebase
  */
 
 // GET all entities (products or partners)
 export async function GET(request: NextRequest) {
+  const auth = await authorizeApiRequest(request);
+  if (auth instanceof NextResponse) return auth;
   try {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type'); // 'products' | 'partners'
 
-    if (!type) {
-      return NextResponse.json(
-        { success: false, error: 'Type parameter required (products or partners)' },
-        { status: 400 }
-      );
+    if (type === 'products') {
+      const data = await productService.getAllProducts();
+      return NextResponse.json({ success: true, data });
+    }
+    if (type === 'partners') {
+      const data = await partnerService.getAllPartners();
+      return NextResponse.json({ success: true, data });
     }
 
-    // TODO: Implement Firebase queries
-    // const entities = await entityService.getAll(type);
-    
-    return NextResponse.json({ 
-      success: true, 
-      data: [],
-      message: `${type} are currently managed in client state. Firebase integration pending.` 
-    });
+    return NextResponse.json(
+      { success: false, error: 'Type parameter required: products or partners' },
+      { status: 400 }
+    );
   } catch (error: any) {
     console.error('GET /api/entities error:', error);
     return NextResponse.json(
@@ -39,6 +40,8 @@ export async function GET(request: NextRequest) {
 
 // POST create new entity
 export async function POST(request: NextRequest) {
+  const auth = await authorizeApiRequest(request);
+  if (auth instanceof NextResponse) return auth;
   try {
     const body = await request.json();
     const { entity, type } = body; // type: 'product' | 'partner'
@@ -50,22 +53,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate entity structure
-    if (!entity.id || !entity.name) {
+    if (!entity.name) {
       return NextResponse.json(
-        { success: false, error: 'Entity must have id and name' },
+        { success: false, error: 'Entity must have name' },
         { status: 400 }
       );
     }
 
-    // TODO: Implement Firebase collection save
-    // const entityId = await entityService.create(entity, type);
+    if (type === 'product') {
+      const productData = {
+        name: entity.name,
+        version: entity.version || '',
+        description: entity.description || '',
+        website: typeof entity.website === 'string' ? entity.website.trim() || '' : '',
+        status: entity.status || 'Active',
+      };
+      const id = await productService.createProduct(productData);
+      return NextResponse.json({ success: true, data: { id, ...productData } });
+    }
+    if (type === 'partner') {
+      const partnerData = {
+        name: entity.name,
+        type: entity.type || '',
+        website: entity.website || '',
+      };
+      const id = await partnerService.createPartner(partnerData);
+      return NextResponse.json({ success: true, data: { id, ...partnerData } });
+    }
 
-    return NextResponse.json({ 
-      success: true, 
-      data: entity,
-      message: `${type} creation will be implemented with Firebase collections` 
-    });
+    return NextResponse.json(
+      { success: false, error: 'Type must be product or partner' },
+      { status: 400 }
+    );
   } catch (error: any) {
     console.error('POST /api/entities error:', error);
     return NextResponse.json(
@@ -77,24 +96,33 @@ export async function POST(request: NextRequest) {
 
 // PUT update entity
 export async function PUT(request: NextRequest) {
+  const auth = await authorizeApiRequest(request);
+  if (auth instanceof NextResponse) return auth;
   try {
     const body = await request.json();
     const { entity, type } = body;
 
     if (!entity || !entity.id || !type) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
+        { success: false, error: 'Missing required fields: entity.id, type' },
         { status: 400 }
       );
     }
 
-    // TODO: Implement Firebase update
-    
-    return NextResponse.json({ 
-      success: true, 
-      data: entity,
-      message: `${type} update will be implemented with Firebase collections` 
-    });
+    if (type === 'product') {
+      const { id, ...updates } = entity as Record<string, unknown> & { id: string };
+      await productService.updateProduct(id, updates);
+      return NextResponse.json({ success: true, data: entity });
+    }
+    if (type === 'partner') {
+      await partnerService.updatePartner(entity.id, entity);
+      return NextResponse.json({ success: true, data: entity });
+    }
+
+    return NextResponse.json(
+      { success: false, error: 'Type must be product or partner' },
+      { status: 400 }
+    );
   } catch (error: any) {
     console.error('PUT /api/entities error:', error);
     return NextResponse.json(
@@ -106,6 +134,8 @@ export async function PUT(request: NextRequest) {
 
 // DELETE entity
 export async function DELETE(request: NextRequest) {
+  const auth = await authorizeApiRequest(request);
+  if (auth instanceof NextResponse) return auth;
   try {
     const { searchParams } = new URL(request.url);
     const entityId = searchParams.get('id');
@@ -118,12 +148,18 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // TODO: Implement Firebase delete
-    
-    return NextResponse.json({ 
-      success: true,
-      message: `${type} deletion will be implemented with Firebase collections` 
-    });
+    if (type === 'product') {
+      await productService.deleteProduct(entityId);
+    } else if (type === 'partner') {
+      await partnerService.deletePartner(entityId);
+    } else {
+      return NextResponse.json(
+        { success: false, error: 'Type must be product or partner' },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('DELETE /api/entities error:', error);
     return NextResponse.json(

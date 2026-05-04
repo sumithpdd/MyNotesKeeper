@@ -22,6 +22,8 @@ The AI Chat Panel is a modern slide-out interface that provides:
 - 💾 **Local storage** for custom prompts
 - ✨ **Always accessible** from any screen
 
+Natural-language answers and tool-backed actions are handled by **`POST /api/ai-chat`** using your Firebase **Bearer** token (Gemini executes on the server). Stay signed in — see **[API_GUIDE.md](API_GUIDE.md)** and **[SECURITY.md](SECURITY.md)**. Some intents still show a preview with **Confirm** / **Cancel** before touching hub data.
+
 ### Key Features
 
 **Design:**

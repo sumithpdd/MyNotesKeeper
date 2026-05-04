@@ -7,7 +7,10 @@ export interface InternalContact {
 
 export interface CustomerContact {
   id: string;
+  /** Firestore owning customer when persisted as catalogue row */
+  customerId?: string;
   name: string;
+  companyName?: string;
   email?: string;
   phone?: string;
   role?: string;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Customer } from '@/types';
+import { Customer, CustomerNote } from '@/types';
 import { useCustomerFilters, useCustomerSearch, useCustomerSort } from '@/hooks';
 import {
   CustomerListHeader,
@@ -16,14 +16,20 @@ type ViewMode = 'grid' | 'list';
 
 interface CustomerListProps {
   customers: Customer[];
+  notes?: CustomerNote[];
   selectedCustomer: string | null;
   onSelectCustomer: (customerId: string | null) => void;
+  onEditCustomer?: (customer: Customer) => void;
+  onDeleteCustomer?: (customerId: string) => void;
 }
 
 export function CustomerList({ 
   customers,
+  notes = [],
   selectedCustomer, 
-  onSelectCustomer
+  onSelectCustomer,
+  onEditCustomer,
+  onDeleteCustomer,
 }: CustomerListProps) {
   // View state
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -49,7 +55,7 @@ export function CustomerList({
   }, [searchFilteredCustomers, filters, sortCustomers]);
   
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 min-w-0">
       {/* Header */}
       <CustomerListHeader
         totalCustomers={customers.length}
@@ -100,12 +106,16 @@ export function CustomerList({
               customers={filteredAndSortedCustomers}
               selectedCustomerId={selectedCustomer}
               onSelectCustomer={onSelectCustomer}
+              onEditCustomer={onEditCustomer}
             />
           ) : (
             <CustomerTableView
               customers={filteredAndSortedCustomers}
+              notes={notes}
               selectedCustomerId={selectedCustomer}
               onSelectCustomer={onSelectCustomer}
+              onEditCustomer={onEditCustomer}
+              onDeleteCustomer={onDeleteCustomer}
             />
           )}
         </>

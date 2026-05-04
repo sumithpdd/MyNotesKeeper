@@ -1,26 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CustomerContact, InternalContact } from '@/types';
+import { customerContactService, internalContactService } from '@/lib/contactService';
+import { authorizeApiRequest } from '@/lib/server/authorizeApiRequest';
 
 /**
  * API Route: /api/contacts
- * Handles customer and internal contact management
- * Note: Currently uses in-memory state, can be extended to Firebase collections
+ * Handles customer and internal contact management via Firebase
  */
 
-// GET all contacts (both customer and internal)
+// GET all contacts (customer or internal)
 export async function GET(request: NextRequest) {
+  const auth = await authorizeApiRequest(request);
+  if (auth instanceof NextResponse) return auth;
   try {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type'); // 'customer' | 'internal'
 
-    // TODO: Implement Firebase queries for contacts
-    // For now, return empty array as contacts are managed in parent state
-    
-    return NextResponse.json({ 
-      success: true, 
-      data: [],
-      message: 'Contacts are currently managed in client state. Firebase integration pending.' 
-    });
+    if (type === 'customer') {
+      const data = await customerContactService.getAllCustomerContacts();
+      return NextResponse.json({ success: true, data });
+    }
+    if (type === 'internal') {
+      const data = await internalContactService.getAllInternalContacts();
+      return NextResponse.json({ success: true, data });
+    }
+
+    return NextResponse.json(
+      { success: false, error: 'Type parameter required: customer or internal' },
+      { status: 400 }
+    );
   } catch (error: any) {
     console.error('GET /api/contacts error:', error);
     return NextResponse.json(
@@ -43,14 +50,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Implement Firebase collection save
-    // const contactId = await contactService.createContact(contact, type);
+    if (type === 'customer') {
+      const { id, ...rest } = contact;
+      const contactId = await customerContactService.createCustomerContact(rest);
+      return NextResponse.json({ success: true, data: { id: contactId, ...rest } });
+    }
+    if (type === 'internal') {
+      const { id, ...rest } = contact;
+      const contactId = await internalContactService.createInternalContact(rest);
+      return NextResponse.json({ success: true, data: { id: contactId, ...rest } });
+    }
 
-    return NextResponse.json({ 
-      success: true, 
-      data: contact,
-      message: 'Contact creation will be implemented with Firebase collections' 
-    });
+    return NextResponse.json(
+      { success: false, error: 'Type must be customer or internal' },
+      { status: 400 }
+    );
   } catch (error: any) {
     console.error('POST /api/contacts error:', error);
     return NextResponse.json(
@@ -62,24 +76,32 @@ export async function POST(request: NextRequest) {
 
 // PUT update contact
 export async function PUT(request: NextRequest) {
+  const auth = await authorizeApiRequest(request);
+  if (auth instanceof NextResponse) return auth;
   try {
     const body = await request.json();
     const { contact, type } = body;
 
     if (!contact || !contact.id || !type) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
+        { success: false, error: 'Missing required fields: contact.id, type' },
         { status: 400 }
       );
     }
 
-    // TODO: Implement Firebase update
-    
-    return NextResponse.json({ 
-      success: true, 
-      data: contact,
-      message: 'Contact update will be implemented with Firebase collections' 
-    });
+    if (type === 'customer') {
+      await customerContactService.updateCustomerContact(contact.id, contact);
+      return NextResponse.json({ success: true, data: contact });
+    }
+    if (type === 'internal') {
+      await internalContactService.updateInternalContact(contact.id, contact);
+      return NextResponse.json({ success: true, data: contact });
+    }
+
+    return NextResponse.json(
+      { success: false, error: 'Type must be customer or internal' },
+      { status: 400 }
+    );
   } catch (error: any) {
     console.error('PUT /api/contacts error:', error);
     return NextResponse.json(
@@ -91,6 +113,8 @@ export async function PUT(request: NextRequest) {
 
 // DELETE contact
 export async function DELETE(request: NextRequest) {
+  const auth = await authorizeApiRequest(request);
+  if (auth instanceof NextResponse) return auth;
   try {
     const { searchParams } = new URL(request.url);
     const contactId = searchParams.get('id');
@@ -103,12 +127,18 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // TODO: Implement Firebase delete
-    
-    return NextResponse.json({ 
-      success: true,
-      message: 'Contact deletion will be implemented with Firebase collections' 
-    });
+    if (type === 'customer') {
+      await customerContactService.deleteCustomerContact(contactId);
+    } else if (type === 'internal') {
+      await internalContactService.deleteInternalContact(contactId);
+    } else {
+      return NextResponse.json(
+        { success: false, error: 'Type must be customer or internal' },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('DELETE /api/contacts error:', error);
     return NextResponse.json(

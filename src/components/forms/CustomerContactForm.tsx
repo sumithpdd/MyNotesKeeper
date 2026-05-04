@@ -4,11 +4,12 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Save, X, User, Mail, Phone, Briefcase } from 'lucide-react';
+import { Save, X, User, Mail, Phone, Briefcase, Building } from 'lucide-react';
 import { CustomerContact } from '@/types';
 
 const customerContactSchema = z.object({
   name: z.string().min(1, 'Name is required'),
+  companyName: z.string().optional(),
   email: z.string().email('Invalid email address').optional().or(z.literal('')),
   phone: z.string().optional(),
   role: z.string().optional(),
@@ -31,11 +32,13 @@ export function CustomerContactForm({ contact, onSave, onCancel }: CustomerConta
     resolver: zodResolver(customerContactSchema),
     defaultValues: contact ? {
       name: contact.name,
+      companyName: contact.companyName || '',
       email: contact.email || '',
       phone: contact.phone || '',
       role: contact.role || '',
     } : {
       name: '',
+      companyName: '',
       email: '',
       phone: '',
       role: '',
@@ -47,6 +50,7 @@ export function CustomerContactForm({ contact, onSave, onCancel }: CustomerConta
       const contactData: CustomerContact = {
         id: contact?.id || `contact-${Date.now()}`,
         name: data.name,
+        companyName: data.companyName || undefined,
         email: data.email || undefined,
         phone: data.phone || undefined,
         role: data.role || undefined,
@@ -75,6 +79,20 @@ export function CustomerContactForm({ contact, onSave, onCancel }: CustomerConta
         {errors.name && (
           <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
         )}
+      </div>
+
+      {/* Company Name */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          <Building className="h-4 w-4 inline mr-2" />
+          Company Name
+        </label>
+        <input
+          {...register('companyName')}
+          type="text"
+          placeholder="Enter company name"
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+        />
       </div>
 
       {/* Email */}

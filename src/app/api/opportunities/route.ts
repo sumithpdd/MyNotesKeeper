@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { opportunityService } from '@/lib/opportunityService';
+import { authorizeApiRequest } from '@/lib/server/authorizeApiRequest';
 
 /**
  * API Route: /api/opportunities
@@ -8,6 +9,8 @@ import { opportunityService } from '@/lib/opportunityService';
 
 // GET all opportunities or opportunities for specific customer
 export async function GET(request: NextRequest) {
+  const auth = await authorizeApiRequest(request);
+  if (auth instanceof NextResponse) return auth;
   try {
     const { searchParams } = new URL(request.url);
     const customerId = searchParams.get('customerId');
@@ -36,6 +39,8 @@ export async function GET(request: NextRequest) {
 
 // POST create new opportunity
 export async function POST(request: NextRequest) {
+  const auth = await authorizeApiRequest(request);
+  if (auth instanceof NextResponse) return auth;
   try {
     const body = await request.json();
     const { opportunity } = body;
@@ -84,6 +89,8 @@ export async function PUT(request: NextRequest) {
 
 // DELETE opportunity
 export async function DELETE(request: NextRequest) {
+  const auth = await authorizeApiRequest(request);
+  if (auth instanceof NextResponse) return auth;
   try {
     const { searchParams } = new URL(request.url);
     const opportunityId = searchParams.get('id');

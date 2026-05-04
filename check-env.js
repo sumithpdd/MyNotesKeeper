@@ -1,4 +1,4 @@
-// Quick script to check if environment variables are loaded
+// Quick script to check if environment variables are loaded (values are never printed)
 // Run with: node check-env.js
 
 require('dotenv').config({ path: '.env.local' });
@@ -12,20 +12,33 @@ const requiredVars = [
   'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET',
   'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID',
   'NEXT_PUBLIC_FIREBASE_APP_ID',
-  'NEXT_PUBLIC_GEMINI_API_KEY'
+  'NEXT_PUBLIC_GEMINI_API_KEY',
 ];
+
+const optionalVars = ['NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID'];
 
 let allPresent = true;
 
-requiredVars.forEach(varName => {
+requiredVars.forEach((varName) => {
   const value = process.env[varName];
   const status = value ? '✅' : '❌';
-  const preview = value ? `${value.substring(0, 20)}...` : 'MISSING';
+  const preview = value ? '(configured — value hidden)' : 'MISSING';
   console.log(`${status} ${varName}: ${preview}`);
   if (!value) allPresent = false;
 });
 
-console.log('\n' + (allPresent ? '✅ All environment variables are set!' : '❌ Some environment variables are missing!'));
-console.log('\n📝 Make sure your .env.local file contains all required variables.');
-console.log('🔄 After updating .env.local, restart your dev server (Ctrl+C then npm run dev)');
+optionalVars.forEach((varName) => {
+  const value = process.env[varName];
+  const status = value ? '✅' : '○';
+  const preview = value ? '(configured — value hidden)' : 'optional — not set';
+  console.log(`${status} ${varName}: ${preview}`);
+});
 
+console.log(
+  '\n' +
+    (allPresent
+      ? '✅ All required environment variables are set!'
+      : '❌ Some required environment variables are missing!'),
+);
+console.log('\n📝 Use .env.local for real values. Never commit secrets.');
+console.log('🔄 After updating .env.local, restart your dev server (Ctrl+C then npm run dev).\n');

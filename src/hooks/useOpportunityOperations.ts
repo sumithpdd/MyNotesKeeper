@@ -1,115 +1,128 @@
-import { useState, useCallback } from 'react';
-import { Opportunity, OpportunityStage } from '@/types';
-import { opportunityService } from '@/lib/opportunityService';
+import { useCallback, useState } from 'react';
+import type { Opportunity, OpportunityStage } from '@/types';
+import { hubAuthFetch } from '@/lib/client/hubAuthFetch';
 
 interface UseOpportunityOperationsProps {
   userId?: string;
-  userEmail?: string;
-  onOpportunitiesChange?: (opportunities: Opportunity[]) => void;
+  userEmail: string;
+  getFirebaseIdToken: () => Promise<string | null>;
+  reloadWorkspace: () => Promise<void>;
 }
 
-/**
- * Custom hook to manage opportunity CRUD operations
- * Provides create, update, delete, and stage change functionality
- */
-export function useOpportunityOperations({ 
-  userId, 
+export function useOpportunityOperations({
+  userId,
   userEmail,
-  onOpportunitiesChange 
+  getFirebaseIdToken,
+  reloadWorkspace,
 }: UseOpportunityOperationsProps) {
-  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [, setOpportunities] = useState<Opportunity[]>([]);
 
-  const updateOpportunities = useCallback((newOpportunities: Opportunity[]) => {
-    setOpportunities(newOpportunities);
-    onOpportunitiesChange?.(newOpportunities);
-  }, [onOpportunitiesChange]);
+  const saveOpportunity = useCallback(
+    async (opportunity: Opportunity) => {
+      if (!userId || !userEmail) return;
+      const token = await getFirebaseIdToken();
+      if (!token) throw new Error('Sign in required');
 
-  const saveOpportunity = useCallback(async (opportunity: Opportunity) => {
-    if (!userId || !userEmail) return;
-    
-    try {
-      const existingOpportunity = opportunities.find(o => o.id === opportunity.id);
-      
-      if (existingOpportunity) {
-        // Update existing
-        await opportunityService.updateOpportunity(opportunity);
-        updateOpportunities(opportunities.map(o => o.id === opportunity.id ? opportunity : o));
-      } else {
-        // Create new
-        const newOpportunity = await opportunityService.createOpportunity({
-          customerId: opportunity.customerId,
-          opportunityName: opportunity.opportunityName,
-          description: opportunity.description,
-          currentStage: opportunity.currentStage,
-          estimatedValue: opportunity.estimatedValue,
-          currency: opportunity.currency,
-          probability: opportunity.probability,
-          expectedCloseDate: opportunity.expectedCloseDate,
-          products: opportunity.products,
-          owner: opportunity.owner,
-          priority: opportunity.priority,
-          type: opportunity.type,
-          competitorInfo: opportunity.competitorInfo,
-          nextSteps: opportunity.nextSteps,
-          createdBy: userEmail,
-          updatedBy: userEmail,
+      if (opportunity.id) {
+        const put = await hubAuthFetch('/api/opportunities', token, {
+          method: 'PUT',
+          body: JSON.stringify({
+            opportunity: {
+              ...opportunity,
+              updatedBy: userEmail,
+            },
+          }),
         });
-        updateOpportunities([...opportunities, newOpportunity]);
+        if (!put.ok) throw new Error(await put.text());
+      } else {
+        const post = await hubAuthFetch('/api/opportunities', token, {
+          method: 'POST',
+          body: JSON.stringify({
+            opportunity: {
+              customerId: opportunity.customerId,
+              opportunityName: opportunity.opportunityName,
+              description: opportunity.description,
+              currentStage: opportunity.currentStage,
+              estimatedValue: opportunity.estimatedValue,
+              currency: opportunity.currency,
+              probability: opportunity.probability,
+              expectedCloseDate: opportunity.expectedCloseDate,
+              products: opportunity.products,
+              owner: opportunity.owner,
+              priority: opportunity.priority,
+              type: opportunity.type,
+              competitorInfo: opportunity.competitorInfo,
+              nextSteps: opportunity.nextSteps,
+              crmOpportunityUrl: opportunity.crmOpportunityUrl,
+              createdBy: userEmail,
+              updatedBy: userEmail,
+            },
+          }),
+        });
+        if (!post.ok) throw new Error(await post.text());
       }
-    } catch (error) {
-      console.error('Error saving opportunity:', error);
-      throw error;
-    }
-  }, [userId, userEmail, opportunities, updateOpportunities]);
 
-  const deleteOpportunity = useCallback(async (opportunityId: string) => {
-    try {
-      await opportunityService.deleteOpportunity(opportunityId);
-      updateOpportunities(opportunities.filter(o => o.id !== opportunityId));
-    } catch (error) {
-      console.error('Error deleting opportunity:', error);
-      throw error;
-    }
-  }, [opportunities, updateOpportunities]);
+      await reloadWorkspace();
+    },
+    [userId, userEmail, getFirebaseIdToken, reloadWorkspace],
+  );
 
-  const changeStage = useCallback(async (
-    opportunityId: string, 
-    newStage: OpportunityStage, 
-    notes?: string
-  ) => {
-    if (!userEmail) return;
-    
-    try {
-      const opportunity = opportunities.find(o => o.id === opportunityId);
-      if (!opportunity) return;
+  const deleteOpportunity = useCallback(
+    async (opportunityId: string) => {
+      const token = await getFirebaseIdToken();
+      if (!token) throw new Error('Sign in required');
+      const res = await hubAuthFetch(
+        `/api/opportunities?id=${encodeURIComponent(opportunityId)}`,
+        token,
+        { method: 'DELETE' },
+      );
+      if (!res.ok) throw new Error(await res.text());
+      await reloadWorkspace();
+    },
+    [getFirebaseIdToken, reloadWorkspace],
+  );
 
-      await opportunityService.changeStage(opportunity, newStage, userEmail, notes);
-      
-      // Reload opportunities to get updated stage history
-      const updatedOpportunities = await opportunityService.getAllOpportunities();
-      updateOpportunities(updatedOpportunities);
-    } catch (error) {
-      console.error('Error changing opportunity stage:', error);
-      throw error;
-    }
-  }, [userEmail, opportunities, updateOpportunities]);
+  const changeStage = useCallback(
+    async (opportunityId: string, newStage: OpportunityStage, notes?: string) => {
+      if (!userEmail) return;
+      const token = await getFirebaseIdToken();
+      if (!token) throw new Error('Sign in required');
+      const res = await hubAuthFetch('/api/opportunities/stage', token, {
+        method: 'POST',
+        body: JSON.stringify({
+          opportunityId,
+          newStage,
+          userEmail,
+          notes,
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await reloadWorkspace();
+    },
+    [userEmail, getFirebaseIdToken, reloadWorkspace],
+  );
 
-  const deleteOpportunitiesByCustomer = useCallback(async (customerId: string) => {
-    try {
-      await opportunityService.deleteOpportunitiesByCustomer(customerId);
-      updateOpportunities(opportunities.filter(o => o.customerId !== customerId));
-    } catch (error) {
-      console.error('Error deleting customer opportunities:', error);
-      throw error;
-    }
-  }, [opportunities, updateOpportunities]);
+  const deleteOpportunitiesByCustomer = useCallback(
+    async (customerId: string) => {
+      const token = await getFirebaseIdToken();
+      if (!token) throw new Error('Sign in required');
+      const res = await hubAuthFetch(
+        `/api/opportunities?customerId=${encodeURIComponent(customerId)}`,
+        token,
+        { method: 'DELETE' },
+      );
+      if (!res.ok) throw new Error(await res.text());
+      await reloadWorkspace();
+    },
+    [getFirebaseIdToken, reloadWorkspace],
+  );
 
   return {
-    opportunities,
-    setOpportunities: updateOpportunities,
+    opportunities: [],
+    setOpportunities,
     saveOpportunity,
     deleteOpportunity,
     changeStage,
-    deleteOpportunitiesByCustomer
+    deleteOpportunitiesByCustomer,
   };
 }

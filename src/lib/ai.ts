@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AIGenerationRequest, AIGenerationResponse } from '@/types';
+import { formatProductDisplayName } from '@/lib/productDisplay';
 
 let genAI: GoogleGenerativeAI | null = null;
 
@@ -107,6 +108,68 @@ export class AIService {
     return result.suggestions || [];
   }
 
+  private parseJsonPayload(text: string): Record<string, unknown> {
+    const t = text.trim();
+    const m = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    const raw = (m ? m[1] : t).trim();
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && parsed !== null) return parsed as Record<string, unknown>;
+    throw new Error('Model did not return a JSON object');
+  }
+
+  /**
+   * Propose description, checklist lines, and subtask titles from a task title + light context (Gemini).
+   */
+  async draftEngagementTaskStructured(input: {
+    title: string;
+    categoryName?: string;
+    customerName?: string;
+    opportunityName?: string;
+  }): Promise<{ description: string; checklist: string[]; subtasks: string[] }> {
+    const title = input.title.trim();
+    if (!title) throw new Error('Title required for AI draft');
+
+    const hint = `
+Task title: ${title}
+${input.categoryName ? `Category: ${input.categoryName}\n` : ''}${input.customerName ? `Account: ${input.customerName}\n` : ''}${input.opportunityName ? `Opportunity: ${input.opportunityName}\n` : ''}`.trim();
+
+    const prompt = `You assist a SaaS engagement / sales consultant. Based on the following, propose a concise task briefing.
+
+${hint}
+
+Return ONLY valid JSON (no markdown fences) matching this schema:
+{"description":"<2-5 short sentences>","checklist":["<short verification-style item>","..."],"subtasks":["<actionable verb-first item>","..."]}
+
+Requirements:
+- checklist: 3–8 discrete yes/no QA items suitable for ticking off before the work ships.
+- subtasks: 3–8 concrete action steps (owners implied: the AE or SC).
+- No duplicate wording between checklist vs subtasks; keep each line under ~90 characters.`;
+
+    try {
+      const result = await this.getModel().generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+      const obj = this.parseJsonPayload(text);
+      const description = typeof obj.description === 'string' ? obj.description.trim() : '';
+      const rawCheck = obj.checklist;
+      const rawSub = obj.subtasks;
+      const checklist = Array.isArray(rawCheck)
+        ? rawCheck.map((x) => String(x).trim()).filter(Boolean)
+        : [];
+      const subtasks = Array.isArray(rawSub) ? rawSub.map((x) => String(x).trim()).filter(Boolean) : [];
+
+      return {
+        description,
+        checklist: checklist.slice(0, 12),
+        subtasks: subtasks.slice(0, 12),
+      };
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      console.error('draftEngagementTaskStructured', error);
+      throw new Error(err?.message || 'Failed to draft task with AI');
+    }
+  }
+
   async refineText(currentText: string, action: 'expand' | 'refine' | 'elaborate', context?: string): Promise<string> {
     try {
       const actionPrompts = {
@@ -174,7 +237,7 @@ export class AIService {
       const prompt = `Generate a comprehensive customer summary for ${customer.customerName || 'this customer'}.
 
 Customer Information:
-- Products: ${customer.products?.map(p => `${p.name}${p.version ? ` v${p.version}` : ''}`).join(', ') || 'N/A'}
+- Products: ${customer.products?.map((p) => formatProductDisplayName(p)).join(', ') || 'N/A'}
 - Migration Complexity: ${customer.migrationComplexity || 'Not specified'}
 - License Type: ${customer.perpetualOrSubscription || 'Not specified'}
 - Hosting: ${customer.hostingLocation || 'Not specified'}

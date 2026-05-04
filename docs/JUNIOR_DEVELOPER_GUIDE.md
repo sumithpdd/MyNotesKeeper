@@ -689,21 +689,27 @@ if (customer !== null) {
 
 ```
 components/
+├── ui/                           # Reusable UI (use everywhere)
+│   ├── TypeBadge.tsx             # Colored badges (Customer, Active, etc.)
+│   ├── DetailRow.tsx             # Key-value rows for detail panels
+│   ├── Avatar.tsx                # Initials or icon avatar
+│   ├── TitleBadge.tsx            # Role/version badges
+│   ├── LinkWithCopy.tsx          # Link + copy button
+│   └── index.ts
 ├── CustomerList.tsx              # Orchestrator (coordinates)
 └── customers/                    # Domain folder
-    ├── index.ts                  # Exports
-    ├── CustomerListHeader.tsx    # Presentational
-    ├── CustomerSearchBar.tsx     # Presentational
-    ├── CustomerFilterPanel.tsx   # Presentational
-    ├── CustomerGridCard.tsx      # Presentational
-    ├── CustomerGridView.tsx      # Container
-    └── CustomerTableView.tsx     # Container
+    ├── CustomerListHeader.tsx
+    ├── CustomerSearchBar.tsx
+    ├── CustomerGridCard.tsx
+    └── ...
 ```
 
 **Pattern:**
-- Orchestrator coordinates child components
-- Small, focused components
-- Group related components in folders
+- **`ui/`** – Generic, reusable components. Import from `@/components/ui`.
+- **Orchestrator** – Coordinates child components, uses custom hooks.
+- **Domain folders** – Group related components (customers, forms).
+
+📚 **Learn more:** [COMPONENT_DESIGN.md](COMPONENT_DESIGN.md) – Full guide on reusability and patterns.
 
 ---
 
@@ -948,3 +954,4 @@ function process(data: Customer): void { }
 - Ask in team chat
 - Check [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) for project-specific info
 - Read [ARCHITECTURE.md](ARCHITECTURE.md) to understand the system
+- Read [COMPONENT_DESIGN.md](COMPONENT_DESIGN.md) for component patterns and reusability

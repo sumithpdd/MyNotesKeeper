@@ -20,7 +20,7 @@ export function parseCustomerInput(input: string, existingCustomers: Customer[])
   // Detect entity types first
   const hasInternalContact = lowerInput.includes('internal contact') || 
                              lowerInput.includes('account manager') ||
-                             lowerInput.includes('@sitecore.com');
+                             lowerInput.includes('@') && lowerInput.includes('.com');
   const hasStakeholder = lowerInput.includes('stake holder') || lowerInput.includes('stakeholder');
   const hasCustomerKeyword = lowerInput.includes('customer') || 
                              lowerInput.includes('for ') || 
@@ -109,9 +109,7 @@ export function parseCustomerInput(input: string, existingCustomers: Customer[])
           id: `internal-${Date.now()}-${Math.random()}`,
           name: parts[0],
           email: parts[3] || '',
-          phone: '',
-          role: parts[1] || '',
-          department: parts[2] || ''
+          role: [parts[1], parts[2]].filter(Boolean).join(' — ') || undefined,
         });
       }
     }
@@ -215,7 +213,7 @@ function generateMultiEntityResponseMessage(
   if (hasInternalContacts) {
     message += `🏢 INTERNAL CONTACTS: ${internalContacts.length} detected\n`;
     internalContacts.forEach(c => {
-      message += `   • ${c.name} - ${c.role}${c.department ? ` (${c.department})` : ''}\n`;
+      message += `   • ${c.name}${c.role ? ` — ${c.role}` : ''}\n`;
       if (c.email) message += `     Email: ${c.email}\n`;
     });
     message += `   ➜ Will add to InternalContacts collection\n\n`;

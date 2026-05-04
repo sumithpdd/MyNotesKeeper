@@ -16,6 +16,26 @@ import { CustomerProfile, CreateCustomerProfileData, UpdateCustomerProfileData }
 const COLLECTION_NAME = 'customerProfiles';
 
 export class CustomerProfileService {
+  async getAllProfiles(): Promise<CustomerProfile[]> {
+    try {
+      const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
+      return querySnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          latestDemoDate: data.latestDemoDate?.toDate() || new Date(),
+          seNotesLastUpdated: data.seNotesLastUpdated?.toDate() || new Date(),
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+        } as CustomerProfile;
+      });
+    } catch (error) {
+      console.error('Error fetching all profiles:', error);
+      return [];
+    }
+  }
+
   async getProfileByCustomerId(customerId: string): Promise<CustomerProfile | null> {
     try {
       const q = query(
@@ -91,6 +111,9 @@ export class CustomerProfileService {
   async updateProfile(data: UpdateCustomerProfileData, userId: string): Promise<void> {
     try {
       const { id, ...updateData } = data;
+      if (!id) {
+        throw new Error('Customer profile id is required to update');
+      }
       const docRef = doc(db, COLLECTION_NAME, id);
       
       const docData: any = {

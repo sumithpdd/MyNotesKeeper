@@ -1,14 +1,19 @@
-import { useState, useEffect } from 'react';
-import { Customer, CustomerNote, CustomerProfile, Opportunity, Product, Partner, CustomerContact, InternalContact } from '@/types';
-import { customerService } from '@/lib/customerService';
-import { customerNotesService } from '@/lib/customerNotes';
-import { customerProfileService } from '@/lib/customerProfileService';
-import { opportunityService } from '@/lib/opportunityService';
-import { productService } from '@/lib/productService';
-import { partnerService } from '@/lib/partnerService';
-import { customerContactService, internalContactService } from '@/lib/contactService';
-import { contactResolver } from '@/lib/contactResolver';
-import { generateDummyCustomers, generateDummyNotes, generateDummyCustomerProfiles } from '../../data/dummyData';
+import { useCallback, useEffect, useState } from 'react';
+import type {
+  Customer,
+  CustomerNote,
+  CustomerProfile,
+  Opportunity,
+  Product,
+  Partner,
+  MartechTool,
+  CustomerContact,
+  InternalContact,
+  EngagementTask,
+  TaskCategory,
+} from '@/types';
+import { hubAuthJson } from '@/lib/client/hubAuthFetch';
+import { hydrateWorkspacePayload } from '@/lib/client/workspaceHydrate';
 
 interface FirebaseData {
   customers: Customer[];
@@ -17,17 +22,23 @@ interface FirebaseData {
   opportunities: Opportunity[];
   products: Product[];
   partners: Partner[];
+  martechTools: MartechTool[];
   customerContacts: CustomerContact[];
   internalContacts: InternalContact[];
+  tasks: EngagementTask[];
+  taskCategories: TaskCategory[];
   loading: boolean;
 }
 
 /**
- * Custom hook to load and manage Firebase data
- * Handles loading all entities from Firebase and enriching customers with resolved references
- * Falls back to dummy data if Firebase fails
+ * Loads the hub workspace strictly through authenticated `/api/workspace` (Admin Firestore on the server).
  */
-export function useFirebaseData(userId?: string) {
+export function useFirebaseData(opts: {
+  hubUserId: string | undefined;
+  getFirebaseIdToken: () => Promise<string | null>;
+}) {
+  const { hubUserId, getFirebaseIdToken } = opts;
+
   const [data, setData] = useState<FirebaseData>({
     customers: [],
     notes: [],
@@ -35,120 +46,163 @@ export function useFirebaseData(userId?: string) {
     opportunities: [],
     products: [],
     partners: [],
+    martechTools: [],
     customerContacts: [],
     internalContacts: [],
-    loading: true
+    tasks: [],
+    taskCategories: [],
+    loading: true,
   });
 
-  useEffect(() => {
-    if (userId) {
-      loadFirebaseData();
+  const loadFirebaseData = useCallback(async () => {
+    if (!hubUserId) {
+      setData((prev) => ({ ...prev, loading: false }));
+      return;
     }
-  }, [userId]);
-
-  const loadFirebaseData = async () => {
     try {
-      setData(prev => ({ ...prev, loading: true }));
-      
-      // Load all data in parallel
-      const [
-        customersData, 
-        notesData, 
-        opportunitiesData,
-        productsData,
-        partnersData,
-        customerContactsData,
-        internalContactsData
-      ] = await Promise.all([
-        customerService.getAllCustomers(),
-        customerNotesService.getAllNotes(),
-        opportunityService.getAllOpportunities(),
-        productService.getAllProducts(),
-        partnerService.getAllPartners(),
-        customerContactService.getAllCustomerContacts(),
-        internalContactService.getAllInternalContacts()
-      ]);
-      
-      // Enrich customers with resolved references (IDs → full objects)
-      const enrichedCustomers = await contactResolver.enrichCustomers(customersData);
-      
-      // Ensure all customers have required fields with default values
-      const customersWithDefaults = enrichedCustomers.map(customer => ({
+      setData((prev) => ({ ...prev, loading: true }));
+
+      const token = await getFirebaseIdToken();
+      if (!token) throw new Error('Missing auth token');
+
+      const envelope = await hubAuthJson<{ success: boolean; data: Record<string, unknown> }>(
+        '/api/workspace',
+        token,
+        { method: 'GET' },
+      );
+
+      if (!envelope.success || !envelope.data) throw new Error('Invalid workspace payload');
+
+      const hydrated = hydrateWorkspacePayload(envelope.data);
+
+      const customersWithDefaults = hydrated.customers.map((customer) => ({
         ...customer,
         products: customer.products || [],
         customerContacts: customer.customerContacts || [],
         internalContacts: customer.internalContacts || [],
         partners: customer.partners || [],
+        martechTools: customer.martechTools || [],
         website: customer.website || '',
+        websiteUrls: customer.websiteUrls?.length ? customer.websiteUrls : undefined,
         sharePointUrl: customer.sharePointUrl || '',
         salesforceLink: customer.salesforceLink || '',
         additionalLink: customer.additionalLink || '',
         additionalInfo: customer.additionalInfo || '',
         createdAt: customer.createdAt || new Date(),
-        updatedAt: customer.updatedAt || new Date()
+        updatedAt: customer.updatedAt || new Date(),
       }));
-      
-      // Ensure all notes have required fields with default values
-      const notesWithDefaults = notesData.map(note => ({
+
+      const notesWithDefaults = hydrated.notes.map((note) => ({
         ...note,
         createdAt: note.createdAt || new Date(),
         updatedAt: note.updatedAt || new Date(),
-        otherFields: note.otherFields || {}
+        otherFields: note.otherFields || {},
       }));
-      
-      // Load customer profiles for each customer
-      const profiles = await Promise.all(
-        customersWithDefaults.map(customer => 
-          customerProfileService.getProfileByCustomerId(customer.id)
-        )
-      );
-      
-      console.log('✅ All Firebase data loaded:', {
-        customers: customersWithDefaults.length,
-        notes: notesWithDefaults.length,
-        opportunities: opportunitiesData.length,
-        products: productsData.length,
-        partners: partnersData.length,
-        customerContacts: customerContactsData.length,
-        internalContacts: internalContactsData.length
-      });
-      
+
       setData({
         customers: customersWithDefaults,
         notes: notesWithDefaults,
-        customerProfiles: profiles.filter(profile => profile !== null) as CustomerProfile[],
-        opportunities: opportunitiesData,
-        products: productsData,
-        partners: partnersData,
-        customerContacts: customerContactsData,
-        internalContacts: internalContactsData,
-        loading: false
+        customerProfiles: hydrated.customerProfiles,
+        opportunities: hydrated.opportunities,
+        products: hydrated.products,
+        partners: hydrated.partners,
+        martechTools: hydrated.martechTools,
+        customerContacts: hydrated.customerContacts,
+        internalContacts: hydrated.internalContacts,
+        tasks: hydrated.tasks,
+        taskCategories: hydrated.taskCategories,
+        loading: false,
       });
     } catch (error) {
-      console.error('Error loading Firebase data:', error);
-      // Fallback to dummy data if Firebase fails
+      console.error('Error loading workspace via API:', error);
       setData({
-        customers: generateDummyCustomers(),
-        notes: generateDummyNotes(),
-        customerProfiles: generateDummyCustomerProfiles(),
+        customers: [],
+        notes: [],
+        customerProfiles: [],
         opportunities: [],
         products: [],
         partners: [],
+        martechTools: [],
         customerContacts: [],
         internalContacts: [],
-        loading: false
+        tasks: [],
+        taskCategories: [],
+        loading: false,
       });
     }
-  };
+  }, [hubUserId, getFirebaseIdToken]);
+
+  const reloadWorkspace = useCallback(async () => {
+    await loadFirebaseData();
+  }, [loadFirebaseData]);
+
+  useEffect(() => {
+    void loadFirebaseData();
+  }, [loadFirebaseData]);
 
   const reloadData = () => {
-    if (userId) {
-      loadFirebaseData();
-    }
+    void reloadWorkspace();
+  };
+
+  const setCustomerContacts = (updater: CustomerContact[] | ((prev: CustomerContact[]) => CustomerContact[])) => {
+    setData((prev) => ({
+      ...prev,
+      customerContacts: typeof updater === 'function' ? updater(prev.customerContacts) : updater,
+    }));
+  };
+
+  const setInternalContacts = (updater: InternalContact[] | ((prev: InternalContact[]) => InternalContact[])) => {
+    setData((prev) => ({
+      ...prev,
+      internalContacts: typeof updater === 'function' ? updater(prev.internalContacts) : updater,
+    }));
+  };
+
+  const setProducts = (updater: Product[] | ((prev: Product[]) => Product[])) => {
+    setData((prev) => ({
+      ...prev,
+      products: typeof updater === 'function' ? updater(prev.products) : updater,
+    }));
+  };
+
+  const setPartners = (updater: Partner[] | ((prev: Partner[]) => Partner[])) => {
+    setData((prev) => ({
+      ...prev,
+      partners: typeof updater === 'function' ? updater(prev.partners) : updater,
+    }));
+  };
+
+  const setMartechTools = (updater: MartechTool[] | ((prev: MartechTool[]) => MartechTool[])) => {
+    setData((prev) => ({
+      ...prev,
+      martechTools: typeof updater === 'function' ? updater(prev.martechTools) : updater,
+    }));
+  };
+
+  const setTasks = (updater: EngagementTask[] | ((prev: EngagementTask[]) => EngagementTask[])) => {
+    setData((prev) => ({
+      ...prev,
+      tasks: typeof updater === 'function' ? updater(prev.tasks) : updater,
+    }));
+  };
+
+  const setTaskCategories = (updater: TaskCategory[] | ((prev: TaskCategory[]) => TaskCategory[])) => {
+    setData((prev) => ({
+      ...prev,
+      taskCategories: typeof updater === 'function' ? updater(prev.taskCategories) : updater,
+    }));
   };
 
   return {
     ...data,
-    reloadData
+    reloadWorkspace,
+    reloadData,
+    setCustomerContacts,
+    setInternalContacts,
+    setProducts,
+    setPartners,
+    setMartechTools,
+    setTasks,
+    setTaskCategories,
   };
 }

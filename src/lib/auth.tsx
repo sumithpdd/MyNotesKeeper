@@ -1,15 +1,21 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { 
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+} from 'react';
+import {
   User as FirebaseUser,
-  signInWithPopup, 
+  signInWithPopup,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  GoogleAuthProvider
+  GoogleAuthProvider,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { User, AuthContextType } from '@/types';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,65 +35,64 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const firebaseUserRef = useRef<FirebaseUser | null>(null);
 
-  // Generate initials from name
   const generateInitials = (name: string): string => {
     return name
       .split(' ')
-      .map(word => word.charAt(0).toUpperCase())
+      .map((word) => word.charAt(0).toUpperCase())
       .join('')
       .slice(0, 2);
   };
 
-  // Create or update user document in Firestore
-  const createUserDocument = async (firebaseUser: FirebaseUser): Promise<User> => {
-    const userRef = doc(db, 'users', firebaseUser.uid);
-    const userSnap = await getDoc(userRef);
+  const getFirebaseIdToken = useCallback(async (): Promise<string | null> => {
+    const u = firebaseUserRef.current;
+    if (!u) return null;
+    try {
+      return await u.getIdToken();
+    } catch {
+      return null;
+    }
+  }, []);
 
-    const userData: User = {
+  const syncUserBootstrap = async (firebaseUser: FirebaseUser): Promise<User> => {
+    const token = await firebaseUser.getIdToken();
+    const res = await fetch('/api/auth/bootstrap', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: firebaseUser.displayName || '',
+        photoURL: firebaseUser.photoURL || '',
+      }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) throw new Error(json.error || res.statusText);
+    return {
       id: firebaseUser.uid,
       email: firebaseUser.email!,
       name: firebaseUser.displayName || 'Unknown User',
       initials: generateInitials(firebaseUser.displayName || 'Unknown User'),
       photoURL: firebaseUser.photoURL || undefined,
-      createdAt: userSnap.exists() ? userSnap.data().createdAt.toDate() : new Date(),
+      createdAt: new Date(),
       updatedAt: new Date(),
     };
-
-    if (!userSnap.exists()) {
-      // Create new user document
-      await setDoc(userRef, {
-        ...userData,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-    } else {
-      // Update existing user document
-      await setDoc(userRef, {
-        ...userData,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-    }
-
-    return userData;
   };
 
   const signInWithGoogle = async () => {
     try {
-      console.log('Starting Google sign-in...');
       const provider = new GoogleAuthProvider();
       provider.addScope('email');
       provider.addScope('profile');
-      
+
       const result = await signInWithPopup(auth, provider);
-      console.log('Google sign-in successful:', result.user.email);
-      
+      firebaseUserRef.current = result.user;
       try {
-        await createUserDocument(result.user);
-        console.log('User document created successfully');
-      } catch (error) {
-        console.warn('Could not create user document (Firestore permissions issue):', error);
-        console.warn('User can still access the app, but data may not be saved');
+        await syncUserBootstrap(result.user);
+      } catch {
+        console.warn('[auth] Bootstrap API failed — ensure FIREBASE_SERVICE_ACCOUNT_JSON is set on the server');
       }
     } catch (error) {
       console.error('Error signing in with Google:', error);
@@ -98,6 +103,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signOut = async () => {
     try {
       await firebaseSignOut(auth);
+      firebaseUserRef.current = null;
     } catch (error) {
       console.error('Error signing out:', error);
       throw error;
@@ -106,18 +112,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log('Auth state changed:', firebaseUser ? 'User logged in' : 'No user');
-      
+      firebaseUserRef.current = firebaseUser;
+
       if (firebaseUser) {
         try {
-          console.log('Creating/updating user document for:', firebaseUser.email);
-          const userData = await createUserDocument(firebaseUser);
-          console.log('User document created successfully:', userData);
+          const userData = await syncUserBootstrap(firebaseUser);
           setUser(userData);
-        } catch (error) {
-          console.error('Error creating user document:', error);
-          console.error('This is likely a Firestore permissions issue. Check Firebase Console → Firestore → Rules');
-          // Set user anyway with basic info so they can see the app
+        } catch {
+          console.warn('[auth] Using client-only profile fallback (bootstrap/API unavailable)');
           setUser({
             id: firebaseUser.uid,
             email: firebaseUser.email!,
@@ -142,11 +144,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     loading,
     signInWithGoogle,
     signOut,
+    getFirebaseIdToken,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

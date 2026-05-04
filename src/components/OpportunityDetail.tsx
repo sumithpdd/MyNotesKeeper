@@ -3,9 +3,13 @@
 import { useState } from 'react';
 import { 
   X, Target, DollarSign, Calendar, TrendingUp, User, 
-  Package, AlertCircle, ArrowRight, History, Edit, CheckCircle 
+  Package, AlertCircle, ArrowRight, History, Edit, CheckCircle,
+  ExternalLink 
 } from 'lucide-react';
 import { Opportunity, OpportunityStage } from '@/types';
+import { safeFormatDate, safeFormatDateTime } from '@/lib/utils';
+import { formatProductDisplayName } from '@/lib/productDisplay';
+import { OPPORTUNITY_STAGE_ORDER, OPPORTUNITY_STAGE_HELP, formatTimeInCurrentStage } from '@/lib/opportunityStages';
 
 interface OpportunityDetailProps {
   opportunity: Opportunity;
@@ -14,17 +18,7 @@ interface OpportunityDetailProps {
   onStageChange: (newStage: OpportunityStage, notes?: string) => void;
 }
 
-const STAGES: OpportunityStage[] = [
-  'Plan',
-  'Prospect',
-  'Qualify',
-  'Discover',
-  'Differentiate',
-  'Propose',
-  'Close',
-  'Delivery and Success',
-  'Expand'
-];
+const STAGES = OPPORTUNITY_STAGE_ORDER;
 
 const STAGE_COLORS: Record<OpportunityStage, string> = {
   'Plan': 'bg-gray-500',
@@ -58,13 +52,9 @@ export function OpportunityDetail({
     }).format(value);
   };
 
-  const formatDate = (date?: Date) => {
-    if (!date) return 'Not set';
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+  const formatDate = (date?: unknown) => {
+    const formatted = safeFormatDate(date);
+    return formatted === '—' ? 'Not set' : formatted;
   };
 
   const handleStageChange = () => {
@@ -99,7 +89,11 @@ export function OpportunityDetail({
                   {opportunity.opportunityName}
                 </h2>
                 <p className="text-sm text-gray-500">
-                  {opportunity.type} • Stage: {opportunity.currentStage}
+                  {opportunity.type ?? 'Deal'} · Stage: <span className="font-medium">{opportunity.currentStage}</span>
+                  <span className="text-slate-500"> · </span>
+                  <span title="Calendar days since this opportunity last entered its current stage (from stage history).">
+                    {formatTimeInCurrentStage(opportunity)}
+                  </span>
                 </p>
               </div>
             </div>
@@ -122,14 +116,32 @@ export function OpportunityDetail({
 
           {/* Stage Progress */}
           <div className="px-6 pb-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Sales Stage Progress</span>
-              <button
-                onClick={() => setShowStageChange(!showStageChange)}
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-              >
-                Change Stage
-              </button>
+            <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+              <span className="text-sm font-medium text-gray-700">Sales stage progress</span>
+              <div className="flex items-center gap-2">
+                <details className="text-xs text-slate-600">
+                  <summary className="cursor-pointer text-blue-600 hover:text-blue-800 font-medium list-none">
+                    Stage help
+                  </summary>
+                  <div className="mt-2 max-h-48 overflow-y-auto rounded border border-slate-200 bg-white p-3 space-y-1.5 text-left shadow-sm">
+                    {STAGES.map((s) => (
+                      <p key={s}>
+                        <span className="font-semibold text-gray-900">{s}:</span>{' '}
+                        {OPPORTUNITY_STAGE_HELP[s].summary}
+                        {OPPORTUNITY_STAGE_HELP[s].crmCue ? (
+                          <span className="text-slate-500"> ({OPPORTUNITY_STAGE_HELP[s].crmCue})</span>
+                        ) : null}
+                      </p>
+                    ))}
+                  </div>
+                </details>
+                <button
+                  onClick={() => setShowStageChange(!showStageChange)}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  Change Stage
+                </button>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {STAGES.map((stage, index) => (
@@ -168,14 +180,20 @@ export function OpportunityDetail({
               <div className="bg-blue-50 rounded-lg p-4 space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    New Stage
+                    New stage
+                    <span
+                      className="block font-normal text-xs text-slate-500 mt-1"
+                      title={OPPORTUNITY_STAGE_HELP[newStage].summary}
+                    >
+                      {OPPORTUNITY_STAGE_HELP[newStage].summary}
+                    </span>
                   </label>
                   <select
                     value={newStage}
                     onChange={(e) => setNewStage(e.target.value as OpportunityStage)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                   >
-                    {STAGES.map(stage => (
+                    {STAGES.map((stage) => (
                       <option key={stage} value={stage}>
                         {stage}
                       </option>
@@ -228,6 +246,21 @@ export function OpportunityDetail({
             </div>
           )}
 
+          {opportunity.crmOpportunityUrl && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-2">CRM link</h3>
+              <a
+                href={opportunity.crmOpportunityUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 font-medium break-all"
+              >
+                <ExternalLink className="h-4 w-4 shrink-0" />
+                {opportunity.crmOpportunityUrl}
+              </a>
+            </div>
+          )}
+
           {/* Key Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-green-50 rounded-lg p-4 border border-green-200">
@@ -277,8 +310,7 @@ export function OpportunityDetail({
                 {opportunity.products.map((product) => (
                   <div key={product.id} className="bg-gray-50 rounded p-3">
                     <div className="font-medium text-gray-900">
-                      {product.name}
-                      {product.version && ` v${product.version}`}
+                      {formatProductDisplayName(product)}
                     </div>
                     {product.description && (
                       <p className="text-sm text-gray-600 mt-1">{product.description}</p>
@@ -334,10 +366,14 @@ export function OpportunityDetail({
 
           {/* Stage History */}
           <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
               <History className="h-5 w-5" />
-              Stage History
+              Stage history
             </h3>
+            <p className="text-xs text-gray-500 mb-4">
+              Each row records a stage move. “Time in previous stage” is computed when the stage changes (calendar days).
+              Total time on the opportunity includes the days shown for the current stage in the header.
+            </p>
             {opportunity.stageHistory.length > 0 ? (
               <div className="space-y-3">
                 {opportunity.stageHistory.map((entry, index) => (
@@ -359,11 +395,12 @@ export function OpportunityDetail({
                         <span className="font-medium text-gray-900">{entry.toStage}</span>
                       </div>
                       <div className="text-sm text-gray-600 mt-1">
-                        Changed by {entry.changedBy} on {new Date(entry.changedAt).toLocaleString()}
+                        Changed by {entry.changedBy} on {safeFormatDateTime(entry.changedAt)}
                       </div>
-                      {entry.duration !== undefined && entry.duration > 0 && (
+                      {entry.duration !== undefined && (
                         <div className="text-xs text-gray-500 mt-1">
-                          Previous stage duration: {entry.duration} day{entry.duration !== 1 ? 's' : ''}
+                          Time in previous stage before this change:{' '}
+                          {entry.duration === 0 ? 'Same day or under 1 day' : `${entry.duration} day${entry.duration !== 1 ? 's' : ''}`}
                         </div>
                       )}
                       {entry.notes && (

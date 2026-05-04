@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { opportunityService } from '@/lib/opportunityService';
+import { authorizeApiRequest } from '@/lib/server/authorizeApiRequest';
 import { OpportunityStage } from '@/types';
 
 /**
@@ -8,6 +9,8 @@ import { OpportunityStage } from '@/types';
  */
 
 export async function POST(request: NextRequest) {
+  const auth = await authorizeApiRequest(request);
+  if (auth instanceof NextResponse) return auth;
   try {
     const body = await request.json();
     const { opportunityId, newStage, userEmail, notes } = body;

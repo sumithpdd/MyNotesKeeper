@@ -1,30 +1,26 @@
 # Documentation Summary
 
-**Last Updated:** February 2026
+**Last Updated:** May 2026
 
 ## 📚 Complete Documentation Overview
 
-This project now has **9 comprehensive guides** organized for different audiences and use cases.
+This project’s guides are organized under `docs/` for different audiences.
 
-### All Documentation Files
+### Core documentation files
 
-| # | File | Lines | Purpose | Audience |
-|---|------|-------|---------|----------|
-| 1 | **README.md** | 76 | Documentation hub and navigation | Everyone |
-| 2 | **QUICKSTART.md** | ~150 | Get running in 5 minutes | Everyone |
-| 3 | **SETUP.md** | ~300 | Complete setup (Firebase, AI, troubleshooting) | First-time users |
-| 4 | **USER_GUIDE.md** | ~520 | How to use all features | Users/SEs |
-| 5 | **AI_CHAT_PANEL_GUIDE.md** | ~550 | AI Assistant & Prompt Library | Everyone |
-| 6 | **DEVELOPER_GUIDE.md** | ~400 | Development guide & code structure | Developers |
-| 7 | **JUNIOR_DEVELOPER_GUIDE.md** | ~450 | React/Next.js/TypeScript concepts | Junior devs |
-| 8 | **ARCHITECTURE.md** | ~350 | Technical architecture & design | Technical team |
-| 9 | **FEATURES.md** | ~415 | Complete feature documentation | Everyone |
+| File | Purpose | Audience |
+|------|---------|----------|
+| **README.md** (in `docs/`) | Hub & navigation | Everyone |
+| **QUICKSTART.md** | Fast local run | Everyone |
+| **SETUP.md** | Firebase, AI, **`FIREBASE_SERVICE_ACCOUNT_JSON`** for Hub REST | First-time setup |
+| **API_GUIDE.md** | REST endpoints & Firebase Admin Bearer auth | Developers / integrators |
+| **SECURITY.md** | Secrets, Firestore, API verification | Everyone |
+| **ARCHITECTURE.md** | Layers: domain, hooks, services, APIs, **engagement task model** | Technical |
+| **CUSTOMER_JOURNEY.md** | How users move across tabs, tasks, and outcomes (mermaid flows) | Everyone |
+| **COMPONENT_DESIGN.md** | UI patterns, `home/` shell, domain | Developers |
+| **DEVELOPER_GUIDE.md** | Dev workflow & repo map | Developers |
 
-**Plus:**
-- **CHANGELOG.md** | ~250 | Version history, fixes, and changes | Everyone
-- **README.md** (root) | ~50 | Project entry point | Everyone
-
-**Total:** 11 markdown files, ~3,500 lines of documentation
+**Also:** `FEATURES.md`, `USER_GUIDE.md`, `AI_CHAT_PANEL_GUIDE.md`, `CHANGELOG.md`, `JUNIOR_DEVELOPER_GUIDE.md`, `DEPLOY_FIRESTORE_RULES.md`, and more — see [docs/README.md](README.md).
 
 ---
 
@@ -35,9 +31,10 @@ This project now has **9 comprehensive guides** organized for different audience
 2. Quick start: **QUICKSTART.md** (5 min)
 3. Setup: **SETUP.md** (10 min)
 4. Basic usage: **USER_GUIDE.md** (15 min)
-5. AI features: **AI_CHAT_PANEL_GUIDE.md** (10 min)
+5. Engagement flows: **CUSTOMER_JOURNEY.md** (10 min)
+6. AI features: **AI_CHAT_PANEL_GUIDE.md** (10 min)
 
-**Total onboarding: 45 minutes**
+**Total onboarding: ~55 minutes**
 
 ### For Developers (Junior)
 1. Environment: **QUICKSTART.md** + **SETUP.md** (15 min)
@@ -92,18 +89,28 @@ This project now has **9 comprehensive guides** organized for different audience
 - Troubleshooting guide
 - Common errors
 
-### 4. USER_GUIDE.md
+### 4. API_GUIDE.md
+- **`GET /api/workspace`** tenant snapshot
+- **`FIREBASE_SERVICE_ACCOUNT_JSON`** required for hub APIs (**503** if missing); **`Authorization: Bearer`** required (**401**)
+- **`userId`** must match token `uid` on routes that enforce it (not **`POST /api/ai-chat`**, which binds from the token only)
+
+### 5. SECURITY.md
+- Never-commit files
+- Firebase Admin required for `/api/workspace` & CRUD; **503 / 401** behavior
+
+### 6. USER_GUIDE.md
 - Getting started
 - Customer management (CRUD)
 - Customer profiles
 - Notes management
 - Opportunity tracking
+- Tasks & Kanban tab
 - AI Assistant usage
 - Entity management
 - Search & filters
 - Tips & best practices
 
-### 5. AI_CHAT_PANEL_GUIDE.md (NEW!)
+### 7. AI_CHAT_PANEL_GUIDE.md
 - Overview of slide-out panel
 - Opening the floating button
 - Chat tab usage
@@ -114,7 +121,7 @@ This project now has **9 comprehensive guides** organized for different audience
 - Tips & best practices
 - Technical details
 
-### 6. DEVELOPER_GUIDE.md
+### 8. DEVELOPER_GUIDE.md
 - Project structure
 - Component architecture
 - Type system
@@ -125,7 +132,7 @@ This project now has **9 comprehensive guides** organized for different audience
 - Debugging tips
 - Best practices
 
-### 7. JUNIOR_DEVELOPER_GUIDE.md
+### 9. JUNIOR_DEVELOPER_GUIDE.md
 - React concepts (hooks, components, effects, context)
 - Next.js features (app router, server/client, API routes)
 - TypeScript essentials (types, interfaces, generics)
@@ -134,7 +141,7 @@ This project now has **9 comprehensive guides** organized for different audience
 - Practice exercises
 - Conceptual explanations
 
-### 8. ARCHITECTURE.md
+### 10. ARCHITECTURE.md
 - System overview
 - Technology stack
 - Data model & relationships
@@ -145,7 +152,7 @@ This project now has **9 comprehensive guides** organized for different audience
 - Security model
 - Performance considerations
 
-### 9. FEATURES.md
+### 11. FEATURES.md
 - Customer management
 - Customer profiles
 - Notes management
@@ -156,7 +163,7 @@ This project now has **9 comprehensive guides** organized for different audience
 - Search & filter
 - Migration opportunities
 
-### 10. ../CHANGELOG.md
+### 12. ../CHANGELOG.md
 - Version 2.1.0: AI Chat Panel Redesign
 - Version 2.0.0: Documentation & Code Simplification
 - Version 1.2.0: AI Chatbot Release

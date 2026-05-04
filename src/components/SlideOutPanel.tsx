@@ -4,7 +4,9 @@ import { useEffect } from 'react';
 import { X, ExternalLink, Calendar, User, Building, Tag, AlertCircle, Copy, Check } from 'lucide-react';
 import { CustomerNote, Customer, CustomerProfile } from '@/types';
 import { formatDateTime } from '@/lib/utils';
+import { formatProductDisplayName } from '@/lib/productDisplay';
 import { CopyableField } from './ui/CopyableField';
+import { LinkWithCopy } from './ui/LinkWithCopy';
 
 interface SlideOutPanelProps {
   note: CustomerNote | null;
@@ -194,28 +196,22 @@ export function SlideOutPanel({ note, customer, customerProfile, onClose }: Slid
                   <div className="p-4 space-y-2">
                     {customer?.sharePointUrl && (
                       <div className="flex items-center gap-2">
-                        <ExternalLink className="h-4 w-4 text-blue-500" />
-                        <a 
-                          href={customer.sharePointUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 text-sm"
-                        >
-                          SharePoint Link
-                        </a>
+                        <ExternalLink className="h-4 w-4 text-blue-500 shrink-0" />
+                        <LinkWithCopy
+                          url={customer.sharePointUrl}
+                          label="SharePoint Link"
+                          linkClassName="text-blue-600 hover:text-blue-800 text-sm"
+                        />
                       </div>
                     )}
                     {customer?.salesforceLink && (
                       <div className="flex items-center gap-2">
-                        <ExternalLink className="h-4 w-4 text-green-500" />
-                        <a 
-                          href={customer.salesforceLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-green-600 hover:text-green-800 text-sm"
-                        >
-                          CRM Opportunity Link
-                        </a>
+                        <ExternalLink className="h-4 w-4 text-green-500 shrink-0" />
+                        <LinkWithCopy
+                          url={customer.salesforceLink}
+                          label="CRM Opportunity Link"
+                          linkClassName="text-green-600 hover:text-green-800 text-sm"
+                        />
                       </div>
                     )}
                   </div>
@@ -380,11 +376,11 @@ export function SlideOutPanel({ note, customer, customerProfile, onClose }: Slid
 
               {/* Tags */}
               <div className="space-y-4">
-                {customer && customer.partners.length > 0 && (
+                {customer && (customer.partners ?? []).length > 0 && (
                   <div>
                     <h3 className="text-lg font-medium text-gray-900 mb-3">Partners</h3>
                     <div className="flex flex-wrap gap-2">
-                      {customer.partners.map((partner) => (
+                      {(customer.partners ?? []).map((partner) => (
                         <span
                           key={partner.id}
                           className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
@@ -397,14 +393,15 @@ export function SlideOutPanel({ note, customer, customerProfile, onClose }: Slid
                   </div>
                 )}
 
-                {customer && customer.customerContacts.length > 0 && (
+                {customer && (customer.customerContacts ?? []).length > 0 && (
                   <div>
                     <h3 className="text-lg font-medium text-gray-900 mb-3">Customer Contacts</h3>
                     <div className="flex flex-wrap gap-2">
-                      {customer.customerContacts.map((contact) => (
+                      {(customer.customerContacts ?? []).map((contact) => (
                         <span
                           key={contact.id}
                           className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800"
+                          title={contact.companyName ? `${contact.name} — ${contact.companyName}` : contact.name}
                         >
                           <User className="h-3 w-3 mr-1" />
                           {contact.name}
@@ -415,17 +412,17 @@ export function SlideOutPanel({ note, customer, customerProfile, onClose }: Slid
                 )}
 
 
-                {customer && customer.products.length > 0 && (
+                {customer && (customer.products ?? []).length > 0 && (
                   <div>
                     <h3 className="text-lg font-medium text-gray-900 mb-3">Products</h3>
                     <div className="flex flex-wrap gap-2">
-                      {customer.products.map((product) => (
+                      {(customer.products ?? []).map((product) => (
                         <span
                           key={product.id}
                           className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-orange-100 text-orange-800"
                         >
                           <Tag className="h-3 w-3 mr-1" />
-                          {product.name}{product.version ? ` v${product.version}` : ''}
+                          {formatProductDisplayName(product)}
                         </span>
                       ))}
                     </div>

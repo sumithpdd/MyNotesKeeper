@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, ChevronDown, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatProductDisplayName } from '@/lib/productDisplay';
 
 interface MultiSelectOption {
   id: string;
@@ -20,6 +21,16 @@ interface MultiSelectProps {
   className?: string;
   allowCustom?: boolean;
   onAddCustom?: (value: string) => void;
+}
+
+function optionMainLabel(option: MultiSelectOption): string {
+  if (option.version != null && String(option.version).trim() !== '') {
+    return formatProductDisplayName({
+      name: option.name,
+      version: option.version,
+    });
+  }
+  return option.name;
 }
 
 export function MultiSelect({
@@ -52,10 +63,19 @@ export function MultiSelect({
   }, []);
 
   const selectedOptions = options.filter(option => selected.includes(option.id));
-  const filteredOptions = options.filter(option =>
-    option.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-    !selected.includes(option.id)
-  );
+  const needle = searchTerm.toLowerCase();
+  const filteredOptions = options.filter((option) => {
+    if (selected.includes(option.id)) return false;
+    if (!needle) return true;
+    const main = optionMainLabel(option).toLowerCase();
+    const desc = (option.description ?? '').toLowerCase();
+    return (
+      main.includes(needle) ||
+      option.name.toLowerCase().includes(needle) ||
+      (option.version != null && String(option.version).toLowerCase().includes(needle)) ||
+      desc.includes(needle)
+    );
+  });
 
   const handleSelect = (optionId: string) => {
     onChange([...selected, optionId]);
@@ -76,14 +96,14 @@ export function MultiSelect({
   return (
     <div className={cn('relative', className)} ref={dropdownRef}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
           {label}
         </label>
       )}
       
       <div className="relative">
         <div
-          className="min-h-[42px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="min-h-[44px] w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-base cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           onClick={() => {
             setIsOpen(!isOpen);
             inputRef.current?.focus();
@@ -95,7 +115,7 @@ export function MultiSelect({
                 key={option.id}
                 className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
               >
-                {option.name}
+                {optionMainLabel(option)}
                 <button
                   type="button"
                   onClick={(e) => {
@@ -170,12 +190,7 @@ export function MultiSelect({
                   className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="font-medium text-gray-900">{option.name}</div>
-                    {option.version && (
-                      <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded">
-                        v{option.version}
-                      </span>
-                    )}
+                    <div className="font-medium text-gray-900">{optionMainLabel(option)}</div>
                   </div>
                   {option.description && (
                     <div className="text-xs text-gray-700 mt-0.5">{option.description}</div>

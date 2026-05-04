@@ -11,17 +11,18 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
 import { customerService } from '@/lib/customerService';
 import { customerNotesService } from '@/lib/customerNotes';
 import { customerProfileService } from '@/lib/customerProfileService';
 import { opportunityService } from '@/lib/opportunityService';
+import { authorizeApiRequest, forbidUserIdMismatch } from '@/lib/server/authorizeApiRequest';
 import type { 
   Customer, 
   CustomerNote, 
   CustomerProfile, 
   Opportunity,
-  OpportunityStage 
+  OpportunityStage,
+  CreateCustomerData 
 } from '@/types';
 
 /**
@@ -47,26 +48,6 @@ interface AICommandResponse {
 }
 
 /**
- * Validate authentication token
- */
-async function validateAuth(request: NextRequest): Promise<{ userId: string; email: string } | null> {
-  try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return null;
-    }
-
-    const token = authHeader.substring(7);
-    // In production, verify Firebase token here
-    // For now, we'll accept the token from the request body
-    return { userId: 'user-id', email: 'user@example.com' };
-  } catch (error) {
-    console.error('Auth validation error:', error);
-    return null;
-  }
-}
-
-/**
  * Execute customer operations
  */
 async function executeCustomerOperation(
@@ -76,61 +57,60 @@ async function executeCustomerOperation(
   userEmail: string
 ): Promise<any> {
   switch (operation) {
-    case 'create':
-      const newCustomer: Customer = {
-        id: crypto.randomUUID(),
+    case 'create': {
+      const createData: CreateCustomerData = {
         customerName: data.customerName,
         website: data.website || '',
-        products: data.products || [],
-        customerContacts: data.customerContacts || [],
-        internalContacts: data.internalContacts || [],
-        accountExecutive: data.accountExecutive,
-        partners: data.partners || [],
+        productIds: data.productIds || [],
+        customerContactIds: data.customerContactIds || [],
+        internalContactIds: data.internalContactIds || [],
+        partnerIds: data.partnerIds || [],
         sharePointUrl: data.sharePointUrl || '',
         salesforceLink: data.salesforceLink || '',
-        additionalLink: data.additionalLink,
-        additionalInfo: data.additionalInfo,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        additionalLink: data.additionalLink || '',
+        additionalInfo: data.additionalInfo || '',
       };
-      await customerService.createCustomer(newCustomer);
-      return newCustomer;
+      const newId = await customerService.createCustomer(createData, userId);
+      return { id: newId, ...createData };
+    }
 
-    case 'update':
+    case 'update': {
       const customer = await customerService.getCustomerByName(data.customerName);
       if (!customer) throw new Error(`Customer ${data.customerName} not found`);
-      
-      const updatedCustomer = { ...customer, ...data, updatedAt: new Date() };
-      await customerService.updateCustomer(updatedCustomer);
-      return updatedCustomer;
+      const updates = { ...data };
+      delete updates.customerName;
+      await customerService.updateCustomer(customer.id, updates, userId);
+      return { ...customer, ...updates, updatedAt: new Date() };
+    }
 
-    case 'delete':
+    case 'delete': {
       const customerToDelete = await customerService.getCustomerByName(data.customerName);
       if (!customerToDelete) throw new Error(`Customer ${data.customerName} not found`);
-      
       await customerService.deleteCustomer(customerToDelete.id);
       return { deleted: true, customerName: data.customerName };
+    }
 
-    case 'search':
+    case 'search': {
       const allCustomers = await customerService.getAllCustomers();
-      // Apply search filters
       return allCustomers.filter(c => {
-        if (data.searchTerm && !c.customerName.toLowerCase().includes(data.searchTerm.toLowerCase())) {
+        if (data.searchTerm && !(c.customerName || '').toLowerCase().includes((data.searchTerm || '').toLowerCase())) {
           return false;
         }
-        if (data.product && !c.products.some(p => p.name === data.product)) {
+        if (data.product && !(c.products || []).some((p: { name?: string }) => (p?.name || '').toLowerCase().includes((data.product || '').toLowerCase()))) {
           return false;
         }
-        if (data.partner && !c.partners.some(p => p.name === data.partner)) {
+        if (data.partner && !(c.partners || []).some((p: { name?: string }) => (p?.name || '').toLowerCase().includes((data.partner || '').toLowerCase()))) {
           return false;
         }
         return true;
       });
+    }
 
-    case 'read':
+    case 'read': {
       const customerData = await customerService.getCustomerByName(data.customerName);
       if (!customerData) throw new Error(`Customer ${data.customerName} not found`);
       return customerData;
+    }
 
     default:
       throw new Error(`Unknown operation: ${operation}`);
@@ -147,24 +127,21 @@ async function executeNoteOperation(
   userEmail: string
 ): Promise<any> {
   switch (operation) {
-    case 'create':
+    case 'create': {
       const customer = await customerService.getCustomerByName(data.customerName);
       if (!customer) throw new Error(`Customer ${data.customerName} not found`);
 
-      const newNote: CustomerNote = {
-        id: crypto.randomUUID(),
+      const noteId = await customerNotesService.createNote({
         customerId: customer.id,
-        notes: data.notes,
+        notes: data.notes || data.noteContent || '',
         noteDate: data.noteDate ? new Date(data.noteDate) : new Date(),
-        createdBy: data.createdBy || userEmail,
-        updatedBy: userEmail,
+        createdBy: userId,
+        updatedBy: userId,
         seConfidence: data.seConfidence || '',
-        otherFields: { nextSteps: data.nextSteps || '' },
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      await customerNotesService.createNote(newNote);
-      return newNote;
+        otherFields: data.otherFields || { nextSteps: data.nextSteps || '' },
+      }, userId);
+      return { id: noteId, customerId: customer.id, notes: data.notes || data.noteContent };
+    }
 
     case 'list':
       const customerForNotes = await customerService.getCustomerByName(data.customerName);
@@ -225,7 +202,7 @@ async function executeProfileOperation(
         createdAt: new Date(),
         updatedAt: new Date()
       };
-      await customerProfileService.createProfile(newProfile);
+      await customerProfileService.createProfile(newProfile, userId);
       return newProfile;
 
     case 'update':
@@ -235,7 +212,7 @@ async function executeProfileOperation(
       const existingProfile = await customerProfileService.getProfileByCustomerId(customerForUpdate.id);
       if (!existingProfile) throw new Error(`Profile for ${data.customerName} not found`);
 
-      await customerProfileService.updateProfile({ id: existingProfile.id, ...data, updatedAt: new Date() });
+      await customerProfileService.updateProfile({ id: existingProfile.id, ...data }, userId);
       return { ...existingProfile, ...data, updatedAt: new Date() };
 
     default:
@@ -306,18 +283,21 @@ async function executeOpportunityOperation(
  */
 export async function POST(request: NextRequest) {
   try {
-    // Validate authentication
-    const auth = await validateAuth(request);
-    if (!auth) {
+    const authResult = await authorizeApiRequest(request);
+    if (authResult instanceof NextResponse) return authResult;
+
+    const body: AICommandRequest = await request.json();
+    const { intent, extractedData, entity, operation, userId, userEmail } = body;
+
+    if (!userId || !userEmail) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' } as AICommandResponse,
-        { status: 401 }
+        { success: false, error: 'userId and userEmail are required' } as AICommandResponse,
+        { status: 400 },
       );
     }
 
-    // Parse request body
-    const body: AICommandRequest = await request.json();
-    const { intent, extractedData, entity, operation, userId, userEmail } = body;
+    const mismatch = forbidUserIdMismatch(authResult.uid, userId);
+    if (mismatch) return mismatch;
 
     // Validate required fields
     if (!intent || !extractedData || !entity || !operation) {

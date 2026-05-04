@@ -1,69 +1,83 @@
-import { useState, useCallback } from 'react';
-import { Customer } from '@/types';
-import { customerService } from '@/lib/customerService';
+import { useCallback, useState } from 'react';
+import type { Customer } from '@/types';
+import { hubAuthFetch } from '@/lib/client/hubAuthFetch';
+import { contactResolver } from '@/lib/contactResolver';
 
 interface UseCustomerOperationsProps {
   userId?: string;
-  onCustomersChange?: (customers: Customer[]) => void;
+  getFirebaseIdToken: () => Promise<string | null>;
+  reloadWorkspace: () => Promise<void>;
 }
 
-/**
- * Custom hook to manage customer CRUD operations
- * Provides create, update, and delete functionality with defensive error handling
- */
-export function useCustomerOperations({ userId, onCustomersChange }: UseCustomerOperationsProps) {
-  const [customers, setCustomers] = useState<Customer[]>([]);
+export function useCustomerOperations({
+  userId,
+  getFirebaseIdToken,
+  reloadWorkspace,
+}: UseCustomerOperationsProps) {
+  /** Retained only so `useFirestoreSnapshotSync` can push workspace customers into memoized component state */
+  const [, setCustomers] = useState<Customer[]>([]);
 
-  const updateCustomers = useCallback((newCustomers: Customer[]) => {
-    setCustomers(newCustomers);
-    onCustomersChange?.(newCustomers);
-  }, [onCustomersChange]);
+  const saveCustomer = useCallback(
+    async (customer: Customer) => {
+      if (!userId) return;
+      const token = await getFirebaseIdToken();
+      if (!token) throw new Error('Sign in required');
+      const prepared = contactResolver.prepareCustomerForSave(customer);
 
-  const saveCustomer = useCallback(async (customer: Customer) => {
-    if (!userId) return;
-    
-    try {
-      const existingIndex = customers.findIndex(c => c.id === customer.id);
-      
-      if (existingIndex >= 0 && customer.id) {
-        try {
-          // Try to update existing customer
-          await customerService.updateCustomer(customer.id, customer, userId);
-          updateCustomers(customers.map(c => c.id === customer.id ? customer : c));
-        } catch (updateError: any) {
-          // If update fails (document doesn't exist in Firebase), create new
-          console.warn('Update failed, creating new customer instead:', updateError.message);
-          const newCustomerId = await customerService.createCustomer(customer, userId);
-          const newCustomer = { ...customer, id: newCustomerId };
-          // Replace the old entry with the new one
-          updateCustomers(customers.map(c => c.id === customer.id ? newCustomer : c));
+      if (customer.id) {
+        const put = await hubAuthFetch('/api/customers', token, {
+          method: 'PUT',
+          body: JSON.stringify({
+            customerId: customer.id,
+            customer: prepared,
+            userId,
+          }),
+        });
+        const text = await put.text();
+        if (!put.ok) {
+          const lower = text.toLowerCase();
+          if (lower.includes('no document to update')) {
+            const post = await hubAuthFetch('/api/customers', token, {
+              method: 'POST',
+              body: JSON.stringify({ customer: prepared, userId }),
+            });
+            if (!post.ok) throw new Error(await post.text());
+          } else {
+            throw new Error(text || `Customer update failed (${put.status})`);
+          }
         }
       } else {
-        // Create new customer
-        const newCustomerId = await customerService.createCustomer(customer, userId);
-        const newCustomer = { ...customer, id: newCustomerId };
-        updateCustomers([...customers, newCustomer]);
+        const post = await hubAuthFetch('/api/customers', token, {
+          method: 'POST',
+          body: JSON.stringify({ customer: prepared, userId }),
+        });
+        if (!post.ok) throw new Error(await post.text());
       }
-    } catch (error) {
-      console.error('Error saving customer:', error);
-      throw error;
-    }
-  }, [userId, customers, updateCustomers]);
 
-  const deleteCustomer = useCallback(async (customerId: string) => {
-    try {
-      await customerService.deleteCustomer(customerId);
-      updateCustomers(customers.filter(c => c.id !== customerId));
-    } catch (error) {
-      console.error('Error deleting customer:', error);
-      throw error;
-    }
-  }, [customers, updateCustomers]);
+      await reloadWorkspace();
+    },
+    [userId, getFirebaseIdToken, reloadWorkspace],
+  );
+
+  const deleteCustomer = useCallback(
+    async (customerId: string) => {
+      const token = await getFirebaseIdToken();
+      if (!token) throw new Error('Sign in required');
+      const res = await hubAuthFetch(
+        `/api/customers?id=${encodeURIComponent(customerId)}`,
+        token,
+        { method: 'DELETE' },
+      );
+      if (!res.ok) throw new Error(await res.text());
+      await reloadWorkspace();
+    },
+    [getFirebaseIdToken, reloadWorkspace],
+  );
 
   return {
-    customers,
-    setCustomers: updateCustomers,
+    customers: [],
+    setCustomers,
     saveCustomer,
-    deleteCustomer
+    deleteCustomer,
   };
 }

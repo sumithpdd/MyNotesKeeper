@@ -1,51 +1,67 @@
-import { useState, useCallback } from 'react';
-import { CustomerNote } from '@/types';
-import { customerNotesService } from '@/lib/customerNotes';
+import { useCallback, useState } from 'react';
+import type { CustomerNote } from '@/types';
+import { hubAuthFetch, hubAuthJson } from '@/lib/client/hubAuthFetch';
 
 interface UseNoteOperationsProps {
   userId?: string;
-  onNotesChange?: (notes: CustomerNote[]) => void;
+  getFirebaseIdToken: () => Promise<string | null>;
+  reloadWorkspace: () => Promise<void>;
 }
 
-/**
- * Custom hook to manage note CRUD operations
- * Provides create, update, and delete functionality with error handling
- */
-export function useNoteOperations({ userId, onNotesChange }: UseNoteOperationsProps) {
-  const [notes, setNotes] = useState<CustomerNote[]>([]);
+export function useNoteOperations({
+  userId,
+  getFirebaseIdToken,
+  reloadWorkspace,
+}: UseNoteOperationsProps) {
+  const [, setNotes] = useState<CustomerNote[]>([]);
 
-  const updateNotes = useCallback((newNotes: CustomerNote[]) => {
-    setNotes(newNotes);
-    onNotesChange?.(newNotes);
-  }, [onNotesChange]);
+  const saveNote = useCallback(
+    async (noteData: CustomerNote, selectedCustomerId: string) => {
+      if (!userId) return;
+      const token = await getFirebaseIdToken();
+      if (!token) throw new Error('Sign in required');
 
-  const saveNote = useCallback(async (noteData: CustomerNote, selectedCustomerId: string) => {
-    if (!userId) return;
-    
-    try {
       if (noteData.id) {
-        try {
-          // Try to update existing note
-          await customerNotesService.updateNote({
-            id: noteData.id,
-            customerId: noteData.customerId,
-            notes: noteData.notes,
-            noteDate: noteData.noteDate,
-            createdBy: noteData.createdBy,
-            updatedBy: userId,
-            seConfidence: noteData.seConfidence,
-            otherFields: noteData.otherFields,
-          }, userId);
-          
-          updateNotes(notes.map(note => 
-            note.id === noteData.id ? { ...note, ...noteData, updatedAt: new Date() } : note
-          ));
-        } catch (updateError: any) {
-          // If the note doesn't exist in Firestore, create it instead
-          if (updateError.message?.includes('does not exist')) {
-            console.warn(`Note ${noteData.id} doesn't exist in Firestore, creating new note instead`);
-            
-            const newNoteId = await customerNotesService.createNote({
+        const put = await hubAuthFetch('/api/notes', token, {
+          method: 'PUT',
+          body: JSON.stringify({
+            note: {
+              id: noteData.id,
+              customerId: noteData.customerId,
+              notes: noteData.notes,
+              noteDate: noteData.noteDate,
+              createdBy: noteData.createdBy,
+              updatedBy: userId,
+              seConfidence: noteData.seConfidence,
+              otherFields: noteData.otherFields,
+            },
+            userId,
+          }),
+        });
+        if (!put.ok) {
+          const message = await put.text();
+          if (!message.includes('does not exist')) throw new Error(message || `HTTP ${put.status}`);
+          await hubAuthJson('/api/notes', token, {
+            method: 'POST',
+            body: JSON.stringify({
+              note: {
+                customerId: selectedCustomerId,
+                notes: noteData.notes,
+                noteDate: noteData.noteDate,
+                createdBy: userId,
+                updatedBy: userId,
+                seConfidence: noteData.seConfidence,
+                otherFields: noteData.otherFields,
+              },
+              userId,
+            }),
+          });
+        }
+      } else {
+        await hubAuthJson('/api/notes', token, {
+          method: 'POST',
+          body: JSON.stringify({
+            note: {
               customerId: selectedCustomerId,
               notes: noteData.notes,
               noteDate: noteData.noteDate,
@@ -53,63 +69,34 @@ export function useNoteOperations({ userId, onNotesChange }: UseNoteOperationsPr
               updatedBy: userId,
               seConfidence: noteData.seConfidence,
               otherFields: noteData.otherFields,
-            }, userId);
-            
-            const newNote: CustomerNote = {
-              ...noteData,
-              id: newNoteId,
-              customerId: selectedCustomerId,
-              createdAt: new Date(),
-              updatedAt: new Date()
-            };
-            
-            // Remove old note and add new one
-            updateNotes([newNote, ...notes.filter(note => note.id !== noteData.id)]);
-          } else {
-            throw updateError;
-          }
-        }
-      } else {
-        // Create new note
-        const newNoteId = await customerNotesService.createNote({
-          customerId: selectedCustomerId,
-          notes: noteData.notes,
-          noteDate: noteData.noteDate,
-          createdBy: userId,
-          updatedBy: userId,
-          seConfidence: noteData.seConfidence,
-          otherFields: noteData.otherFields,
-        }, userId);
-        
-        const newNote: CustomerNote = {
-          ...noteData,
-          id: newNoteId,
-          customerId: selectedCustomerId,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        updateNotes([newNote, ...notes]);
+            },
+            userId,
+          }),
+        });
       }
-    } catch (error) {
-      console.error('Error saving note:', error);
-      throw error;
-    }
-  }, [userId, notes, updateNotes]);
 
-  const deleteNote = useCallback(async (noteId: string) => {
-    try {
-      await customerNotesService.deleteNote(noteId);
-      updateNotes(notes.filter(note => note.id !== noteId));
-    } catch (error) {
-      console.error('Error deleting note:', error);
-      throw error;
-    }
-  }, [notes, updateNotes]);
+      await reloadWorkspace();
+    },
+    [userId, getFirebaseIdToken, reloadWorkspace],
+  );
+
+  const deleteNote = useCallback(
+    async (noteId: string) => {
+      const token = await getFirebaseIdToken();
+      if (!token) throw new Error('Sign in required');
+      const res = await hubAuthFetch(`/api/notes?id=${encodeURIComponent(noteId)}`, token, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await reloadWorkspace();
+    },
+    [getFirebaseIdToken, reloadWorkspace],
+  );
 
   return {
-    notes,
-    setNotes: updateNotes,
+    notes: [],
+    setNotes,
     saveNote,
-    deleteNote
+    deleteNote,
   };
 }
