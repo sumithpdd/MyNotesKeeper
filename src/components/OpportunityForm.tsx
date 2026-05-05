@@ -9,7 +9,7 @@ import { Opportunity, OpportunityStage } from '@/types';
 import { MultiSelect } from './ui/MultiSelect';
 import { FieldHint } from './ui/FieldHint';
 import { OPPORTUNITY_STAGE_ORDER, OPPORTUNITY_STAGE_HELP } from '@/lib/opportunityStages';
-import { dummyProducts, dummyInternalContacts } from '../../data/dummyData';
+import { dummyProducts, dummyInternalContacts } from '@/data/seed';
 
 const STAGE_ENUM = [...OPPORTUNITY_STAGE_ORDER] as unknown as [
   OpportunityStage,

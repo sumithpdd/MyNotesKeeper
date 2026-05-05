@@ -149,7 +149,11 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+# Local-only datasets that may contain real customer info.
+# `data/dxpPools.ts` is intentionally NOT ignored — it is generic config
+# (DXP objective/use-case lookups, status colours) needed at compile time.
+# Keep `data/dummyData.ts` ignored: shipping code does not import it; the
+# scrubbed exports it used to provide live in `src/data/seed.ts`.
 data/Customer*
 data/dummyData.ts
-data/dxpPools.ts
 data/realCustomerData.ts

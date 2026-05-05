@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, X, Package, Tag, FileText, Activity, Globe } from 'lucide-react';
 import { Product } from '@/types';
-import { dummyProducts } from '../../../data/dummyData';
+import { dummyProducts } from '@/data/seed';
 import { PRODUCT_STATUS_OPTIONS } from '../../../data/dxpPools';
 import { formatProductDisplayName, PRODUCT_VERSION_PRESETS_DESC } from '@/lib/productDisplay';
 

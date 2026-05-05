@@ -8,12 +8,12 @@ import { Save, X, Building, Users, ExternalLink, Globe, Link2, GitBranch } from 
 import { Customer, CreateCustomerData, MartechTool } from '@/types';
 import { MultiSelect } from './ui/MultiSelect';
 import { AIButton } from './ui/AIButton';
-import { 
-  dummyProducts, 
-  dummyCustomerContacts, 
+import {
+  dummyProducts,
+  dummyCustomerContacts,
   dummyInternalContacts,
-  dummyPartners 
-} from '../../data/dummyData';
+  dummyPartners,
+} from '@/data/seed';
 import { formatProductDisplayName } from '@/lib/productDisplay';
 import { customerWebsiteList, parseWebsitesFromFormText } from '@/lib/customerWebsites';
 
