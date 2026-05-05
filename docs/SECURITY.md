@@ -21,7 +21,13 @@
 
 ### `NEXT_PUBLIC_*` variables (browser-visible)
 
-Next.js exposes **`NEXT_PUBLIC_*`** variables in the **client JavaScript bundle**. That includes **`NEXT_PUBLIC_GEMINI_API_KEY`** and **`NEXT_PUBLIC_FIREBASE_*`**. Restrict Firebase keys in Google Cloud Console; treat **Gemini** keys as sensitive and **rotate** if you suspect leakage. Scripts such as **`check-env.js`** only report configured/missing — they do **not** print secret values.
+Next.js inlines **`NEXT_PUBLIC_*`** variables into the **client JavaScript bundle** at build time. They are public and must never hold real secrets.
+
+- **`NEXT_PUBLIC_FIREBASE_*`** — public by design (Firebase web config). Restrict the API key by HTTP referrer in Google Cloud Console → Credentials, and rely on **Firestore Rules + Auth** (and optionally **App Check**) for actual security.
+- **`GEMINI_API_KEY`** — **server-only**, no `NEXT_PUBLIC_` prefix. Used only by server code (`/api/*` routes). The client must call those routes via `hubAuthFetch` rather than calling Gemini directly. If the variable ever appears with a `NEXT_PUBLIC_` prefix again, the key is leaked into every browser visitor's JS bundle and must be rotated.
+- **`FIREBASE_SERVICE_ACCOUNT_JSON`** — server-only secret for Firebase Admin SDK. Never expose, never log.
+
+Scripts such as **`check-env.js`** only report configured/missing — they do **not** print secret values.
 
 ## Firebase (client)
 

@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Eye, Building, Users, Calendar, FileText, ArrowLeft, Sparkles, X, CalendarDays, List, ClipboardList } from 'lucide-react';
 import { LinkWithCopy } from './ui/LinkWithCopy';
-import { aiService } from '@/lib/ai';
+import { useAuth } from '@/lib/auth';
+import { hubAuthJson } from '@/lib/client/hubAuthFetch';
 import { Customer, CustomerNote, CustomerProfile, Opportunity, OpportunityStage, EngagementTask, Product, Partner, MartechTool, InternalContact } from '@/types';
 import { CustomerForm } from './CustomerForm';
 import { CustomerEditSlideOut } from './CustomerEditSlideOut';
@@ -77,6 +78,7 @@ export function CustomerManagement({
   workspaceFocus,
   onWorkspaceFocusConsumed,
 }: CustomerManagementProps) {
+  const { getFirebaseIdToken } = useAuth();
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | undefined>();
   const [showCustomerProfileForm, setShowCustomerProfileForm] = useState(false);
@@ -192,15 +194,34 @@ export function CustomerManagement({
 
   const handleGenerateSummary = async () => {
     if (!selectedCustomerData) return;
-    
+
     setIsGeneratingSummary(true);
     try {
-      const summary = await aiService.generateCustomerSummary(selectedCustomerData);
+      const token = await getFirebaseIdToken();
+      if (!token) throw new Error('Sign in required to use AI features.');
+      const { summary } = await hubAuthJson<{ summary: string }>(
+        '/api/ai/customer-summary',
+        token,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            customerName: selectedCustomerData.customerName,
+            products: selectedCustomerData.products,
+            migrationComplexity: selectedCustomerData.migrationComplexity,
+            perpetualOrSubscription: selectedCustomerData.perpetualOrSubscription,
+            hostingLocation: selectedCustomerData.hostingLocation,
+            compellingEvent: selectedCustomerData.compellingEvent,
+            existingMigrationOpp: selectedCustomerData.existingMigrationOpp,
+            migrationNotes: selectedCustomerData.migrationNotes,
+            mergedNotes: selectedCustomerData.mergedNotes,
+          }),
+        },
+      );
       setCustomerSummary(summary);
-    } catch (error: any) {
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Failed to generate summary';
       console.error('Error generating summary:', error);
-      // Use the error message from the AI service which includes helpful details
-      alert(error?.message || 'Failed to generate summary. Please check your API key at https://aistudio.google.com/app/apikey');
+      alert(msg);
     } finally {
       setIsGeneratingSummary(false);
     }

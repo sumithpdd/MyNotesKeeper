@@ -1,23 +1,19 @@
+import 'server-only';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { SE_PERSONA_PROMPT, PromptTemplate } from './chatbotPrompts';
+import type { ParsedChatbotInput } from '@/types/chatbotAI';
+
+export type { ParsedChatbotInput } from '@/types/chatbotAI';
 
 let genAI: GoogleGenerativeAI | null = null;
-
-export interface ParsedChatbotInput {
-  intent: string; // What the user wants to do
-  confidence: number; // 0-1 confidence in the parse
-  extractedData: Record<string, any>; // The structured data
-  suggestedPrompt?: PromptTemplate; // Which prompt template was matched
-  errors?: string[]; // Any parsing errors or warnings
-}
 
 export class ChatbotAIService {
   private getGenAI() {
     if (!genAI) {
-      const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+      const apiKey = process.env.GEMINI_API_KEY;
       
       if (!apiKey) {
-        throw new Error('Gemini API key is not configured. Please add NEXT_PUBLIC_GEMINI_API_KEY to your .env.local file.');
+        throw new Error('Gemini API key is not configured. Please add GEMINI_API_KEY (server-only) to your .env.local file.');
       }
       
       if (!apiKey.startsWith('AIza')) {

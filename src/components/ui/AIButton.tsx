@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { Sparkles, Loader2 } from 'lucide-react';
-import { aiService } from '@/lib/ai';
+import { useAuth } from '@/lib/auth';
+import { hubAuthJson } from '@/lib/client/hubAuthFetch';
 
 interface AIButtonProps {
   currentText: string;
@@ -12,27 +13,24 @@ interface AIButtonProps {
 }
 
 export function AIButton({ currentText, onGenerated, context, className }: AIButtonProps) {
+  const { getFirebaseIdToken } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAIAction = async (action: 'expand' | 'refine' | 'elaborate') => {
     setIsLoading(true);
-    console.log('🚀 Starting AI enhancement...', { action, hasText: !!currentText });
     try {
-      const refined = await aiService.refineText(currentText, action, context);
-      console.log('✅ AI enhancement successful!');
-      onGenerated(refined);
-    } catch (error: any) {
-      console.error('❌ Error generating text:', error);
-      console.error('Full error details:', {
-        message: error?.message,
-        status: error?.status,
-        code: error?.code,
-        stack: error?.stack
+      const token = await getFirebaseIdToken();
+      if (!token) throw new Error('Sign in required to use AI features.');
+      const res = await hubAuthJson<{ text: string }>('/api/ai/refine-text', token, {
+        method: 'POST',
+        body: JSON.stringify({ text: currentText, action, context }),
       });
-      
-      // Use the error message from the AI service which includes helpful details
-      alert(error?.message || 'Failed to generate text. Please check your API key at https://aistudio.google.com/app/apikey');
+      onGenerated(res.text);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Failed to refine text';
+      console.error('AI refine failed:', error);
+      alert(msg);
     } finally {
       setIsLoading(false);
       setIsOpen(false);
@@ -83,4 +81,3 @@ export function AIButton({ currentText, onGenerated, context, className }: AIBut
     </div>
   );
 }
-

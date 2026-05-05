@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, CheckCircle, XCircle, AlertCircle, Loader2, Bot, User, MessageSquare } from 'lucide-react';
+import { Send, Sparkles, CheckCircle, XCircle, AlertCircle, Loader2, Bot, User } from 'lucide-react';
 import { Customer, CustomerNote, CustomerProfile } from '@/types';
-import { chatbotAI, ParsedChatbotInput } from '@/lib/chatbotAI';
-import { chatbotPrompts, getPromptById } from '@/lib/chatbotPrompts';
+import { useAuth } from '@/lib/auth';
+import { hubAuthJson } from '@/lib/client/hubAuthFetch';
+import type { ParsedChatbotInput } from '@/types/chatbotAI';
 
 interface ChatMessage {
   id: string;
@@ -32,6 +33,7 @@ export function ChatbotInterface({
   onUpdateProfile,
   currentUser
 }: ChatbotInterfaceProps) {
+  const { getFirebaseIdToken } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -69,20 +71,24 @@ export function ChatbotInterface({
     setIsProcessing(true);
 
     try {
-      // Detect intent first
-      const detectedPrompt = await chatbotAI.detectIntent(input, chatbotPrompts);
-      
-      // Parse the input
-      const customerNames = customers.map(c => c.customerName);
-      const parsed = await chatbotAI.parseInput(input, detectedPrompt || undefined, customerNames);
-      
-      // Generate confirmation message
-      const confirmationText = await chatbotAI.generateConfirmation(parsed);
-      
+      const token = await getFirebaseIdToken();
+      if (!token) throw new Error('Sign in required to use the chatbot.');
+
+      const { parsed, confirmation } = await hubAuthJson<{
+        parsed: ParsedChatbotInput;
+        confirmation: string;
+      }>('/api/ai/chatbot/parse', token, {
+        method: 'POST',
+        body: JSON.stringify({
+          input,
+          customerNames: customers.map(c => c.customerName),
+        }),
+      });
+
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: confirmationText,
+        content: confirmation,
         timestamp: new Date(),
         parsedData: parsed,
         status: 'pending'
@@ -90,11 +96,12 @@ export function ChatbotInterface({
 
       setMessages(prev => [...prev, assistantMessage]);
       setPendingAction(parsed);
-    } catch (error: any) {
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Failed to parse input';
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'system',
-        content: `Sorry, I had trouble understanding that. ${error.message}. Could you try rephrasing?`,
+        content: `Sorry, I had trouble understanding that. ${msg}. Could you try rephrasing?`,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);

@@ -3,8 +3,12 @@
  *
  * Uses Gemini's function calling: the LLM decides which tool to call,
  * we execute it, then optionally get a natural language response.
+ *
+ * Server-only: holds the Gemini key (`GEMINI_API_KEY`). Importing this from a
+ * client component triggers a build-time error via the `server-only` package.
  */
 
+import 'server-only';
 import {
   GoogleGenerativeAI,
   SchemaType,
@@ -292,9 +296,9 @@ let genAI: GoogleGenerativeAI | null = null;
 
 function getModel() {
   if (!genAI) {
-    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error('NEXT_PUBLIC_GEMINI_API_KEY is not configured');
+      throw new Error('GEMINI_API_KEY is not configured');
     }
     genAI = new GoogleGenerativeAI(apiKey);
   }

@@ -51,8 +51,8 @@ NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 
-# Google Gemini AI Configuration
-NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key
+# Google Gemini AI Configuration (server-only — no NEXT_PUBLIC_ prefix)
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
 ## Step 3: Start the Server (1 minute)

@@ -1,3 +1,4 @@
+import 'server-only';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AIGenerationRequest, AIGenerationResponse } from '@/types';
 import { formatProductDisplayName } from '@/lib/productDisplay';
@@ -8,10 +9,10 @@ export class AIService {
   private getGenAI() {
     if (!genAI) {
       // Get API key from environment variable only
-      const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+      const apiKey = process.env.GEMINI_API_KEY;
       
       if (!apiKey) {
-        throw new Error('Gemini API key is not configured. Please add NEXT_PUBLIC_GEMINI_API_KEY to your .env.local file and restart the server. Get your key from: https://aistudio.google.com/app/apikey');
+        throw new Error('Gemini API key is not configured. Please add GEMINI_API_KEY (server-only) to your .env.local file and restart the server. Get your key from: https://aistudio.google.com/app/apikey');
       }
       
       if (!apiKey.startsWith('AIza')) {

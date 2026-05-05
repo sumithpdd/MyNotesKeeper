@@ -174,8 +174,11 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
 
-# Google Gemini AI (get from Google AI Studio)
-NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key
+# Google Gemini AI (server-only — get from Google AI Studio)
+# IMPORTANT: do NOT prefix with NEXT_PUBLIC_. Doing so would inline the key
+# into the browser bundle and expose your billable Gemini quota to anyone who
+# views your site source. All Gemini calls run on the server (`/api/*`).
+GEMINI_API_KEY=your_gemini_api_key
 
 # Easiest locally: put the downloaded key in project root as serviceAccountKey.json (gitignored) and uncomment:
 FIREBASE_SERVICE_ACCOUNT_PATH=./serviceAccountKey.json
@@ -318,7 +321,7 @@ Navigate to **http://localhost:3000**
 
 **Fix:**
 1. Get a new API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Update `NEXT_PUBLIC_GEMINI_API_KEY` in `.env.local`
+2. Update `GEMINI_API_KEY` (server-only — no `NEXT_PUBLIC_` prefix) in `.env.local`
 3. Restart dev server
 
 #### "Quota exceeded"

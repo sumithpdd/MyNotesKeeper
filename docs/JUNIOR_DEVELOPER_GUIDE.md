@@ -449,11 +449,13 @@ export async function POST(request: Request) {
 **We use:**
 ```typescript
 // .env.local (not committed to git)
-NEXT_PUBLIC_FIREBASE_API_KEY=your_key_here
-NEXT_PUBLIC_GEMINI_API_KEY=your_key_here
+NEXT_PUBLIC_FIREBASE_API_KEY=your_key_here   // public web config (browser-visible by design)
+GEMINI_API_KEY=your_key_here                 // server-only secret — never NEXT_PUBLIC_
 
-// Usage in code
-const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+// Usage: NEXT_PUBLIC_* is readable in client and server code
+const firebaseKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+// Server-only vars are only readable in server code (API routes, server components)
+const geminiKey = process.env.GEMINI_API_KEY;
 ```
 
 **Rules:**
