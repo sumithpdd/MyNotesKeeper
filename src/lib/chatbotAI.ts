@@ -1,66 +1,84 @@
 import 'server-only';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateText, generateObject } from 'ai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { z } from 'zod';
 import { SE_PERSONA_PROMPT, PromptTemplate } from './chatbotPrompts';
 import type { ParsedChatbotInput } from '@/types/chatbotAI';
 
 export type { ParsedChatbotInput } from '@/types/chatbotAI';
 
-let genAI: GoogleGenerativeAI | null = null;
+/**
+ * Server-only chatbot service using the Vercel AI SDK with Google Gemini.
+ * Mirrors the previous ChatbotAIService surface so callers can stay unchanged.
+ *
+ * Env: `GEMINI_API_KEY` (server-only).
+ */
+
+const MODEL_ID = 'gemini-2.0-flash';
+
+let providerSingleton: ReturnType<typeof createGoogleGenerativeAI> | null = null;
+
+function getModel() {
+  if (!providerSingleton) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error(
+        'Gemini API key is not configured. Please add GEMINI_API_KEY (server-only) to your .env.local file.',
+      );
+    }
+    if (!apiKey.startsWith('AIza')) {
+      throw new Error(
+        'Invalid API key format. Please check your key from https://aistudio.google.com/app/apikey',
+      );
+    }
+    providerSingleton = createGoogleGenerativeAI({ apiKey });
+  }
+  return providerSingleton(MODEL_ID);
+}
+
+const parseInputSchema = z.object({
+  intent: z.string(),
+  confidence: z.number().min(0).max(1),
+  extractedData: z.record(z.string(), z.any()),
+  warnings: z.array(z.string()).optional(),
+});
+
+const detectIntentSchema = z.object({
+  promptId: z.string().nullable(),
+  confidence: z.number().min(0).max(1),
+  reasoning: z.string().optional(),
+});
+
+const suggestActionsSchema = z.object({
+  actions: z.array(z.string()),
+});
 
 export class ChatbotAIService {
-  private getGenAI() {
-    if (!genAI) {
-      const apiKey = process.env.GEMINI_API_KEY;
-      
-      if (!apiKey) {
-        throw new Error('Gemini API key is not configured. Please add GEMINI_API_KEY (server-only) to your .env.local file.');
-      }
-      
-      if (!apiKey.startsWith('AIza')) {
-        throw new Error('Invalid API key format. Please check your key from https://aistudio.google.com/app/apikey');
-      }
-      
-      genAI = new GoogleGenerativeAI(apiKey);
-    }
-    return genAI;
-  }
-
-  private getModel() {
-    return this.getGenAI().getGenerativeModel({ model: 'gemini-2.0-flash' });
-  }
-
   /**
-   * Parse natural language input and extract structured data
+   * Parse natural language input and extract structured data.
    */
   async parseInput(
     userInput: string,
     promptTemplate?: PromptTemplate,
-    existingCustomers?: string[]
+    existingCustomers?: string[],
   ): Promise<ParsedChatbotInput> {
     try {
       const systemPrompt = promptTemplate?.systemPrompt || SE_PERSONA_PROMPT;
-      
-      const fullPrompt = `${systemPrompt}
+      const knownCustomersBlock =
+        existingCustomers && existingCustomers.length > 0
+          ? `\nKnown customers in the system:\n${existingCustomers.slice(0, 20).join(', ')}\n`
+          : '';
+      const fieldsHint = promptTemplate
+        ? `Focus on these fields: ${promptTemplate.fields.join(', ')}`
+        : '';
 
-${existingCustomers && existingCustomers.length > 0 ? `
-Known customers in the system:
-${existingCustomers.slice(0, 20).join(', ')}
-` : ''}
+      const fullPrompt = `${systemPrompt}
+${knownCustomersBlock}
 
 User input: "${userInput}"
 
-Parse this input and extract structured data as a JSON object. 
-${promptTemplate ? `Focus on these fields: ${promptTemplate.fields.join(', ')}` : ''}
-
-Return ONLY a valid JSON object with the following structure:
-{
-  "intent": "brief description of what the user wants to do",
-  "confidence": 0.95,
-  "extractedData": {
-    // All extracted fields here
-  },
-  "warnings": [] // Any ambiguities or missing information
-}
+Parse this input and extract structured data.
+${fieldsHint}
 
 Important:
 - For dates, use ISO format (YYYY-MM-DD)
@@ -68,44 +86,41 @@ Important:
 - For booleans, use true/false
 - Match customer names to existing customers if possible
 - If a field is not mentioned, omit it or set to null
-- Be smart about interpreting informal language`;
+- Be smart about interpreting informal language
+- "warnings" should list any ambiguities or missing information.`;
 
-      console.log('🤖 Parsing input with AI:', userInput);
-      const result = await this.getModel().generateContent(fullPrompt);
-      const response = await result.response;
-      const text = response.text();
-      
-      // Extract JSON from the response (might be wrapped in markdown code blocks)
-      const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/) || text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('Could not extract JSON from AI response');
-      }
-      
-      const jsonText = jsonMatch[1] || jsonMatch[0];
-      const parsed = JSON.parse(jsonText);
-      
-      console.log('✅ Successfully parsed:', parsed);
-      
+      const { object } = await generateObject({
+        model: getModel(),
+        schema: parseInputSchema,
+        prompt: fullPrompt,
+      });
+
       return {
-        intent: parsed.intent || 'Unknown intent',
-        confidence: parsed.confidence || 0.5,
-        extractedData: parsed.extractedData || {},
+        intent: object.intent || 'Unknown intent',
+        confidence: typeof object.confidence === 'number' ? object.confidence : 0.5,
+        extractedData: object.extractedData ?? {},
         suggestedPrompt: promptTemplate,
-        errors: parsed.warnings || []
+        errors: object.warnings ?? [],
       };
-    } catch (error: any) {
-      console.error('❌ Error parsing chatbot input:', error);
-      throw new Error(`Failed to parse input: ${error.message}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error parsing chatbot input:', error);
+      throw new Error(`Failed to parse input: ${message}`);
     }
   }
 
   /**
-   * Determine which prompt template best matches the user input
+   * Determine which prompt template best matches the user input.
    */
-  async detectIntent(userInput: string, availablePrompts: PromptTemplate[]): Promise<PromptTemplate | null> {
+  async detectIntent(
+    userInput: string,
+    availablePrompts: PromptTemplate[],
+  ): Promise<PromptTemplate | null> {
     try {
-      const promptsList = availablePrompts.map(p => `- ${p.id}: ${p.title} - ${p.description}`).join('\n');
-      
+      const promptsList = availablePrompts
+        .map((p) => `- ${p.id}: ${p.title} - ${p.description}`)
+        .join('\n');
+
       const detectionPrompt = `${SE_PERSONA_PROMPT}
 
 Available prompt templates:
@@ -113,49 +128,24 @@ ${promptsList}
 
 User input: "${userInput}"
 
-Determine which prompt template best matches this input. Return ONLY a JSON object:
-{
-  "promptId": "the-best-matching-prompt-id",
-  "confidence": 0.95,
-  "reasoning": "why this template was chosen"
-}
+Determine which prompt template best matches this input. If no template matches well, return promptId = null.`;
 
-If no template matches well, return:
-{
-  "promptId": null,
-  "confidence": 0.0,
-  "reasoning": "explanation"
-}`;
+      const { object } = await generateObject({
+        model: getModel(),
+        schema: detectIntentSchema,
+        prompt: detectionPrompt,
+      });
 
-      console.log('🎯 Detecting intent for:', userInput);
-      const result = await this.getModel().generateContent(detectionPrompt);
-      const response = await result.response;
-      const text = response.text();
-      
-      const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/) || text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        return null;
-      }
-      
-      const jsonText = jsonMatch[1] || jsonMatch[0];
-      const parsed = JSON.parse(jsonText);
-      
-      if (!parsed.promptId) {
-        return null;
-      }
-      
-      const matchedPrompt = availablePrompts.find(p => p.id === parsed.promptId);
-      console.log('✅ Detected intent:', matchedPrompt?.title);
-      
-      return matchedPrompt || null;
-    } catch (error: any) {
-      console.error('❌ Error detecting intent:', error);
+      if (!object.promptId) return null;
+      return availablePrompts.find((p) => p.id === object.promptId) || null;
+    } catch (error) {
+      console.error('Error detecting intent:', error);
       return null;
     }
   }
 
   /**
-   * Generate a natural language confirmation message
+   * Generate a natural language confirmation message.
    */
   async generateConfirmation(parsedData: ParsedChatbotInput): Promise<string> {
     try {
@@ -175,23 +165,21 @@ Keep it concise (2-3 sentences max). Be friendly and professional.
 
 Return ONLY the confirmation text, no JSON.`;
 
-      const result = await this.getModel().generateContent(confirmPrompt);
-      const response = await result.response;
-      return response.text();
-    } catch (error: any) {
-      console.error('❌ Error generating confirmation:', error);
-      // Fallback to a simple confirmation
+      const { text } = await generateText({ model: getModel(), prompt: confirmPrompt });
+      return text;
+    } catch (error) {
+      console.error('Error generating confirmation:', error);
       return `I understood: ${parsedData.intent}. Please review the details below and confirm.`;
     }
   }
 
   /**
-   * Suggest next actions based on the current context
+   * Suggest next actions based on the current context.
    */
   async suggestNextActions(
     customerName: string,
     recentNotes: string[],
-    profileData?: any
+    profileData?: unknown,
   ): Promise<string[]> {
     try {
       const suggestionPrompt = `${SE_PERSONA_PROMPT}
@@ -202,30 +190,22 @@ ${recentNotes.slice(0, 3).join('\n')}
 
 ${profileData ? `Profile data: ${JSON.stringify(profileData)}` : ''}
 
-Based on this context, suggest 3-5 next actions or follow-ups that would be valuable for a Sales Solution Engineer.
+Based on this context, suggest 3-5 next actions or follow-ups that would be valuable for a Sales Solution Engineer. Return them under the "actions" field.`;
 
-Return ONLY a JSON array of strings:
-["action 1", "action 2", "action 3"]`;
-
-      const result = await this.getModel().generateContent(suggestionPrompt);
-      const response = await result.response;
-      const text = response.text();
-      
-      const jsonMatch = text.match(/\[[\s\S]*\]/);
-      if (!jsonMatch) {
-        return [];
-      }
-      
-      const suggestions = JSON.parse(jsonMatch[0]);
-      return Array.isArray(suggestions) ? suggestions : [];
-    } catch (error: any) {
-      console.error('❌ Error suggesting next actions:', error);
+      const { object } = await generateObject({
+        model: getModel(),
+        schema: suggestActionsSchema,
+        prompt: suggestionPrompt,
+      });
+      return Array.isArray(object.actions) ? object.actions : [];
+    } catch (error) {
+      console.error('Error suggesting next actions:', error);
       return [];
     }
   }
 
   /**
-   * Enhance or expand user input with AI assistance
+   * Enhance or expand user input with AI assistance.
    */
   async enhanceInput(userInput: string, context: string): Promise<string> {
     try {
@@ -241,15 +221,13 @@ Enhance this input by:
 
 Return the enhanced input text only (no JSON).`;
 
-      const result = await this.getModel().generateContent(enhancePrompt);
-      const response = await result.response;
-      return response.text();
-    } catch (error: any) {
-      console.error('❌ Error enhancing input:', error);
+      const { text } = await generateText({ model: getModel(), prompt: enhancePrompt });
+      return text;
+    } catch (error) {
+      console.error('Error enhancing input:', error);
       return userInput;
     }
   }
 }
 
 export const chatbotAI = new ChatbotAIService();
-
