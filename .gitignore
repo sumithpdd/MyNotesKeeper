@@ -157,3 +157,8 @@ vite.config.ts.timestamp-*
 data/Customer*
 data/dummyData.ts
 data/realCustomerData.ts
+
+# One-shot, machine-local seed/admin scripts that may contain real PII or
+# customer-specific URLs. Never commit these — copy/edit locally per run.
+scripts/*.local.*
+scripts/*.local
