@@ -18,6 +18,7 @@ Welcome! This guide helps you get started and find what you need quickly.
 | **[API_GUIDE.md](API_GUIDE.md)** | REST APIs, **`GET /api/workspace`**, Firebase Admin Bearer auth | Developers / integrators |
 | **[FEATURES.md](FEATURES.md)** | Feature documentation | Everyone |
 | **[CUSTOMER_JOURNEY.md](CUSTOMER_JOURNEY.md)** | Engagement journey flows (how tabs fit together) | Everyone |
+| **[MEETING_NOTES.md](MEETING_NOTES.md)** | Structured meeting notes (`ideasExecution`, imports) | Everyone |
 | **[CHANGELOG.md](CHANGELOG.md)** | Version history & fixes | Everyone |
 | **[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)** | Database migration | Developers |
 | **[SCRIPTS.md](SCRIPTS.md)** | Migration scripts | Developers |
@@ -74,7 +75,7 @@ Welcome! This guide helps you get started and find what you need quickly.
 
 **Key Features:**
 - ✅ Customer & opportunity management
-- ✅ **Tasks & Kanban** — four statuses (incl. Cancelled), product tags, search & filters, calendar
+- ✅ **Tasks & Kanban** — four statuses (incl. Cancelled), card drag/drop, product tags, reusable filters, calendar + Gantt timeline lanes
 - ✅ AI-powered chatbot for data entry
 - ✅ Note templates and generation
 - ✅ Firebase cloud storage

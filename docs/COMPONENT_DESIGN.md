@@ -58,6 +58,7 @@ Before writing new UI, check if a reusable component exists:
 | Avatar with initials | `Avatar` |
 | Role/title badge | `TitleBadge` |
 | Copyable link | `LinkWithCopy` |
+| Task search/filter shell | `TaskFiltersBar` |
 
 ---
 
@@ -79,6 +80,17 @@ Widgets that only belong to the main engagement hub dashboard (not generic featu
 ### Journey documentation
 
 High-level UX flows (warm start, onboarding a logo, tab roles) live in **`docs/CUSTOMER_JOURNEY.md`** and should stay aligned when adding major tabs or workflows.
+
+### Tasks module pattern
+
+The Tasks feature is now explicitly split into reusable surfaces:
+
+- **`TaskFiltersBar`**: shared search/filter controls.
+- **`TaskKanbanBoard`**: operational status lanes and drag/drop.
+- **`TaskCalendarView`**: month grid + Gantt-style timeline lanes.
+- **`TaskFormDrawer`**: create/edit workflow (links, checklist, subtasks, account/opportunity mapping).
+
+This is the preferred model when adding new task views: keep filter state in an orchestrator, then reuse focused presentational components.
 
 ### Domain-backed behavior
 
@@ -374,6 +386,7 @@ Use `onClick={(e) => e.stopPropagation()}` on the button container so row click 
 ## Checklist for New Features
 
 - [ ] Check if `ui/` component exists before creating new UI
+- [ ] Check feature-specific reusable components (e.g. `tasks/TaskFiltersBar`) before duplicating filter markup
 - [ ] Extract logic to custom hook if > 50 lines
 - [ ] Use TypeScript interfaces for all props
 - [ ] Add JSDoc comments for reusable components

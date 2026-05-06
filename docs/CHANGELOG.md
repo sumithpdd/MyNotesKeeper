@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.5.3] - 2026-05-06 - Meeting notes (ideas & execution), AE review seed script
+
+- ✅ **Notes:** **Ideas & execution** section on customer notes (`otherFields.ideasExecution`), aligned with domain constants (`MEETING_NOTE_OTHER_FIELDS`).
+- 📚 **Docs:** [MEETING_NOTES.md](MEETING_NOTES.md); journey/architecture cross-links.
+- 🔧 **Ops:** Gitignored `scripts/seedJohnFalloAccountReview.local.js` to upsert AE/SC account-review customers, contacts, notes, and Sumith follow-up tasks (run with `--apply` after review).
+
+---
+
+## [2.5.2] - 2026-05-06 - Tasks UX hardening, Gantt pagination, docs/security alignment
+
+- ✅ **Tasks UX:** Kanban cards now support **card-surface drag/drop** (not only grip drag), with protected click actions for delete/link/workspace controls.
+- ✅ **Calendar:** Added a **Gantt-style timeline lane** with month-relative bars and **pagination** for large task lists.
+- ♻️ **Component reuse:** Extracted task search/filter shell into reusable **`TaskFiltersBar`** component (`src/components/tasks/TaskFiltersBar.tsx`), reducing orchestrator bloat.
+- 🔐 **Security docs:** Added guidance for local-only data scripts (`scripts/*.local.*`) and dry-run-first operational practice.
+- 📚 **Journey docs:** Updated customer journey with an explicit task execution loop diagram (Kanban → notes/opportunity → timeline).
+
+---
+
 ## [2.5.1] - 2026-05-03 - Documentation: Hub API auth & workspace
 
 - 📚 **[API_GUIDE.md](API_GUIDE.md)**, **[SECURITY.md](SECURITY.md)**, **[SETUP.md](SETUP.md)**, **[ARCHITECTURE.md](ARCHITECTURE.md)**, **[docs/README.md](README.md)**, **[DOCUMENTATION_SUMMARY.md](DOCUMENTATION_SUMMARY.md)**: Document that hub REST endpoints require **`FIREBASE_SERVICE_ACCOUNT_JSON`** plus **`Authorization: Bearer <Firebase ID token>`** (otherwise **503** / **401**); added **`GET /api/workspace`**; **`POST /api/ai-chat`** accepts **`{ message }`** only and binds tool mutations to the token **`uid`**.

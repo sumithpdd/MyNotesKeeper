@@ -102,10 +102,22 @@ MyNotesKeeper/
 |--------|-----------|
 | Firestore persistence | `src/lib/taskService.ts` (`engagementTasks` collection; `productIds` array field) |
 | Kanban reorder / column moves | `src/lib/kanbanMerge.ts` — pure `applyKanbanDrag`; four columns |
+| Task planning range / calendar math | `src/lib/taskPlanningRange.ts` — pure date normalization and range helpers |
 | Stats | `src/domain/engagement-hub/dashboardStats.ts` — **open tasks** exclude `done` and `cancelled` |
 | Cascaded deletes | `src/domain/engagement-hub/taskRemoval.ts` |
 
 Filtering in the Tasks UI narrows visible cards/calendar items; persisted drag-merge reconciles filtered updates back into the full task list (`TasksManagement` + `persistKanbanTasks`).
+
+### Task UI composition (May 2026 update)
+
+- **`TasksManagement`** orchestrates feature state and delegates rendering to focused children.
+- **`TaskFiltersBar`** centralizes search/filter UI (status/category/account/product) and is reusable in other task surfaces.
+- **`TaskKanbanBoard`** provides drag-and-drop card workflow; card-level drag is enabled while preserving explicit action controls (delete, links, workspace navigation).
+- **`TaskCalendarView`** provides two read models of the same task data:
+  - month grid (day-focused),
+  - timeline lanes (Gantt-style, paginated for large workloads).
+
+This keeps board/calendar concerns componentized while retaining a single source of truth in `EngagementTask`.
 
 ## Data flow (typical UX path)
 

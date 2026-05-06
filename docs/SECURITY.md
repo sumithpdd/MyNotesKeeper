@@ -10,6 +10,7 @@
 - **`singleCustomer.json`** (working copy — copy from **`singleCustomer.example.json`**) — Treat as potentially sensitive (`git rm --cached singleCustomer.json` if tracked).
 
 - **`data/realCustomerData.ts`**, **`data/dummyData.ts`**, **`data/Customer*`** — Local/demo datasets (**gitignored**); do not add real-roster dumps to Git.
+- **`scripts/*.local.*`** / **`scripts/*.local`** — Local admin/seed scripts that may contain real customer links/emails (intentionally gitignored).
 
 - **`backups/`** — Database backups may contain sensitive data
 
@@ -67,3 +68,5 @@ Uses **`authorizeApiRequest`** plus **`forbidUserIdMismatch`**: send **`Authoriz
 2. Add `.env.local` to `.gitignore` (already done).
 3. Add **`FIREBASE_SERVICE_ACCOUNT_JSON`** only on secure server environments; restrict who can deploy.
 4. Use **least privilege** for the service account (only Firebase Admin scopes you need).
+5. For one-off data updates, prefer **local scripts with dry-run mode first**, then apply mode (`--apply`) after review.
+6. Keep customer-specific seed/check scripts local-only (`*.local.*`) and never commit them.

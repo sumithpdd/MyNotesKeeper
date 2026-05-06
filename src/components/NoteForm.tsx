@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, X, Calendar, User } from 'lucide-react';
 import { CustomerNote } from '@/types';
+import { MEETING_NOTE_OTHER_FIELDS } from '@/domain/engagement-hub/meetingNoteFields';
 import { AIButton } from './ui/AIButton';
 
 const noteSchema = z.object({
@@ -221,6 +222,21 @@ export function NoteForm({ customerId, note, onSave, onCancel }: NoteFormProps) 
                   rows={2}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                   placeholder="What are the next steps?"
+                />
+              </div>
+
+              <div className="rounded-lg border border-indigo-100 bg-indigo-50/40 p-4">
+                <label className="block text-sm font-semibold text-indigo-950 mb-1">
+                  Ideas &amp; execution (next account planning)
+                </label>
+                <p className="text-xs text-indigo-900/80 mb-2">
+                  Capture hypotheses, initiatives, and concrete execution items for the next cycle — separate from the main narrative so you can scan before customer calls.
+                </p>
+                <textarea
+                  {...register(`otherFields.${MEETING_NOTE_OTHER_FIELDS.ideasExecution}`)}
+                  rows={5}
+                  className="w-full px-3 py-2 border border-indigo-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 bg-white"
+                  placeholder="e.g. workshop themes, pilot scope, assets to reuse, stakeholders to loop in…"
                 />
               </div>
             </div>

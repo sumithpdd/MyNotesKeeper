@@ -339,9 +339,12 @@ function SortableTaskCard({
     <div
       ref={setNodeRef}
       style={style}
+      {...attributes}
+      {...(!dragDisabled ? listeners : {})}
       className={`rounded-[1.15rem] bg-white/[0.98] px-3.5 pt-3 pb-2.5 mb-1 border border-black/[0.05] hover:border-black/[0.085] hover:shadow-[0_14px_40px_-24px_rgba(15,23,42,0.18)] hover:-translate-y-0.5 transition-all duration-200 ring-1 ring-transparent hover:ring-white/80 hub-soft-shadow ${
         dragDisabled ? '' : 'cursor-grab active:cursor-grabbing'
       }`}
+      aria-label={dragDisabled ? 'Task card (drag unavailable while a calendar day filter is active)' : 'Task card (drag to reorder or move status)'}
     >
       <div className="flex gap-2">
         <button
@@ -352,15 +355,15 @@ function SortableTaskCard({
               ? 'text-slate-200 cursor-not-allowed'
               : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100/80 cursor-grab active:cursor-grabbing'
           }`}
-          {...attributes}
-          {...(!dragDisabled ? listeners : {})}
           aria-disabled={dragDisabled}
+          tabIndex={-1}
         >
           <GripVertical className="h-4 w-4" />
         </button>
         <div className="min-w-0 flex-1 relative" onClick={() => onEdit(task)} role="presentation">
           <button
             type="button"
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               if (confirm('Delete this task?')) void onDelete(task.id);
@@ -389,7 +392,12 @@ function SortableTaskCard({
           {checklistLine}
 
           {task.links && task.links.length > 0 ? (
-            <div className="mt-2 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()} role="presentation">
+            <div
+              className="mt-2 flex flex-wrap gap-2"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              role="presentation"
+            >
               {task.links.map((lnk) => {
                 const href = taskLinkHref(lnk.url);
                 let display = lnk.label?.trim() || '';
@@ -461,6 +469,7 @@ function SortableTaskCard({
               {cust?.id && onOpenCustomerWorkspace ? (
                 <button
                   type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
                     onOpenCustomerWorkspace(cust.id, task.opportunityId ?? null);

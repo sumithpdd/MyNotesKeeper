@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   format,
   startOfMonth,
@@ -16,6 +16,7 @@ import {
   startOfDay,
   max,
   min,
+  differenceInCalendarDays,
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, Link2, PanelRightOpen } from 'lucide-react';
 import type { EngagementTask, Opportunity, Customer, TaskCategory } from '@/types';
@@ -39,6 +40,14 @@ interface TaskCalendarViewProps {
 }
 
 const WEEK_OPTS = { weekStartsOn: 1 as const };
+const GANTT_PAGE_SIZE = 8;
+
+const STATUS_BAR_CLASS: Record<EngagementTask['status'], string> = {
+  todo: 'bg-slate-400',
+  in_progress: 'bg-[#9381FF]',
+  done: 'bg-emerald-500',
+  cancelled: 'bg-rose-300',
+};
 
 function TaskPlanningStrip({
   task,
@@ -111,6 +120,7 @@ export function TaskCalendarView({
 }: TaskCalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [timelinePage, setTimelinePage] = useState(1);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -159,6 +169,48 @@ export function TaskCalendarView({
   const tasksOnSelected = selectedKey ? (tasksByDate.get(selectedKey) ?? []) : [];
 
   const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const daysInMonth = differenceInCalendarDays(monthEnd, monthStart) + 1;
+  const timelineTasks = useMemo(() => {
+    return tasks
+      .map((task) => {
+        const full = getTaskPlanningRange(task);
+        if (!full) return null;
+        const start = startOfDay(max([full.start, monthStart]));
+        const end = startOfDay(min([full.end, monthEnd]));
+        if (start.getTime() > end.getTime()) return null;
+        const offsetDays = differenceInCalendarDays(start, monthStart);
+        const spanDays = differenceInCalendarDays(end, start) + 1;
+        const leftPct = (offsetDays / daysInMonth) * 100;
+        const widthPct = (spanDays / daysInMonth) * 100;
+        const opp = task.opportunityId ? opportunities.find((o) => o.id === task.opportunityId) : null;
+        const accountId = task.customerId ?? opp?.customerId ?? null;
+        const cust = accountId ? customers.find((c) => c.id === accountId) : null;
+        return {
+          task,
+          leftPct,
+          widthPct,
+          spanDays,
+          accountId,
+          customerName: cust?.customerName ?? null,
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row != null)
+      .sort((a, b) => {
+        if (a.leftPct !== b.leftPct) return a.leftPct - b.leftPct;
+        return a.task.title.localeCompare(b.task.title);
+      });
+  }, [tasks, monthStart, monthEnd, daysInMonth, opportunities, customers]);
+  const ganttTotalPages = Math.max(1, Math.ceil(timelineTasks.length / GANTT_PAGE_SIZE));
+  const ganttPage = Math.min(timelinePage, ganttTotalPages);
+  const ganttRows = timelineTasks.slice((ganttPage - 1) * GANTT_PAGE_SIZE, ganttPage * GANTT_PAGE_SIZE);
+
+  useEffect(() => {
+    setTimelinePage(1);
+  }, [currentMonth]);
+
+  useEffect(() => {
+    if (timelinePage > ganttTotalPages) setTimelinePage(ganttTotalPages);
+  }, [timelinePage, ganttTotalPages]);
 
   return (
     <div className="rounded-[1.35rem] border border-[#e8e4ff] bg-white/[0.97] overflow-hidden hub-soft-shadow ring-1 ring-[#9381FF]/[0.08]">
@@ -265,6 +317,96 @@ export function TaskCalendarView({
             );
           })}
         </div>
+      </div>
+
+      <div className="border-t border-violet-100/80 px-4 py-4 bg-white">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <p className="text-sm font-semibold text-violet-950">Timeline (Gantt)</p>
+          <div className="flex items-center gap-3">
+            <p className="text-[11px] text-violet-700">
+              {timelineTasks.length} task{timelineTasks.length === 1 ? '' : 's'} in {format(currentMonth, 'MMMM')}
+            </p>
+            {timelineTasks.length > GANTT_PAGE_SIZE ? (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setTimelinePage((p) => Math.max(1, p - 1))}
+                  disabled={ganttPage <= 1}
+                  className="px-2 py-1 text-[11px] rounded border border-violet-200 text-violet-700 disabled:opacity-45 disabled:cursor-not-allowed hover:bg-violet-50"
+                >
+                  Prev
+                </button>
+                <span className="text-[11px] text-violet-800 font-medium">
+                  {ganttPage}/{ganttTotalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setTimelinePage((p) => Math.min(ganttTotalPages, p + 1))}
+                  disabled={ganttPage >= ganttTotalPages}
+                  className="px-2 py-1 text-[11px] rounded border border-violet-200 text-violet-700 disabled:opacity-45 disabled:cursor-not-allowed hover:bg-violet-50"
+                >
+                  Next
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+        {timelineTasks.length === 0 ? (
+          <p className="text-sm text-violet-600">No planned ranges in this month.</p>
+        ) : (
+          <div className="space-y-2 max-h-[420px] overflow-auto pr-1">
+            {ganttRows.map((row) => (
+              <div key={row.task.id} className="rounded-xl border border-violet-100/90 bg-white px-3 py-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => onSelectTask(row.task)}
+                    className="text-left min-w-0 flex-1"
+                  >
+                    <span className="block text-sm font-semibold text-gray-900 truncate">{row.task.title}</span>
+                    <span className="block text-[11px] text-violet-700">
+                      {formatTaskPlanningWindow(row.task)} ({row.spanDays}d)
+                      {row.customerName ? ` · ${row.customerName}` : ''}
+                    </span>
+                  </button>
+                  {onOpenCustomerWorkspace && row.accountId ? (
+                    <button
+                      type="button"
+                      title="Open account in Customer Management"
+                      onClick={() => {
+                        if (!row.accountId) return;
+                        onOpenCustomerWorkspace(row.accountId, row.task.opportunityId ?? null);
+                      }}
+                      className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg border border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100"
+                    >
+                      <PanelRightOpen className="h-4 w-4" aria-hidden strokeWidth={2} />
+                    </button>
+                  ) : null}
+                </div>
+                <div className="relative h-7 rounded-lg bg-violet-50/70 ring-1 ring-violet-100/90 overflow-hidden">
+                  <div
+                    className="absolute inset-y-0 left-0 right-0 opacity-55"
+                    style={{
+                      backgroundImage:
+                        'repeating-linear-gradient(to right, rgba(109,40,217,0.12) 0, rgba(109,40,217,0.12) 1px, transparent 1px, transparent calc(100% / 31))',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onSelectTask(row.task)}
+                    className={`absolute top-1 bottom-1 rounded-md ${STATUS_BAR_CLASS[row.task.status]} shadow-sm hover:brightness-95`}
+                    style={{
+                      left: `${row.leftPct}%`,
+                      width: `${Math.max(row.widthPct, 1.8)}%`,
+                    }}
+                    title={`${row.task.title} · ${formatTaskPlanningWindow(row.task) ?? 'No range'}`}
+                    aria-label={`Open task ${row.task.title}`}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {selectedDate && (
