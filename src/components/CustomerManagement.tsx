@@ -5,7 +5,11 @@ import { Plus, Edit, Trash2, Eye, Building, Users, Calendar, FileText, ArrowLeft
 import { LinkWithCopy } from './ui/LinkWithCopy';
 import { useAuth } from '@/lib/auth';
 import { hubAuthJson } from '@/lib/client/hubAuthFetch';
-import { Customer, CustomerNote, CustomerProfile, Opportunity, OpportunityStage, EngagementTask, Product, Partner, MartechTool, InternalContact } from '@/types';
+import { Customer, CustomerNote, CustomerProfile, Opportunity, OpportunityStage, EngagementTask, Product, Partner, MartechTool, InternalContact, TaskCategory, AccountPlanningPlan } from '@/types';
+import { MEETING_NOTE_OTHER_FIELDS } from '@/domain/engagement-hub/meetingNoteFields';
+import { parseNoteNextSteps } from '@/domain/engagement-hub/noteNextSteps';
+import type { AccountPlanningPillarId } from '@/domain/engagement-hub/accountPlanningPillars';
+import { AccountPlanningSection } from './planning/AccountPlanningSection';
 import { CustomerForm } from './CustomerForm';
 import { CustomerEditSlideOut } from './CustomerEditSlideOut';
 import { NoteForm } from './NoteForm';
@@ -31,6 +35,7 @@ interface CustomerManagementProps {
   customerProfiles: CustomerProfile[];
   notes: CustomerNote[];
   tasks: EngagementTask[];
+  taskCategories: TaskCategory[];
   opportunities: Opportunity[];
   products?: Product[];
   partners?: Partner[];
@@ -51,6 +56,8 @@ interface CustomerManagementProps {
   /** When set together with matching `selectedCustomer`, opens optional opportunity detail (e.g. from Tasks). */
   workspaceFocus?: { customerId: string; opportunityId?: string | null } | null;
   onWorkspaceFocusConsumed?: () => void;
+  onOpenPlanningTasks?: (pillarId?: AccountPlanningPillarId) => void;
+  onCreatePlanningTask?: (pillarId: AccountPlanningPillarId) => void;
 }
 
 export function CustomerManagement({
@@ -58,6 +65,7 @@ export function CustomerManagement({
   customerProfiles,
   notes,
   tasks,
+  taskCategories,
   opportunities,
   products = [],
   partners = [],
@@ -77,6 +85,8 @@ export function CustomerManagement({
   onChangeOpportunityStage,
   workspaceFocus,
   onWorkspaceFocusConsumed,
+  onOpenPlanningTasks,
+  onCreatePlanningTask,
 }: CustomerManagementProps) {
   const { getFirebaseIdToken } = useAuth();
   const [showCustomerForm, setShowCustomerForm] = useState(false);
@@ -618,6 +628,20 @@ export function CustomerManagement({
                   ) : null}
                 </div>
 
+                {selectedCustomerData ? (
+                  <AccountPlanningSection
+                    customer={selectedCustomerData}
+                    tasks={customerRelatedTasks}
+                    taskCategories={taskCategories}
+                    onSavePlanning={(_customerId, plan: AccountPlanningPlan) => {
+                      onSaveCustomer({ ...selectedCustomerData, accountPlanning: plan, updatedAt: new Date() });
+                    }}
+                    onAddPlanningTask={(pillarId) => onCreatePlanningTask?.(pillarId)}
+                    onOpenPlanningTasks={onOpenPlanningTasks}
+                    onEditTask={() => onOpenPlanningTasks?.()}
+                  />
+                ) : null}
+
                 {/* Quick Links */}
                 <div>
                   <h3 className="text-sm font-bold text-gray-800 mb-3">Quick Links</h3>
@@ -907,6 +931,18 @@ export function CustomerManagement({
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-600 max-w-xs">
                               <p className="line-clamp-2">{note.notes}</p>
+                              {(() => {
+                                const ns = parseNoteNextSteps(
+                                  note.otherFields?.[MEETING_NOTE_OTHER_FIELDS.nextSteps],
+                                );
+                                if (!ns.length) return null;
+                                const done = ns.filter((s) => s.done).length;
+                                return (
+                                  <p className="text-xs text-emerald-700 mt-1 font-medium">
+                                    {done}/{ns.length} steps
+                                  </p>
+                                );
+                              })()}
                             </td>
                             <td className="px-4 py-3">
                               {note.seConfidence ? (

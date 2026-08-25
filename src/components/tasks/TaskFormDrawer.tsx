@@ -16,6 +16,12 @@ import type {
   CustomerContact,
   InternalContact,
 } from '@/types';
+import {
+  ACCOUNT_PLANNING_PILLARS,
+  defaultTaskTitleForPillar,
+  resolveCategoryIdForPillar,
+  type AccountPlanningPillarId,
+} from '@/domain/engagement-hub/accountPlanningPillars';
 import { hubAuthJson } from '@/lib/client/hubAuthFetch';
 import { formatProductDisplayName } from '@/lib/productDisplay';
 import { FieldHint } from '@/components/ui/FieldHint';
@@ -54,6 +60,7 @@ const schema = z.object({
   checklist: z.array(checklistRow),
   subtasks: z.array(subtaskRow),
   links: z.array(linkRow),
+  planningPillar: z.enum(['', 'whitespace', 'multi_threading', 'migration', 'research']),
 });
 
 export type TaskFormValues = z.infer<typeof schema>;
@@ -69,6 +76,8 @@ interface TaskFormDrawerProps {
   internalContacts: InternalContact[];
   defaultCustomerId?: string | null;
   defaultOpportunityId?: string | null;
+  defaultPlanningPillar?: AccountPlanningPillarId | null;
+  defaultTitle?: string;
   getFirebaseIdToken?: () => Promise<string | null>;
   onClose: () => void;
   onSave: (values: TaskFormValues & { mode: 'create' | 'edit'; id?: string }) => Promise<void>;
@@ -97,6 +106,8 @@ export function TaskFormDrawer({
   internalContacts,
   defaultCustomerId,
   defaultOpportunityId,
+  defaultPlanningPillar,
+  defaultTitle,
   getFirebaseIdToken,
   onClose,
   onSave,
@@ -127,6 +138,7 @@ export function TaskFormDrawer({
       checklist: [],
       subtasks: [],
       links: [],
+      planningPillar: '',
     },
   });
 
@@ -162,12 +174,19 @@ export function TaskFormDrawer({
         links: task.links?.length
           ? task.links.map((l) => ({ id: l.id, label: l.label ?? '', url: l.url }))
           : [],
+        planningPillar: task.planningPillar ?? '',
       });
     } else {
+      const pillar = defaultPlanningPillar ?? '';
+      const pillarCat = pillar ? resolveCategoryIdForPillar(categories, pillar) : undefined;
+      const cust = defaultCustomerId ? customers.find((c) => c.id === defaultCustomerId) : undefined;
+      const title =
+        defaultTitle ||
+        (pillar && cust ? defaultTaskTitleForPillar(cust.customerName, pillar) : '');
       form.reset({
-        title: '',
+        title,
         description: '',
-        categoryIds: defaultCat ? [defaultCat] : [],
+        categoryIds: pillarCat ? [pillarCat] : defaultCat ? [defaultCat] : [],
         customerId: defaultCustomerId || '',
         opportunityId: defaultOpportunityId || '',
         status: 'todo',
@@ -179,9 +198,10 @@ export function TaskFormDrawer({
         checklist: [],
         subtasks: [],
         links: [],
+        planningPillar: pillar,
       });
     }
-  }, [open, task, defaultCat, defaultCustomerId, defaultOpportunityId, form]);
+  }, [open, task, defaultCat, defaultCustomerId, defaultOpportunityId, defaultPlanningPillar, defaultTitle, categories, customers, form]);
 
   const custId = form.watch('customerId');
   const oppIdW = form.watch('opportunityId');
@@ -509,6 +529,21 @@ export function TaskFormDrawer({
               </div>
 
               <div className="space-y-5 min-w-0 xl:border-l xl:border-gray-100 xl:pl-8">
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Account planning pillar
+              <FieldHint text="Tags whitespace, multi-threading, migration, or research work — drives the account planning timeline." />
+            </label>
+            <select {...form.register('planningPillar')} className="select-field w-full">
+              <option value="">— Not account planning —</option>
+              {ACCOUNT_PLANNING_PILLARS.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -52,6 +52,10 @@ const DEFAULT_TASK_CATEGORY_SEED: readonly { name: string; color: string }[] = [
   { name: 'Discovery Session', color: 'bg-emerald-100 text-emerald-800' },
   { name: 'Account / Deal Review', color: 'bg-indigo-100 text-indigo-800' },
   { name: 'Speaking Event / Webinar', color: 'bg-pink-100 text-pink-800' },
+  { name: 'Whitespace Activity', color: 'bg-cyan-100 text-cyan-800' },
+  { name: 'Multi-threading', color: 'bg-blue-100 text-blue-800' },
+  { name: 'Migration Planning', color: 'bg-amber-100 text-amber-800' },
+  { name: 'Customer Research', color: 'bg-rose-100 text-rose-800' },
 ];
 
 async function seedTaskCategoriesIfEmpty(db: Firestore) {
@@ -71,6 +75,29 @@ async function seedTaskCategoriesIfEmpty(db: Firestore) {
     });
   });
   await batch.commit();
+}
+
+/** Upsert account-planning task kinds when missing (existing workspaces seeded before v2.6). */
+async function ensureAccountPlanningCategories(db: Firestore) {
+  const col = db.collection('taskCategories');
+  const snap = await col.get();
+  const existing = new Set(
+    snap.docs.map((d) => String(d.data().name ?? '').toLowerCase().replace(/\s+/g, ' ').trim()),
+  );
+  const planningKinds = DEFAULT_TASK_CATEGORY_SEED.slice(10);
+  const now = Timestamp.now();
+  let sortOrder = snap.docs.length;
+  for (const row of planningKinds) {
+    const key = row.name.toLowerCase().replace(/\s+/g, ' ').trim();
+    if (existing.has(key)) continue;
+    await col.add({
+      name: row.name,
+      color: row.color,
+      sortOrder: sortOrder++,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
 }
 
 async function seedMartechIfEmpty(db: Firestore) {
@@ -124,6 +151,7 @@ export async function loadWorkspaceSnapshot(params: { uid: string; email: string
   const { uid, email } = params;
 
   await seedTaskCategoriesIfEmpty(db);
+  await ensureAccountPlanningCategories(db);
   await seedMartechIfEmpty(db);
 
   const customerScopeMine = process.env.HUB_WORKSPACE_CUSTOMER_SCOPE?.trim().toLowerCase() === 'mine';

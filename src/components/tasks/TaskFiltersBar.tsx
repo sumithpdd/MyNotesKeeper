@@ -1,7 +1,8 @@
 'use client';
 
 import { FilterX, Search } from 'lucide-react';
-import type { Product, TaskCategory, TaskKanbanStatus, Customer } from '@/types';
+import type { Product, TaskCategory, TaskKanbanStatus, Customer, TaskPlanningPillar } from '@/types';
+import { ACCOUNT_PLANNING_PILLARS } from '@/domain/engagement-hub/accountPlanningPillars';
 import { formatProductDisplayName } from '@/lib/productDisplay';
 
 interface TaskFiltersBarProps {
@@ -15,6 +16,8 @@ interface TaskFiltersBarProps {
   onFilterCustomerIdChange: (value: string) => void;
   filterProductId: string;
   onFilterProductIdChange: (value: string) => void;
+  filterPlanningPillar: TaskPlanningPillar | '';
+  onFilterPlanningPillarChange: (value: TaskPlanningPillar | '') => void;
   taskCategories: TaskCategory[];
   customers: Customer[];
   products: Product[];
@@ -36,6 +39,8 @@ export function TaskFiltersBar({
   onFilterCustomerIdChange,
   filterProductId,
   onFilterProductIdChange,
+  filterPlanningPillar,
+  onFilterPlanningPillarChange,
   taskCategories,
   customers,
   products,
@@ -63,7 +68,7 @@ export function TaskFiltersBar({
           </button>
         ) : null}
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
         <input
           type="search"
           value={searchQuery}
@@ -112,6 +117,19 @@ export function TaskFiltersBar({
                 {c.customerName}
               </option>
             ))}
+        </select>
+        <select
+          value={filterPlanningPillar}
+          onChange={(e) => onFilterPlanningPillarChange((e.target.value || '') as TaskPlanningPillar | '')}
+          className="select-field w-full sm:col-span-2 lg:col-span-1"
+          aria-label="Filter by account planning pillar"
+        >
+          <option value="">All planning pillars</option>
+          {ACCOUNT_PLANNING_PILLARS.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.shortLabel}
+            </option>
+          ))}
         </select>
         <select
           value={filterProductId}

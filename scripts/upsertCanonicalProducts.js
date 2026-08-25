@@ -50,6 +50,7 @@ const CANONICAL_PRODUCTS = [
   { id: 'product-connect', name: 'Connect', version: 'Latest', description: 'Integration platform for connecting systems and data', status: 'Active' },
   { id: 'product-sitecore-ai', name: 'Sitecore AI', version: 'Latest', description: 'AI-assisted authoring, discovery, and experience optimization across Sitecore composable solutions', status: 'Active' },
   { id: 'product-sitecore-search', name: 'Sitecore Search', version: 'Latest', description: 'Composable enterprise search and relevance for websites, commerce, and knowledge experiences', status: 'Active' },
+  { id: 'product-scrunch', name: 'Scrunch', version: 'Latest', description: 'Composable analytics and audience insights for digital experience optimization', status: 'Active' },
 ];
 
 function initDb() {

@@ -11,8 +11,17 @@ Defined in code as `MEETING_NOTE_OTHER_FIELDS` (`src/domain/engagement-hub/meeti
 | `meetingId` | Stable idempotency key for imports (e.g. `john-fallo-ae-review-2026-05-06`) |
 | `meetingType` | e.g. `account_review`, `discovery`, `workshop` |
 | `ideasExecution` | **Ideas & execution** — backlog for the next planning cycle (shown in **NoteForm**) |
+| `accountStatus` | Short account snapshot (e.g. *Active — RFP + hosting*) |
+| `nextSteps` | **Checklist** of `{ id, label, done, owner? }` — shown as steps in **NoteForm** / note viewer |
+| `transcriptRef` | Optional source id (e.g. Teams recording filename) |
 
 Additional ad-hoc keys (presentation dates, participants JSON, etc.) are allowed.
+
+Example import:
+
+```bash
+node scripts/seedJohnFallonCatchup20260522.local.js you@company.com --apply
+```
 
 ## UI
 

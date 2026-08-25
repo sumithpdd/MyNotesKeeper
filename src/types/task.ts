@@ -1,6 +1,13 @@
 /** Kanban column for account / opportunity tasks */
 export type TaskKanbanStatus = 'todo' | 'in_progress' | 'done' | 'cancelled';
 
+/** Account planning pillar tag on engagement tasks. */
+export type TaskPlanningPillar =
+  | 'whitespace'
+  | 'multi_threading'
+  | 'migration'
+  | 'research';
+
 export interface TaskCategory {
   id: string;
   name: string;
@@ -61,6 +68,8 @@ export interface EngagementTask {
   subtasks?: TaskSubtask[];
   /** External references shown on cards and calendar details. */
   links?: TaskLink[];
+  /** Optional link to account planning pillar (whitespace, multi-threading, etc.). */
+  planningPillar?: TaskPlanningPillar | null;
   /** Last time someone advanced or edited this task — drives "last actioned on account" */
   lastActionedAt: Date;
   createdBy: string;
@@ -86,6 +95,7 @@ export interface CreateEngagementTaskData {
   checklist?: TaskChecklistItem[];
   subtasks?: TaskSubtask[];
   links?: TaskLink[];
+  planningPillar?: TaskPlanningPillar | null;
   createdBy: string;
   updatedBy: string;
 }

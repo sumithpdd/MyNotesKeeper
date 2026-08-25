@@ -94,6 +94,9 @@ export function engagementTaskFromDoc(id: string, data: DocumentData): Engagemen
     checklist: parseChecklist(data.checklist),
     subtasks: parseSubtasks(data.subtasks),
     ...(linksParsed?.length ? { links: linksParsed } : {}),
+    ...(data.planningPillar != null && data.planningPillar !== ''
+      ? { planningPillar: String(data.planningPillar) as EngagementTask['planningPillar'] }
+      : {}),
     lastActionedAt: toDt(data.lastActionedAt),
     createdBy: String(data.createdBy ?? ''),
     updatedBy: String(data.updatedBy ?? ''),
@@ -149,6 +152,7 @@ function taskToFirestore(t: EngagementTask): Record<string, unknown> {
     checklist,
     subtasks,
     links: taskLinksFirestorePayload(t.links),
+    planningPillar: t.planningPillar ?? null,
     lastActionedAt: Timestamp.fromDate(new Date(t.lastActionedAt)),
     createdBy: t.createdBy,
     updatedBy: t.updatedBy,
@@ -193,6 +197,7 @@ export async function createEngagementTaskAdmin(
     checklist: data.checklist?.length ? [...data.checklist] : undefined,
     subtasks: data.subtasks?.length ? [...data.subtasks] : undefined,
     links: data.links?.length ? [...data.links] : undefined,
+    planningPillar: data.planningPillar ?? null,
     lastActionedAt: now,
     createdBy: data.createdBy,
     updatedBy: data.updatedBy,

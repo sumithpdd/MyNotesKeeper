@@ -3,6 +3,9 @@
 import { useEffect } from 'react';
 import { X, ExternalLink, Calendar, User, Building, Tag, AlertCircle, Copy, Check } from 'lucide-react';
 import { CustomerNote, Customer, CustomerProfile } from '@/types';
+import { MEETING_NOTE_OTHER_FIELDS } from '@/domain/engagement-hub/meetingNoteFields';
+import { parseNoteNextSteps } from '@/domain/engagement-hub/noteNextSteps';
+import { NoteNextStepsList } from './notes/NoteNextStepsList';
 import { formatDateTime } from '@/lib/utils';
 import { formatProductDisplayName } from '@/lib/productDisplay';
 import { CopyableField } from './ui/CopyableField';
@@ -29,6 +32,16 @@ export function SlideOutPanel({ note, customer, customerProfile, onClose }: Slid
   }, [note]);
 
   if (!note) return null;
+
+  const nextSteps = parseNoteNextSteps(note.otherFields?.[MEETING_NOTE_OTHER_FIELDS.nextSteps]);
+  const ideasExecution =
+    typeof note.otherFields?.[MEETING_NOTE_OTHER_FIELDS.ideasExecution] === 'string'
+      ? (note.otherFields[MEETING_NOTE_OTHER_FIELDS.ideasExecution] as string)
+      : '';
+  const accountStatus =
+    typeof note.otherFields?.accountStatus === 'string'
+      ? (note.otherFields.accountStatus as string)
+      : '';
 
   return (
     <>
@@ -367,12 +380,37 @@ export function SlideOutPanel({ note, customer, customerProfile, onClose }: Slid
               {/* Notes */}
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-3">Notes</h3>
+                {accountStatus ? (
+                  <p className="text-xs font-medium text-gray-600 mb-2">Status: {accountStatus}</p>
+                ) : null}
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="text-sm text-gray-900 whitespace-pre-wrap">
                     {note.notes}
                   </p>
                 </div>
               </div>
+
+              {nextSteps.length > 0 && (
+                <div className="border border-emerald-200 rounded-lg">
+                  <div className="bg-emerald-50 px-4 py-3 border-b border-emerald-200">
+                    <h3 className="text-lg font-medium text-emerald-950">Next steps</h3>
+                  </div>
+                  <div className="p-4">
+                    <NoteNextStepsList steps={nextSteps} />
+                  </div>
+                </div>
+              )}
+
+              {ideasExecution.trim() ? (
+                <div className="border border-indigo-200 rounded-lg">
+                  <div className="bg-indigo-50 px-4 py-3 border-b border-indigo-200">
+                    <h3 className="text-lg font-medium text-indigo-950">Ideas &amp; execution</h3>
+                  </div>
+                  <div className="p-4">
+                    <p className="text-sm text-gray-900 whitespace-pre-wrap">{ideasExecution}</p>
+                  </div>
+                </div>
+              ) : null}
 
               {/* Tags */}
               <div className="space-y-4">

@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { LayoutGrid, Calendar as CalendarIcon, Plus, Tags, ClipboardList, FilterX, Sparkles } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { LayoutGrid, Calendar as CalendarIcon, Plus, Tags, ClipboardList, FilterX, Sparkles, Target } from 'lucide-react';
 import { format, parse } from 'date-fns';
 import type {
   EngagementTask,
@@ -13,6 +13,7 @@ import type {
   TaskKanbanStatus,
   CustomerContact,
   InternalContact,
+  TaskPlanningPillar,
 } from '@/types';
 import { TaskKanbanBoard } from './TaskKanbanBoard';
 import { TaskCategoriesManager } from './TaskCategoriesManager';
@@ -20,6 +21,12 @@ import { TaskSidebarCalendar } from './TaskSidebarCalendar';
 import { TaskCalendarView } from './TaskCalendarView';
 import { TaskFormDrawer, type TaskFormValues } from './TaskFormDrawer';
 import { TaskFiltersBar } from './TaskFiltersBar';
+import { AccountPlanningTaskTimeline, PlanningPillarLegend } from '@/components/planning/AccountPlanningTaskTimeline';
+import {
+  filterTasksByPlanningPillar,
+  resolveTaskPlanningPillar,
+  type AccountPlanningPillarId,
+} from '@/domain/engagement-hub/accountPlanningPillars';
 import { taskTouchesCalendarDay } from '@/lib/taskPlanningRange';
 import { formatProductDisplayName } from '@/lib/productDisplay';
 
@@ -45,6 +52,12 @@ interface TasksManagementProps {
   reloadWorkspace: () => Promise<void>;
   /** Jump to Customer Management for this account; optional opportunity opens its detail drawer. */
   onOpenCustomerWorkspace?: (customerId: string, opportunityId?: string | null) => void;
+  /** Deep-link from account planning (customer + optional pillar filter). */
+  planningFocus?: { customerId?: string; pillar?: AccountPlanningPillarId } | null;
+  onPlanningFocusConsumed?: () => void;
+  /** Open create drawer with account planning defaults. */
+  pendingPlanningTask?: { customerId: string; pillarId: AccountPlanningPillarId } | null;
+  onPendingPlanningTaskConsumed?: () => void;
 }
 
 export function TasksManagement({
@@ -64,8 +77,12 @@ export function TasksManagement({
   getFirebaseIdToken,
   reloadWorkspace,
   onOpenCustomerWorkspace,
+  planningFocus,
+  onPlanningFocusConsumed,
+  pendingPlanningTask,
+  onPendingPlanningTaskConsumed,
 }: TasksManagementProps) {
-  const [view, setView] = useState<'kanban' | 'calendar'>('kanban');
+  const [view, setView] = useState<'kanban' | 'calendar' | 'planning'>('kanban');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<EngagementTask | null>(null);
   const [manageCategoriesOpen, setManageCategoriesOpen] = useState(false);
@@ -74,8 +91,36 @@ export function TasksManagement({
   const [filterCategoryId, setFilterCategoryId] = useState('');
   const [filterCustomerId, setFilterCustomerId] = useState('');
   const [filterProductId, setFilterProductId] = useState('');
+  const [filterPlanningPillar, setFilterPlanningPillar] = useState<TaskPlanningPillar | ''>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarCalendarDate, setSidebarCalendarDate] = useState<Date | null>(null);
+  const [drawerDefaults, setDrawerDefaults] = useState<{
+    customerId?: string;
+    pillar?: AccountPlanningPillarId;
+  }>({});
+
+  useEffect(() => {
+    if (!planningFocus) return;
+    if (planningFocus.customerId) setFilterCustomerId(planningFocus.customerId);
+    if (planningFocus.pillar) {
+      setFilterPlanningPillar(planningFocus.pillar);
+      setView('planning');
+    } else {
+      setView('planning');
+    }
+    onPlanningFocusConsumed?.();
+  }, [planningFocus, onPlanningFocusConsumed]);
+
+  useEffect(() => {
+    if (!pendingPlanningTask) return;
+    setDrawerDefaults({
+      customerId: pendingPlanningTask.customerId,
+      pillar: pendingPlanningTask.pillarId,
+    });
+    setEditingTask(null);
+    setDrawerOpen(true);
+    onPendingPlanningTaskConsumed?.();
+  }, [pendingPlanningTask, onPendingPlanningTaskConsumed]);
 
   const filteredTasks = useMemo(() => {
     const qnorm = searchQuery.trim().toLowerCase();
@@ -120,6 +165,16 @@ export function TasksManagement({
     products,
   ]);
 
+  const displayTasks = useMemo(() => {
+    if (filterPlanningPillar) {
+      return filterTasksByPlanningPillar(filteredTasks, taskCategories, filterPlanningPillar);
+    }
+    if (view === 'planning') {
+      return filteredTasks.filter((t) => resolveTaskPlanningPillar(t, taskCategories) != null);
+    }
+    return filteredTasks;
+  }, [filteredTasks, taskCategories, filterPlanningPillar, view]);
+
   const sidebarCalendarDayKey = sidebarCalendarDate ? format(sidebarCalendarDate, 'yyyy-MM-dd') : null;
 
   const sidebarDayMatchesAnyTask = useMemo(() => {
@@ -134,6 +189,7 @@ export function TasksManagement({
     Boolean(filterCategoryId) ||
     Boolean(filterCustomerId) ||
     Boolean(filterProductId) ||
+    Boolean(filterPlanningPillar) ||
     Boolean(sidebarCalendarDate);
 
   const clearFilters = () => {
@@ -142,6 +198,7 @@ export function TasksManagement({
     setFilterCategoryId('');
     setFilterCustomerId('');
     setFilterProductId('');
+    setFilterPlanningPillar('');
     setSidebarCalendarDate(null);
   };
 
@@ -191,6 +248,7 @@ export function TasksManagement({
         links,
         customerContactIds,
         internalContactIds,
+        planningPillar: values.planningPillar || null,
       });
     } else if (values.id) {
       const existing = tasks.find((t) => t.id === values.id);
@@ -212,6 +270,7 @@ export function TasksManagement({
         links,
         customerContactIds,
         internalContactIds,
+        planningPillar: values.planningPillar || null,
         lastActionedAt: new Date(),
         updatedAt: new Date(),
         updatedBy: currentUserEmail,
@@ -276,6 +335,19 @@ export function TasksManagement({
               <CalendarIcon className="h-4 w-4" aria-hidden />
               Calendar
             </button>
+            <button
+              type="button"
+              onClick={() => setView('planning')}
+              aria-pressed={view === 'planning'}
+              className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
+                view === 'planning'
+                  ? 'bg-white text-violet-950 shadow-[0_2px_14px_-5px_rgba(147,129,255,0.55)] ring-1 ring-[#9381FF]/40'
+                  : 'text-slate-600 hover:text-gray-950'
+              }`}
+            >
+              <Target className="h-4 w-4" aria-hidden />
+              Planning
+            </button>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {onOpenAssistant ? (
@@ -332,13 +404,15 @@ export function TasksManagement({
         onFilterCustomerIdChange={setFilterCustomerId}
         filterProductId={filterProductId}
         onFilterProductIdChange={setFilterProductId}
+        filterPlanningPillar={filterPlanningPillar}
+        onFilterPlanningPillarChange={setFilterPlanningPillar}
         taskCategories={taskCategories}
         customers={customers}
         products={products}
         hasActiveFilters={hasActiveFilters}
         onClearFilters={clearFilters}
         totalCount={tasks.length}
-        filteredCount={filteredTasks.length}
+        filteredCount={displayTasks.length}
         sidebarCalendarDateActive={Boolean(sidebarCalendarDate)}
       />
 
@@ -362,7 +436,7 @@ export function TasksManagement({
             Create first task
           </button>
         </div>
-      ) : filteredTasks.length === 0 ? (
+      ) : displayTasks.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-[#9381FF]/35 bg-[#faf8ff]/95 py-12 px-6 text-center ring-1 ring-[#9381FF]/[0.08]">
           <p className="text-sm font-medium text-violet-950">No tasks match the current search or filters.</p>
           <p className="text-xs text-violet-900/85 mt-1 max-w-md">
@@ -378,6 +452,28 @@ export function TasksManagement({
               Reset filters
             </button>
           ) : null}
+        </div>
+      ) : view === 'planning' ? (
+        <div className="rounded-2xl border border-violet-200/80 bg-white/95 p-6 hub-soft-shadow ring-1 ring-violet-100">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Account planning timeline</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Whitespace, multi-threading, migration, and research tasks by planning week.
+              </p>
+            </div>
+            <PlanningPillarLegend />
+          </div>
+          <AccountPlanningTaskTimeline
+            tasks={displayTasks}
+            taskCategories={taskCategories}
+            pillarFilter={filterPlanningPillar}
+            onTaskClick={(t) => {
+              setEditingTask(t);
+              setDrawerOpen(true);
+            }}
+            emptyMessage="No account planning tasks match your filters. Tag tasks with a planning pillar or use the matching task type."
+          />
         </div>
       ) : view === 'kanban' && sidebarCalendarDate && !sidebarDayMatchesAnyTask ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-[#dcd5ff]/90 bg-white/[0.97] py-14 px-6 text-center hub-soft-shadow ring-1 ring-[#9381FF]/[0.08]">
@@ -397,7 +493,7 @@ export function TasksManagement({
         <div className="flex flex-col gap-8 xl:grid xl:grid-cols-[minmax(0,1fr),minmax(268px,300px)] xl:gap-8 xl:items-start">
           <div className="min-w-0 w-full xl:mr-0">
             <TaskKanbanBoard
-              tasks={filteredTasks}
+              tasks={displayTasks}
               calendarDayKey={sidebarCalendarDayKey ?? undefined}
               categories={taskCategories}
               products={products}
@@ -423,7 +519,7 @@ export function TasksManagement({
           </div>
           <aside className="shrink-0 w-full xl:max-w-none">
             <TaskSidebarCalendar
-              tasks={filteredTasks}
+              tasks={displayTasks}
               selectedDate={sidebarCalendarDate}
               onSelectDate={setSidebarCalendarDate}
             />
@@ -431,7 +527,7 @@ export function TasksManagement({
         </div>
       ) : (
         <TaskCalendarView
-          tasks={filteredTasks}
+          tasks={displayTasks}
           categories={taskCategories}
           opportunities={opportunities}
           customers={customers}
@@ -455,10 +551,13 @@ export function TasksManagement({
         onClose={() => {
           setDrawerOpen(false);
           setEditingTask(null);
+          setDrawerDefaults({});
         }}
         onSave={handleSaveForm}
         getFirebaseIdToken={getFirebaseIdToken}
         onOpenCustomerWorkspace={onOpenCustomerWorkspace}
+        defaultCustomerId={drawerDefaults.customerId ?? null}
+        defaultPlanningPillar={drawerDefaults.pillar ?? null}
       />
     </div>
   );

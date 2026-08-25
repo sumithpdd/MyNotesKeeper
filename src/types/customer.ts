@@ -2,6 +2,28 @@ import { Product } from './product';
 import { MartechTool } from './martechTool';
 import { CustomerContact, InternalContact, Partner } from './contacts';
 
+/** Per-pillar free-text fields on an account planning record. */
+export interface AccountPlanningPillarFields {
+  approach?: string;
+  status?: string;
+  nextActions?: string;
+}
+
+/** SC account planning — whitespace, multi-threading, migration, research. */
+export interface AccountPlanningPlan {
+  /** Align with AE after Vee whitespace work. */
+  aeAlignment?: string;
+  whitespace?: AccountPlanningPillarFields;
+  multiThreading?: AccountPlanningPillarFields & { targetStakeholders?: string };
+  migration?: AccountPlanningPillarFields & {
+    eligible?: boolean;
+    headlessPath?: string;
+    saiPath?: string;
+    partnerStrategy?: '' | 'partner' | 'direct' | 'both';
+  };
+  research?: AccountPlanningPillarFields & { vertical?: string; topics?: string };
+}
+
 // Customer Information (static data per customer)
 export interface Customer {
   id: string;
@@ -43,6 +65,8 @@ export interface Customer {
   dateAnalysed?: string;
   mergedNotes?: string; // Merged notes field
   migrationNotes?: string; // Migration-specific notes
+  /** AE/SC account planning pillars (whitespace, multi-threading, migration, research). */
+  accountPlanning?: AccountPlanningPlan;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -85,6 +109,7 @@ export interface CreateCustomerData {
   dateAnalysed?: string;
   mergedNotes?: string;
   migrationNotes?: string;
+  accountPlanning?: AccountPlanningPlan;
 }
 
 // Customer Profile (static information that doesn't change often)

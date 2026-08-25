@@ -3,6 +3,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import { FileText, Users, Settings, Target, LayoutGrid, Sparkles, ChevronRight } from 'lucide-react';
 import type { Customer, CustomerProfile, CustomerNote, MartechTool, Product } from '@/types';
+import type { AccountPlanningPillarId } from '@/domain/engagement-hub/accountPlanningPillars';
 import { CustomerEditSlideOut } from '@/components/CustomerEditSlideOut';
 import { CustomerManagement } from '@/components/CustomerManagement';
 import { EntityManagement } from '@/components/EntityManagement';
@@ -47,6 +48,14 @@ export default function HomePage() {
     customerId: string;
     opportunityId?: string | null;
   } | null>(null);
+  const [taskPlanningFocus, setTaskPlanningFocus] = useState<{
+    customerId?: string;
+    pillar?: AccountPlanningPillarId;
+  } | null>(null);
+  const [pendingPlanningTask, setPendingPlanningTask] = useState<{
+    customerId: string;
+    pillarId: AccountPlanningPillarId;
+  } | null>(null);
 
   const [editingMigrationCustomer, setEditingMigrationCustomer] = useState<Customer | null>(null);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
@@ -61,6 +70,19 @@ export default function HomePage() {
   }, []);
 
   const clearWorkspaceFocus = useCallback(() => setWorkspaceFocus(null), []);
+
+  const openPlanningTasks = useCallback(
+    (customerId: string, pillarId?: AccountPlanningPillarId) => {
+      setTaskPlanningFocus({ customerId, pillar: pillarId });
+      setActiveTab('tasks');
+    },
+    [],
+  );
+
+  const createPlanningTask = useCallback((customerId: string, pillarId: AccountPlanningPillarId) => {
+    setPendingPlanningTask({ customerId, pillarId });
+    setActiveTab('tasks');
+  }, []);
 
   const [customerProfiles, setCustomerProfiles] = useState<CustomerProfile[]>([]);
 
@@ -408,6 +430,10 @@ export default function HomePage() {
               getFirebaseIdToken={getFirebaseIdToken}
               reloadWorkspace={reloadWorkspace}
               onOpenCustomerWorkspace={openCustomerWorkspace}
+              planningFocus={taskPlanningFocus}
+              onPlanningFocusConsumed={() => setTaskPlanningFocus(null)}
+              pendingPlanningTask={pendingPlanningTask}
+              onPendingPlanningTaskConsumed={() => setPendingPlanningTask(null)}
             />
           ) : activeTab === 'notes' ? (
             <CustomerManagement
@@ -415,6 +441,7 @@ export default function HomePage() {
               customerProfiles={customerProfiles}
               notes={notes}
               tasks={tasks}
+              taskCategories={taskCategories}
               opportunities={opportunities}
               products={products}
               partners={partners}
@@ -436,6 +463,12 @@ export default function HomePage() {
               onSaveOpportunity={saveOpportunity}
               onDeleteOpportunity={handleDeleteOpportunityWithTasks}
               onChangeOpportunityStage={changeStage}
+              onOpenPlanningTasks={(pillarId) =>
+                selectedCustomer ? openPlanningTasks(selectedCustomer, pillarId) : undefined
+              }
+              onCreatePlanningTask={(pillarId) =>
+                selectedCustomer ? createPlanningTask(selectedCustomer, pillarId) : undefined
+              }
             />
           ) : activeTab === 'migration' ? (
             <MigrationOpportunitiesGrid

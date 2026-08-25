@@ -1,11 +1,17 @@
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, X, Calendar, User } from 'lucide-react';
 import { CustomerNote } from '@/types';
 import { MEETING_NOTE_OTHER_FIELDS } from '@/domain/engagement-hub/meetingNoteFields';
+import {
+  parseNoteNextSteps,
+  type NoteNextStep,
+} from '@/domain/engagement-hub/noteNextSteps';
+import { NoteNextStepsEditor } from './notes/NoteNextStepsEditor';
 import { AIButton } from './ui/AIButton';
 
 const noteSchema = z.object({
@@ -55,10 +61,21 @@ export function NoteForm({ customerId, note, onSave, onCancel }: NoteFormProps) 
 
   const watchedValues = watch();
 
+  const [nextSteps, setNextSteps] = useState<NoteNextStep[]>(() =>
+    parseNoteNextSteps(note?.otherFields?.[MEETING_NOTE_OTHER_FIELDS.nextSteps]),
+  );
+
   const onSubmit = async (data: NoteFormData) => {
     try {
+      const cleanedSteps = nextSteps
+        .map((s) => ({ ...s, label: s.label.trim() }))
+        .filter((s) => s.label.length > 0);
       const noteData = {
         ...data,
+        otherFields: {
+          ...data.otherFields,
+          [MEETING_NOTE_OTHER_FIELDS.nextSteps]: cleanedSteps,
+        },
       };
 
       const savedNote: CustomerNote = {
@@ -206,23 +223,23 @@ export function NoteForm({ customerId, note, onSave, onCancel }: NoteFormProps) 
                 />
               </div>
 
-              <div>
+              <div className="rounded-lg border border-emerald-100 bg-emerald-50/40 p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Next Steps
-                  </label>
-                  <AIButton 
-                    currentText={watchedValues.otherFields?.nextSteps as string || ''} 
-                    onGenerated={(text) => setValue('otherFields', { ...watchedValues.otherFields, nextSteps: text })}
+                  <div>
+                    <label className="block text-sm font-semibold text-emerald-950">
+                      Next steps
+                    </label>
+                    <p className="text-xs text-emerald-900/80">
+                      Actionable checklist — tick off as you go; optional owner per step.
+                    </p>
+                  </div>
+                  <AIButton
+                    currentText={nextSteps.map((s) => `${s.done ? '[x]' : '[ ]'} ${s.label}${s.owner ? ` (${s.owner})` : ''}`).join('\n')}
+                    onGenerated={(text) => setNextSteps(parseNoteNextSteps(text))}
                     context={`Notes: ${watchedValues.notes}, SE Confidence: ${watchedValues.seConfidence || 'Not set'}`}
                   />
                 </div>
-                <textarea
-                  {...register('otherFields.nextSteps')}
-                  rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                  placeholder="What are the next steps?"
-                />
+                <NoteNextStepsEditor steps={nextSteps} onChange={setNextSteps} />
               </div>
 
               <div className="rounded-lg border border-indigo-100 bg-indigo-50/40 p-4">
