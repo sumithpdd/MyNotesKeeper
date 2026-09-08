@@ -5,18 +5,26 @@
  * Body: { message: string } — tenancy from verified Bearer (`auth.uid`); do not trust a client-supplied userId.
  * Returns: { text?: string, error?: string }
  *
- * Uses processWithTools with server-side tool executors backed by Firebase services.
+ * Uses processWithTools with server-side tool executors.
+ *
+ * All Firestore access here goes through the Firebase **Admin** SDK
+ * (`loadWorkspaceSnapshot` for reads, `*Admin` helpers for writes). The
+ * `src/lib/*Service.ts` helpers must NOT be used from this route: they use the
+ * Firebase web SDK, which has no signed-in user on the server, so every
+ * `firestore.rules` check fails with `permission-denied`.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { processWithTools, type ToolExecutor } from '@/lib/aiToolsService';
 import { authorizeApiRequest } from '@/lib/server/authorizeApiRequest';
-import { customerService } from '@/lib/customerService';
-import { customerNotesService } from '@/lib/customerNotes';
-import { customerProfileService } from '@/lib/customerProfileService';
-import { customerContactService, internalContactService } from '@/lib/contactService';
-import { productService } from '@/lib/productService';
-import { partnerService } from '@/lib/partnerService';
+import { createCustomerAdmin, updateCustomerAdmin } from '@/lib/server/customersAdmin';
+import {
+  createCustomerNoteAdmin,
+  createInternalContactAdmin,
+  createCustomerContactAdmin,
+  createProductAdmin,
+  createPartnerAdmin,
+} from '@/lib/server/aiChatEntitiesAdmin';
 import { aiService } from '@/lib/ai';
 import type { CreateCustomerData } from '@/types';
 import { formatProductDisplayName } from '@/lib/productDisplay';
@@ -48,24 +56,26 @@ export async function POST(request: NextRequest) {
 
     const uid = auth.uid;
 
-    // Load all data from Firebase
-    const [customers, notes, profiles, customerContacts, internalContacts, products, partners] =
-      await Promise.all([
-        customerService.getAllCustomers(),
-        customerNotesService.getAllNotes(),
-        customerProfileService.getAllProfiles().catch(() => []),
-        customerContactService.getAllCustomerContacts(),
-        internalContactService.getAllInternalContacts(),
-        productService.getAllProducts(),
-        partnerService.getAllPartners(),
-      ]);
-
-    // Opportunities and engagement tasks come from the tenant-aware workspace
-    // loader rather than a raw `getAll`, so status answers stay scoped to the
-    // signed-in user in the same way the dashboard is.
+    // Everything is read through the tenant-aware workspace loader, which uses
+    // the Firebase **Admin** SDK.
+    //
+    // The `src/lib/*Service.ts` helpers use the Firebase *web* SDK, which
+    // authenticates as the signed-in browser user. Called from a route handler
+    // there is no such user, so every rule in `firestore.rules` (all of which
+    // require `request.auth != null`) denies the read with `permission-denied`.
+    // See `src/lib/server/adminFirestore.ts`.
     const workspace = await loadWorkspaceSnapshot({ uid, email: auth.email });
-    const opportunities = workspace.opportunities;
-    const tasks = workspace.tasks;
+    const {
+      customers,
+      notes,
+      customerProfiles: profiles,
+      customerContacts,
+      internalContacts,
+      products,
+      partners,
+      opportunities,
+      tasks,
+    } = workspace;
 
     const customerById = new Map(customers.map((c) => [c.id, c]));
     const nameOf = (customerId?: string | null) =>
@@ -160,7 +170,7 @@ export async function POST(request: NextRequest) {
           salesforceLink: '',
           additionalInfo: additionalInfo?.trim() || '',
         };
-        const newId = await customerService.createCustomer(createData, uid);
+        const newId = await createCustomerAdmin(createData, uid);
         return { created: true, customerName: customerName.trim(), id: newId };
       },
       update_customer: async (args) => {
@@ -192,7 +202,7 @@ export async function POST(request: NextRequest) {
           const existingIds = (match.internalContactIds || []).filter(Boolean);
           updateData.internalContactIds = [...new Set([...existingIds, ...aeIds])];
         }
-        await customerService.updateCustomer(match.id, updateData, uid);
+        await updateCustomerAdmin(match.id, updateData, uid);
         return { updated: true, customerName: match.customerName };
       },
       add_note: async (args) => {
@@ -209,7 +219,7 @@ export async function POST(request: NextRequest) {
             customerName.toLowerCase().includes((c.customerName || '').toLowerCase())
         );
         if (!match) return { found: false, message: `Customer "${customerName}" not found` };
-        const noteId = await customerNotesService.createNote(
+        const noteId = await createCustomerNoteAdmin(
           {
             customerId: match.id,
             notes: noteContent.trim(),
@@ -311,7 +321,7 @@ export async function POST(request: NextRequest) {
       create_internal_contact: async (args) => {
         const { name, role, email } = args as { name: string; role?: string; email?: string };
         if (!name?.trim()) return { error: 'Name is required' };
-        const id = await internalContactService.createInternalContact({
+        const id = await createInternalContactAdmin({
           name: name.trim(),
           role: role?.trim() || '',
           email: email?.trim() || '',
@@ -328,7 +338,7 @@ export async function POST(request: NextRequest) {
       create_customer_contact: async (args) => {
         const { name, role, email } = args as { name: string; role?: string; email?: string };
         if (!name?.trim()) return { error: 'Name is required' };
-        const id = await customerContactService.createCustomerContact({
+        const id = await createCustomerContactAdmin({
           name: name.trim(),
           role: role?.trim() || '',
           email: email?.trim() || '',
@@ -366,7 +376,7 @@ export async function POST(request: NextRequest) {
       create_product: async (args) => {
         const { name, version } = args as { name: string; version?: string };
         if (!name?.trim()) return { error: 'Name is required' };
-        const id = await productService.createProduct({
+        const id = await createProductAdmin({
           name: name.trim(),
           version: version?.trim() || '',
           description: '',
@@ -388,7 +398,7 @@ export async function POST(request: NextRequest) {
       create_partner: async (args) => {
         const { name, type } = args as { name: string; type?: string };
         if (!name?.trim()) return { error: 'Name is required' };
-        const id = await partnerService.createPartner({
+        const id = await createPartnerAdmin({
           name: name.trim(),
           type: type?.trim() || '',
         });
