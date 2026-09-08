@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { X, ExternalLink, Calendar, User, Building, Tag, AlertCircle, Copy, Check } from 'lucide-react';
+import { X, ExternalLink, Calendar, User, Building, Tag, AlertCircle } from 'lucide-react';
 import { CustomerNote, Customer, CustomerProfile } from '@/types';
 import { MEETING_NOTE_OTHER_FIELDS } from '@/domain/engagement-hub/meetingNoteFields';
 import { parseNoteNextSteps } from '@/domain/engagement-hub/noteNextSteps';

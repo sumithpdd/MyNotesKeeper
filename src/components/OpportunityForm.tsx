@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Save, X, Target, DollarSign, Calendar, TrendingUp } from 'lucide-react';
+import { Save, X, Target, DollarSign, TrendingUp } from 'lucide-react';
 import { Opportunity, OpportunityStage } from '@/types';
 import { MultiSelect } from './ui/MultiSelect';
 import { FieldHint } from './ui/FieldHint';
@@ -66,7 +66,7 @@ export function OpportunityForm({
   onCancel
 }: OpportunityFormProps) {
   const [customProducts, setCustomProducts] = useState(dummyProducts);
-  const [customInternalContacts, setCustomInternalContacts] = useState(dummyInternalContacts);
+  const [customInternalContacts] = useState(dummyInternalContacts);
 
   const {
     register,

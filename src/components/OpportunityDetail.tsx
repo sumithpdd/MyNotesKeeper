@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { 
-  X, Target, DollarSign, Calendar, TrendingUp, User, 
+  X, Target, DollarSign, Calendar, User, 
   Package, AlertCircle, ArrowRight, History, Edit, CheckCircle,
   ExternalLink 
 } from 'lucide-react';
@@ -376,7 +376,7 @@ export function OpportunityDetail({
             </p>
             {opportunity.stageHistory.length > 0 ? (
               <div className="space-y-3">
-                {opportunity.stageHistory.map((entry, index) => (
+                {opportunity.stageHistory.map((entry) => (
                   <div
                     key={entry.id}
                     className="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-0"

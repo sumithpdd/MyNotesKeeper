@@ -23,7 +23,18 @@ const eslintConfig = [
   {
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",
-      "@typescript-eslint/no-unused-vars": "warn",
+      // `ignoreRestSiblings` makes the deliberate-omission idiom legitimate:
+      // `const { id, ...rest } = obj` drops a field on purpose, it is not dead
+      // code. A leading underscore marks anything else as intentionally unused.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          ignoreRestSiblings: true,
+          varsIgnorePattern: "^_",
+          argsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
       "react/no-unescaped-entities": "warn",
       "prefer-const": "warn",
       "react-hooks/exhaustive-deps": "warn",

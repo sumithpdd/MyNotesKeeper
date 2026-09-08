@@ -175,6 +175,7 @@ Older or auxiliary code paths may still use the Firebase Web SDK in the browser 
 ## Technologies
 
 - **Frontend:** Next.js 15, React 19, TypeScript, Tailwind CSS
+- **Fonts:** **Self-hosted** Geist via the `geist` package (`next/font/local` under the hood). Deliberately **not** `next/font/google`, which fetches from `fonts.gstatic.com` at build time and breaks offline, CI, and network-restricted builds.
 - **Backend (hub data):** Next.js Route Handlers + Firebase Admin (`FIREBASE_SERVICE_ACCOUNT_JSON`) + tenant-aware workspace loaders
 - **Database:** Firebase Firestore
 - **Auth (users):** Firebase Auth (Google)

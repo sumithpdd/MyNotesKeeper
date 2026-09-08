@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Target, Plus, Edit, Trash2, Eye, TrendingUp, DollarSign, Calendar, Filter, ArrowUpDown, User, ExternalLink, Clock } from 'lucide-react';
+import { Target, Plus, Edit, Trash2, Eye, DollarSign, Calendar, Filter, ArrowUpDown, User, ExternalLink, Clock } from 'lucide-react';
 import { Opportunity, OpportunityStage } from '@/types';
 import { safeFormatDate } from '@/lib/utils';
 import { getAccountExecutiveColor } from '@/lib/accountExecutiveColors';

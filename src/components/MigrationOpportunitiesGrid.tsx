@@ -164,15 +164,6 @@ export function MigrationOpportunitiesGrid({
     document.body.removeChild(link);
   };
   
-  const getMigrationOppBadge = (value: string | undefined) => {
-    if (!value) return null;
-    const lower = value.toLowerCase();
-    if (lower === 'yes' || lower === 'y' || lower === 'YES') {
-      return <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Yes</span>;
-    }
-    return <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Active</span>;
-  };
-  
   return (
     <div className="space-y-6">
       {/* Header */}

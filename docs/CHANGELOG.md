@@ -19,6 +19,12 @@
 - ✅ **Model:** upgraded `gemini-2.0-flash` → **`gemini-2.5-flash`**, resolved centrally by new [`src/lib/aiModel.ts`](../src/lib/aiModel.ts) and overridable with **`GEMINI_MODEL`**. Defaults to GA rather than preview because the tool-calling path writes customer data. `MAX_TOOL_STEPS` 5 → 8 for chained status queries.
 - ✅ **Prompt Library:** seven new status/planning/positioning prompts.
 
+### Build & tooling
+
+- 🐛 **Fixed: builds required network access.** `layout.tsx` used `next/font/google`, which fetches Geist from `fonts.gstatic.com` at build time — breaking offline development, CI, and any network-restricted build. Fonts are now **self-hosted** via the `geist` package (`next/font/local`), exposing the same `--font-geist-sans` / `--font-geist-mono` variables, so no styles changed. `npm run build` now succeeds with no network.
+- 🐛 **Fixed: `PromptLibrary` never invoked `onSelectPrompt`.** `CustomerProfileForm` passed the callback to populate **SE Notes**, but the component only ever called `onUsePromptInChatbot` — and did not render a button at all when that prop was absent. Opening the Prompt Library from SE Notes therefore offered no way to insert a prompt. Found while clearing an "unused variable" warning.
+- ♻️ **Unused variables in `src/` cleared: 40 → 0.** Dead imports, an unused state pair, a no-op stub, unused setters, and a dead `getMigrationOppBadge` helper (which also contained unreachable logic — `lower === 'YES'` after `.toLowerCase()`). ESLint now sets `ignoreRestSiblings` and a `^_` ignore pattern, so the deliberate-omission idiom (`const { id, ...rest }`) is no longer reported as dead code.
+
 ### Cleanup
 
 - 🗑️ **Removed 12 unused files (~1,900 lines):** legacy `ChatbotInterface` chain (`/api/ai/chatbot/parse`, `chatbotAI.ts`, `types/chatbotAI.ts`), orphaned `/api/ai-command` route, unused `components/ai-chat/`, pre-API-migration `taskService.ts` / `taskCategoryService.ts` / `taskCategoryMerge.ts`, `seTemplate` left in place, and `utils/aiMessageParser.ts`. The task services were **client-side Firestore writes**, which the project's own standards forbid.

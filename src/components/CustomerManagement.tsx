@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Eye, Building, Users, Calendar, FileText, ArrowLeft, Sparkles, X, CalendarDays, List, ClipboardList } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, FileText, ArrowLeft, Sparkles, X, CalendarDays, List, ClipboardList } from 'lucide-react';
 import { LinkWithCopy } from './ui/LinkWithCopy';
 import { useAuth } from '@/lib/auth';
 import { hubAuthJson } from '@/lib/client/hubAuthFetch';
@@ -10,7 +10,6 @@ import { MEETING_NOTE_OTHER_FIELDS } from '@/domain/engagement-hub/meetingNoteFi
 import { parseNoteNextSteps } from '@/domain/engagement-hub/noteNextSteps';
 import type { AccountPlanningPillarId } from '@/domain/engagement-hub/accountPlanningPillars';
 import { AccountPlanningSection } from './planning/AccountPlanningSection';
-import { CustomerForm } from './CustomerForm';
 import { CustomerEditSlideOut } from './CustomerEditSlideOut';
 import { NoteForm } from './NoteForm';
 import { CustomerProfileForm } from './CustomerProfileForm';

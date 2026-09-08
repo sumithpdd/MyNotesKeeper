@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { X, MessageSquare, BookOpen, Plus, Send, Bot, User, Loader2, CheckCircle, XCircle, Sparkles, Copy, Check, Search, Tag, Trash2, Edit2, Save } from 'lucide-react';
+import { X, MessageSquare, BookOpen, Plus, Send, Bot, User, Loader2, CheckCircle, XCircle, Sparkles, Copy, Check, Search, Tag, Trash2, Save } from 'lucide-react';
 import { Customer, CustomerNote, CustomerProfile, CustomerContact, InternalContact, Product, Partner } from '@/types';
-import { comprehensivePrompts, ComprehensivePromptTemplate, EntityType, OperationType, getPromptsByEntity, searchPrompts as searchComprehensivePrompts } from '@/lib/comprehensivePrompts';
+import { comprehensivePrompts, ComprehensivePromptTemplate, EntityType, OperationType } from '@/lib/comprehensivePrompts';
 
 interface ChatMessage {
   id: string;
@@ -41,25 +41,20 @@ interface AIChatPanelProps {
   reloadWorkspace?: () => Promise<void>;
 }
 
+// Several declared props are no longer read here: the assistant now runs
+// server-side via `POST /api/ai-chat`, which loads its own data and binds
+// mutations to the verified token. They stay on `AIChatPanelProps` so existing
+// call sites keep compiling, but are not destructured.
 export function AIChatPanel({
   isOpen,
   onClose,
   customers,
-  notes = [],
-  customerProfiles = [],
   customerContacts,
   internalContacts,
-  products,
-  partners,
   onSaveNote,
   onSaveCustomer,
-  onUpdateCustomer,
-  onUpdateProfile,
   onAddCustomerContact,
   onAddInternalContact,
-  onAddProduct,
-  onAddPartner,
-  currentUser,
   getFirebaseIdToken,
   reloadWorkspace,
 }: AIChatPanelProps) {
@@ -81,7 +76,6 @@ export function AIChatPanel({
   const [selectedPromptId, setSelectedPromptId] = useState<string>('');
   const [customPrompts, setCustomPrompts] = useState<CustomPrompt[]>([]);
   const [showAddPrompt, setShowAddPrompt] = useState(false);
-  const [editingPrompt, setEditingPrompt] = useState<ComprehensivePromptTemplate | null>(null);
   const [copiedText, setCopiedText] = useState('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -250,11 +244,6 @@ export function AIChatPanel({
       message,
       existingCustomer: existingCustomer || null
     };
-  };
-
-  const generateExtractedInfo = (parsedData: any) => {
-    // This function can be used to format extracted data for display
-    return parsedData;
   };
 
   // Load custom prompts from localStorage

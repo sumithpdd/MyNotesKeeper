@@ -94,7 +94,6 @@ export function EntityManagement({
   };
   const {
     activeTab,
-    setActiveTab,
     searchTerm,
     setSearchTerm,
     sortBy,

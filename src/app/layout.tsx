@@ -1,18 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+// Self-hosted Geist (the `geist` package bundles the woff2 files and wraps
+// `next/font/local`). Deliberately NOT `next/font/google`, which fetches from
+// fonts.gstatic.com at build time and so breaks offline and network-restricted
+// builds — including CI. Exposes the same CSS variables as before.
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Customer Engagement Hub",
@@ -44,7 +39,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#3B82F6" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}
       >
         <AuthProvider>
           <ProtectedRoute>

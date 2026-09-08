@@ -43,6 +43,16 @@ export function PromptLibrary({ onSelectPrompt, onUsePromptInChatbot }: PromptLi
     }
   };
 
+  /**
+   * Insert a prompt's text into the caller's field (e.g. SE Notes). Callers that
+   * supply `onSelectPrompt` get an insert button; callers that supply
+   * `onUsePromptInChatbot` get the chatbot button instead.
+   */
+  const handleSelectPrompt = (prompt: PromptTemplate) => {
+    if (!onSelectPrompt) return;
+    onSelectPrompt(prompt.examples?.[0] ?? prompt.description ?? prompt.title);
+  };
+
   const getCategoryColor = (category: string) => {
     switch (category) {
       case 'note': return 'bg-blue-100 text-blue-700';
@@ -184,6 +194,16 @@ export function PromptLibrary({ onSelectPrompt, onUsePromptInChatbot }: PromptLi
                   >
                     <Sparkles className="h-5 w-5" />
                     Use This Prompt in Chatbot
+                  </button>
+                )}
+
+                {onSelectPrompt && (
+                  <button
+                    onClick={() => handleSelectPrompt(currentPrompt)}
+                    className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center justify-center gap-2 font-medium shadow-md"
+                  >
+                    <Sparkles className="h-5 w-5" />
+                    Use This Prompt
                   </button>
                 )}
               </div>

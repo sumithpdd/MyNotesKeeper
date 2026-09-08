@@ -12,7 +12,7 @@ import {
   Timestamp 
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Opportunity, CreateOpportunityData, UpdateOpportunityData, StageChangeData, OpportunityStage } from '@/types';
+import { Opportunity, CreateOpportunityData, UpdateOpportunityData, OpportunityStage } from '@/types';
 
 const COLLECTION_NAME = 'opportunities';
 

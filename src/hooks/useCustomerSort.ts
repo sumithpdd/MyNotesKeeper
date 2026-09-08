@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Customer } from '@/types';
 
 export type SortBy = 'name' | 'created' | 'updated' | 'products';
