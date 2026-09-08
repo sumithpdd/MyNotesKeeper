@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { productService } from '@/lib/productService';
-import { partnerService } from '@/lib/partnerService';
+import {
+  getAllProductsAdmin,
+  getAllPartnersAdmin,
+  createProductAdmin,
+  createPartnerAdmin,
+  updateProductAdmin,
+  updatePartnerAdmin,
+  deleteProductAdmin,
+  deletePartnerAdmin,
+} from '@/lib/server/entitiesAdmin';
 import { authorizeApiRequest } from '@/lib/server/authorizeApiRequest';
 
 /**
@@ -17,11 +25,11 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type'); // 'products' | 'partners'
 
     if (type === 'products') {
-      const data = await productService.getAllProducts();
+      const data = await getAllProductsAdmin();
       return NextResponse.json({ success: true, data });
     }
     if (type === 'partners') {
-      const data = await partnerService.getAllPartners();
+      const data = await getAllPartnersAdmin();
       return NextResponse.json({ success: true, data });
     }
 
@@ -68,7 +76,7 @@ export async function POST(request: NextRequest) {
         website: typeof entity.website === 'string' ? entity.website.trim() || '' : '',
         status: entity.status || 'Active',
       };
-      const id = await productService.createProduct(productData);
+      const id = await createProductAdmin(productData);
       return NextResponse.json({ success: true, data: { id, ...productData } });
     }
     if (type === 'partner') {
@@ -77,7 +85,7 @@ export async function POST(request: NextRequest) {
         type: entity.type || '',
         website: entity.website || '',
       };
-      const id = await partnerService.createPartner(partnerData);
+      const id = await createPartnerAdmin(partnerData);
       return NextResponse.json({ success: true, data: { id, ...partnerData } });
     }
 
@@ -111,11 +119,11 @@ export async function PUT(request: NextRequest) {
 
     if (type === 'product') {
       const { id, ...updates } = entity as Record<string, unknown> & { id: string };
-      await productService.updateProduct(id, updates);
+      await updateProductAdmin(id, updates);
       return NextResponse.json({ success: true, data: entity });
     }
     if (type === 'partner') {
-      await partnerService.updatePartner(entity.id, entity);
+      await updatePartnerAdmin(entity.id, entity);
       return NextResponse.json({ success: true, data: entity });
     }
 
@@ -149,9 +157,9 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (type === 'product') {
-      await productService.deleteProduct(entityId);
+      await deleteProductAdmin(entityId);
     } else if (type === 'partner') {
-      await partnerService.deletePartner(entityId);
+      await deletePartnerAdmin(entityId);
     } else {
       return NextResponse.json(
         { success: false, error: 'Type must be product or partner' },

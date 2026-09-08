@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { customerNotesService } from '@/lib/customerNotes';
+import {
+  getAllNotesAdmin,
+  getNotesByCustomerAdmin,
+  createNoteAdmin,
+  updateNoteAdmin,
+  deleteNoteAdmin,
+} from '@/lib/server/notesAdmin';
 import { authorizeApiRequest, forbidUserIdMismatch } from '@/lib/server/authorizeApiRequest';
 import type { CustomerNote } from '@/types';
 
@@ -16,10 +22,10 @@ export async function GET(request: NextRequest) {
     const customerId = searchParams.get('customerId');
 
     if (customerId) {
-      const notes = await customerNotesService.getNotesByCustomer(customerId);
+      const notes = await getNotesByCustomerAdmin(customerId);
       return NextResponse.json({ success: true, data: notes });
     }
-    const notes = await customerNotesService.getAllNotes();
+    const notes = await getAllNotesAdmin();
     return NextResponse.json({ success: true, data: notes });
   } catch (error: unknown) {
     console.error('GET /api/notes error:', error);
@@ -44,7 +50,7 @@ export async function POST(request: NextRequest) {
     const forbidden = forbidUserIdMismatch(auth.uid, userId);
     if (forbidden) return forbidden;
 
-    const noteId = await customerNotesService.createNote(note, userId);
+    const noteId = await createNoteAdmin(note, userId);
     return NextResponse.json({
       success: true,
       data: { ...note, id: noteId },
@@ -79,7 +85,7 @@ export async function PUT(request: NextRequest) {
     const forbidden = forbidUserIdMismatch(auth.uid, userId);
     if (forbidden) return forbidden;
 
-    await customerNotesService.updateNote(note, userId);
+    await updateNoteAdmin(note, userId);
     return NextResponse.json({ success: true, data: note });
   } catch (error: unknown) {
     console.error('PUT /api/notes error:', error);
@@ -92,7 +98,7 @@ export async function PUT(request: NextRequest) {
         }
         const forbidden = forbidUserIdMismatch(auth.uid, userId);
         if (forbidden) return forbidden;
-        const newNoteId = await customerNotesService.createNote(note, userId);
+        const newNoteId = await createNoteAdmin(note, userId);
         return NextResponse.json({
           success: true,
           data: { ...note, id: newNoteId },
@@ -124,7 +130,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Note ID required' }, { status: 400 });
     }
 
-    await customerNotesService.deleteNote(noteId);
+    await deleteNoteAdmin(noteId);
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     console.error('DELETE /api/notes error:', error);

@@ -18,13 +18,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { processWithTools, type ToolExecutor } from '@/lib/aiToolsService';
 import { authorizeApiRequest } from '@/lib/server/authorizeApiRequest';
 import { createCustomerAdmin, updateCustomerAdmin } from '@/lib/server/customersAdmin';
+import { createNoteAdmin } from '@/lib/server/notesAdmin';
 import {
-  createCustomerNoteAdmin,
   createInternalContactAdmin,
   createCustomerContactAdmin,
-  createProductAdmin,
-  createPartnerAdmin,
-} from '@/lib/server/aiChatEntitiesAdmin';
+} from '@/lib/server/contactsAdmin';
+import { createProductAdmin, createPartnerAdmin } from '@/lib/server/entitiesAdmin';
 import { aiService } from '@/lib/ai';
 import type { CreateCustomerData } from '@/types';
 import { formatProductDisplayName } from '@/lib/productDisplay';
@@ -219,7 +218,7 @@ export async function POST(request: NextRequest) {
             customerName.toLowerCase().includes((c.customerName || '').toLowerCase())
         );
         if (!match) return { found: false, message: `Customer "${customerName}" not found` };
-        const noteId = await createCustomerNoteAdmin(
+        const noteId = await createNoteAdmin(
           {
             customerId: match.id,
             notes: noteContent.trim(),

@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { opportunityService } from '@/lib/opportunityService';
+import {
+  getAllOpportunitiesAdmin,
+  getOpportunityByIdAdmin,
+  createOpportunityAdmin,
+  updateOpportunityAdmin,
+  deleteOpportunityAdmin,
+  deleteOpportunitiesByCustomerAdmin,
+} from '@/lib/server/opportunitiesAdmin';
 import { authorizeApiRequest } from '@/lib/server/authorizeApiRequest';
 
 /**
@@ -17,15 +24,15 @@ export async function GET(request: NextRequest) {
     const opportunityId = searchParams.get('id');
 
     if (opportunityId) {
-      const opportunity = await opportunityService.getOpportunityById(opportunityId);
+      const opportunity = await getOpportunityByIdAdmin(opportunityId);
       return NextResponse.json({ success: true, data: opportunity });
     } else if (customerId) {
       // Get opportunities for specific customer
-      const allOpportunities = await opportunityService.getAllOpportunities();
+      const allOpportunities = await getAllOpportunitiesAdmin();
       const customerOpportunities = allOpportunities.filter(o => o.customerId === customerId);
       return NextResponse.json({ success: true, data: customerOpportunities });
     } else {
-      const opportunities = await opportunityService.getAllOpportunities();
+      const opportunities = await getAllOpportunitiesAdmin();
       return NextResponse.json({ success: true, data: opportunities });
     }
   } catch (error: any) {
@@ -52,7 +59,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newOpportunity = await opportunityService.createOpportunity(opportunity);
+    const newOpportunity = await createOpportunityAdmin(opportunity);
     return NextResponse.json({ success: true, data: newOpportunity });
   } catch (error: any) {
     console.error('POST /api/opportunities error:', error);
@@ -76,7 +83,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    await opportunityService.updateOpportunity(opportunity);
+    await updateOpportunityAdmin(opportunity);
     return NextResponse.json({ success: true, data: opportunity });
   } catch (error: any) {
     console.error('PUT /api/opportunities error:', error);
@@ -98,10 +105,10 @@ export async function DELETE(request: NextRequest) {
 
     if (customerId) {
       // Delete all opportunities for a customer
-      await opportunityService.deleteOpportunitiesByCustomer(customerId);
+      await deleteOpportunitiesByCustomerAdmin(customerId);
       return NextResponse.json({ success: true });
     } else if (opportunityId) {
-      await opportunityService.deleteOpportunity(opportunityId);
+      await deleteOpportunityAdmin(opportunityId);
       return NextResponse.json({ success: true });
     } else {
       return NextResponse.json(

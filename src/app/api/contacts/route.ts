@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { customerContactService, internalContactService } from '@/lib/contactService';
+import {
+  getAllCustomerContactsAdmin,
+  getAllInternalContactsAdmin,
+  createCustomerContactAdmin,
+  createInternalContactAdmin,
+  updateCustomerContactAdmin,
+  updateInternalContactAdmin,
+  deleteCustomerContactAdmin,
+  deleteInternalContactAdmin,
+} from '@/lib/server/contactsAdmin';
 import { authorizeApiRequest } from '@/lib/server/authorizeApiRequest';
 
 /**
@@ -16,11 +25,11 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type'); // 'customer' | 'internal'
 
     if (type === 'customer') {
-      const data = await customerContactService.getAllCustomerContacts();
+      const data = await getAllCustomerContactsAdmin();
       return NextResponse.json({ success: true, data });
     }
     if (type === 'internal') {
-      const data = await internalContactService.getAllInternalContacts();
+      const data = await getAllInternalContactsAdmin();
       return NextResponse.json({ success: true, data });
     }
 
@@ -52,12 +61,12 @@ export async function POST(request: NextRequest) {
 
     if (type === 'customer') {
       const { id, ...rest } = contact;
-      const contactId = await customerContactService.createCustomerContact(rest);
+      const contactId = await createCustomerContactAdmin(rest);
       return NextResponse.json({ success: true, data: { id: contactId, ...rest } });
     }
     if (type === 'internal') {
       const { id, ...rest } = contact;
-      const contactId = await internalContactService.createInternalContact(rest);
+      const contactId = await createInternalContactAdmin(rest);
       return NextResponse.json({ success: true, data: { id: contactId, ...rest } });
     }
 
@@ -90,11 +99,11 @@ export async function PUT(request: NextRequest) {
     }
 
     if (type === 'customer') {
-      await customerContactService.updateCustomerContact(contact.id, contact);
+      await updateCustomerContactAdmin(contact.id, contact);
       return NextResponse.json({ success: true, data: contact });
     }
     if (type === 'internal') {
-      await internalContactService.updateInternalContact(contact.id, contact);
+      await updateInternalContactAdmin(contact.id, contact);
       return NextResponse.json({ success: true, data: contact });
     }
 
@@ -128,9 +137,9 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (type === 'customer') {
-      await customerContactService.deleteCustomerContact(contactId);
+      await deleteCustomerContactAdmin(contactId);
     } else if (type === 'internal') {
-      await internalContactService.deleteInternalContact(contactId);
+      await deleteInternalContactAdmin(contactId);
     } else {
       return NextResponse.json(
         { success: false, error: 'Type must be customer or internal' },

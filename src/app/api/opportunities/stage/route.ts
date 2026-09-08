@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { opportunityService } from '@/lib/opportunityService';
+import { getOpportunityByIdAdmin, changeStageAdmin } from '@/lib/server/opportunitiesAdmin';
 import { authorizeApiRequest } from '@/lib/server/authorizeApiRequest';
 import { OpportunityStage } from '@/types';
 
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the opportunity
-    const opportunity = await opportunityService.getOpportunityById(opportunityId);
+    const opportunity = await getOpportunityByIdAdmin(opportunityId);
     
     if (!opportunity) {
       return NextResponse.json(
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Change stage with history tracking
-    await opportunityService.changeStage(
+    await changeStageAdmin(
       opportunity,
       newStage as OpportunityStage,
       userEmail,
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Get updated opportunity
-    const updatedOpportunity = await opportunityService.getOpportunityById(opportunityId);
+    const updatedOpportunity = await getOpportunityByIdAdmin(opportunityId);
 
     return NextResponse.json({ success: true, data: updatedOpportunity });
   } catch (error: any) {
