@@ -32,7 +32,8 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
   const {
     register,
     handleSubmit,
-    watch,    formState: { errors, isSubmitting }
+    watch,
+    formState: { errors, isSubmitting }
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: product ? {
