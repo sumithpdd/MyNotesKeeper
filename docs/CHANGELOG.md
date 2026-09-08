@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.6.1] - 2026-09-08 - Gemini model retirement, AI chat Admin SDK fix
+
+- 🐛 **Fixed: `/api/ai-chat` returned 500 with `permission-denied` on every collection.** The route called `src/lib/*Service.ts` helpers, which use the Firebase **web** SDK. Inside a route handler there is no signed-in browser user, so `request.auth` is null and every rule in `firestore.rules` denies the read. Reads now come from `loadWorkspaceSnapshot` (Admin SDK, tenant-aware); writes go through `customersAdmin` and a new [`aiChatEntitiesAdmin.ts`](../src/lib/server/aiChatEntitiesAdmin.ts). Pre-existing defect, not introduced by 2.6.0.
+- 🐛 **Fixed: `gemini-2.5-flash` was retired by Google** and began returning `404 … no longer available to new users`. Default is now **`gemini-3.6-flash`**, verified live (`gemini-2.5-flash` → 404, `gemini-3.6-flash` → 200).
+- 📚 **Corrected model-ID guidance.** 2.6.0 said to take valid IDs from the installed `@ai-sdk/google` package. That is wrong: the package pins a hardcoded union that goes stale — it does not list `gemini-3.6-flash`. The union ends in `(string & {})`, so any ID compiles and a wrong one only fails at request time. The **live API** is the authority. `SETUP.md` now documents the retirement path, the pinned-vs-floating trade-off (`gemini-flash-latest`), and a curl check.
+
+### Known issues
+
+- `/api/contacts`, `/api/entities`, `/api/notes`, `/api/opportunities` and `/api/opportunities/stage` still import the web-SDK services and carry the **same `permission-denied` defect** as `/api/ai-chat` did. Not yet fixed.
+- `@ai-sdk/google` (3.0.67) and `ai` (6.0.175) are each a major version behind (4.x / 7.x).
+
+---
+
 ## [2.6.0] - 2026-09-08 - CRM-aligned schema, AI status tools, dead code removal
 
 ### CRM alignment

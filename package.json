@@ -1,6 +1,6 @@
 {
   "name": "customer-engagement-hub",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "description": "A comprehensive Next.js application for managing customer relationships, tracking engagement progress, and maintaining detailed customer notes",
   "private": true,
   "keywords": [

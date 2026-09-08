@@ -181,7 +181,7 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
 GEMINI_API_KEY=your_gemini_api_key
 
 # Optional: override the Gemini model for every server-side AI call.
-# GEMINI_MODEL=gemini-2.5-flash
+# GEMINI_MODEL=gemini-3.6-flash
 
 # Easiest locally: put the downloaded key in project root as serviceAccountKey.json (gitignored) and uncomment:
 FIREBASE_SERVICE_ACCOUNT_PATH=./serviceAccountKey.json
@@ -328,11 +328,29 @@ Navigate to **http://localhost:3000**
 
 ### Choosing a Gemini model (`GEMINI_MODEL`)
 
-All server-side AI calls resolve their model through [`src/lib/aiModel.ts`](../src/lib/aiModel.ts), which defaults to a **GA** model. Override it with `GEMINI_MODEL` — no code change required.
+All server-side AI calls resolve their model through [`src/lib/aiModel.ts`](../src/lib/aiModel.ts). Override it with `GEMINI_MODEL` — no code change required. Both `src/lib/ai.ts` and `src/lib/aiToolsService.ts` read the same helper, so one env var moves the whole app.
 
-- **Valid IDs are enumerated by the installed `@ai-sdk/google` package.** Check there rather than guessing a name; an unknown ID fails at request time, not at build time.
-- **Prefer GA over preview.** The `gemini-3*-preview` family can change or be withdrawn without notice, and the tool-calling path (`/api/ai-chat`) writes customer data.
-- Both `src/lib/ai.ts` and `src/lib/aiToolsService.ts` read from the same helper, so one env var moves the whole app.
+**The live API is the authority on model IDs — not this repo, and not the SDK.** The installed `@ai-sdk/google` package pins a hardcoded union of IDs that goes stale between releases: it did not list `gemini-3.6-flash` even while the API was actively recommending it. The union ends in `(string & {})`, so any ID compiles; a wrong one fails at **request time**.
+
+**Models get retired.** `gemini-2.5-flash` began returning:
+
+```
+404 This model models/gemini-2.5-flash is no longer available to new users.
+    Please update your code to use models/gemini-3.6-flash
+```
+
+When that happens the error names the replacement — set `GEMINI_MODEL` to it, then update the default in `aiModel.ts`.
+
+**Pinned vs floating.** The default is pinned. The floating aliases (`gemini-flash-latest`, `gemini-pro-latest`) never go stale and would have absorbed the retirement above with no outage — at the cost of the model changing underneath a tool-calling path that writes customer data. Set `GEMINI_MODEL=gemini-flash-latest` if you would rather trade that.
+
+To check quickly whether an ID is live:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" \
+  "https://generativelanguage.googleapis.com/v1beta/models/<MODEL_ID>:generateContent?key=$GEMINI_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"contents":[{"parts":[{"text":"ping"}]}]}'
+```
 3. Restart dev server
 
 #### "Quota exceeded"
