@@ -180,6 +180,9 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
 # views your site source. All Gemini calls run on the server (`/api/*`).
 GEMINI_API_KEY=your_gemini_api_key
 
+# Optional: override the Gemini model for every server-side AI call.
+# GEMINI_MODEL=gemini-2.5-flash
+
 # Easiest locally: put the downloaded key in project root as serviceAccountKey.json (gitignored) and uncomment:
 FIREBASE_SERVICE_ACCOUNT_PATH=./serviceAccountKey.json
 
@@ -322,6 +325,14 @@ Navigate to **http://localhost:3000**
 **Fix:**
 1. Get a new API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
 2. Update `GEMINI_API_KEY` (server-only — no `NEXT_PUBLIC_` prefix) in `.env.local`
+
+### Choosing a Gemini model (`GEMINI_MODEL`)
+
+All server-side AI calls resolve their model through [`src/lib/aiModel.ts`](../src/lib/aiModel.ts), which defaults to a **GA** model. Override it with `GEMINI_MODEL` — no code change required.
+
+- **Valid IDs are enumerated by the installed `@ai-sdk/google` package.** Check there rather than guessing a name; an unknown ID fails at request time, not at build time.
+- **Prefer GA over preview.** The `gemini-3*-preview` family can change or be withdrawn without notice, and the tool-calling path (`/api/ai-chat`) writes customer data.
+- Both `src/lib/ai.ts` and `src/lib/aiToolsService.ts` read from the same helper, so one env var moves the whole app.
 3. Restart dev server
 
 #### "Quota exceeded"

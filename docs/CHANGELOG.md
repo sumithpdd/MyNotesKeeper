@@ -1,5 +1,33 @@
 # Changelog
 
+## [2.6.0] - 2026-09-08 - CRM-aligned schema, AI status tools, dead code removal
+
+### CRM alignment
+
+- ✅ **Opportunity type** now carries the CRM picklist — **`License`**, **`Renewal`**, **`Services`** — alongside the Hub-native motions. Previously only `Renewal` overlapped, so most CRM records could not be represented. Additive union; no stored data affected.
+- ✅ **`SEInvolvement`** changed from `boolean` to **`'Yes' | 'No' | 'Not Needed' | ''`**. `'No'` (support wanted but absent) and `'Not Needed'` (deliberately out of scope) are now distinct. Legacy booleans are parsed for backward compatibility by `parseSEInvolvement`.
+- ✅ **RAG assessments** (`seConfidence`, `seProductFitAssessment`) gained **`'Not Applicable'`**, distinct from blank/unassessed.
+- ✅ **Fiscal periods** — new pure module [`fiscalPeriod.ts`](../src/domain/engagement-hub/fiscalPeriod.ts). Fiscal year starts **1 July**, labelled by the year it ends (Sep 2026 → `Q1-2027`). Always derived from a date, never stored.
+- ✅ **Executable CRM stage mapping** — `stageFromCrmLabel()` in `opportunityStages.ts` replaces prose-only `crmCue` guidance (`Propose & Commit` → `Propose`, `Contract to Close` → `Close`).
+- 🐛 **Fixed:** `Not Applicable` rendered as a **red** badge in `CustomerManagement`, inventing a risk signal from a deliberate N/A. Badge tone is now centralised in `seRagTone()`.
+
+### AI assistant
+
+- ✅ **Nine new read-only tools** (18 → 27): `account_status`, `list_opportunities`, `list_tasks`, `list_notes`, `pipeline_health`, `account_planning`, `planning_coverage`, `industry_approach`, `accounts_by_solution`. The assistant previously had **no** opportunity or task tools.
+- ✅ **Account planning pillars** (whitespace, multi-threading, migration, research) exposed to the assistant, including activity options and the **xM/xP-only** constraint on migration.
+- ✅ **Tenant scoping:** status tools read opportunities and tasks via `loadWorkspaceSnapshot`, matching dashboard scoping rather than a raw `getAll`.
+- ✅ **Model:** upgraded `gemini-2.0-flash` → **`gemini-2.5-flash`**, resolved centrally by new [`src/lib/aiModel.ts`](../src/lib/aiModel.ts) and overridable with **`GEMINI_MODEL`**. Defaults to GA rather than preview because the tool-calling path writes customer data. `MAX_TOOL_STEPS` 5 → 8 for chained status queries.
+- ✅ **Prompt Library:** seven new status/planning/positioning prompts.
+
+### Cleanup
+
+- 🗑️ **Removed 12 unused files (~1,900 lines):** legacy `ChatbotInterface` chain (`/api/ai/chatbot/parse`, `chatbotAI.ts`, `types/chatbotAI.ts`), orphaned `/api/ai-command` route, unused `components/ai-chat/`, pre-API-migration `taskService.ts` / `taskCategoryService.ts` / `taskCategoryMerge.ts`, `seTemplate` left in place, and `utils/aiMessageParser.ts`. The task services were **client-side Firestore writes**, which the project's own standards forbid.
+- 🗑️ Dropped unused `@google/generative-ai` dependency (superseded by the Vercel AI SDK).
+- 🔧 **ESLint:** 82 errors → **0**. All were `no-require-imports` firing on CommonJS Node scripts; config now scopes that rule off for `scripts/**/*.js` and `check-env.js`. No source files changed.
+- 📚 **Docs:** stale references to deleted modules removed across ARCHITECTURE, API_GUIDE, SECURITY, DEVELOPER_GUIDE, JUNIOR_DEVELOPER_GUIDE and FEATURES.
+
+---
+
 ## [2.5.3] - 2026-05-06 - Meeting notes (ideas & execution), AE review seed script
 
 - ✅ **Notes:** **Ideas & execution** section on customer notes (`otherFields.ideasExecution`), aligned with domain constants (`MEETING_NOTE_OTHER_FIELDS`).

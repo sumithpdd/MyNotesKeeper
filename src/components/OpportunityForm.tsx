@@ -38,7 +38,9 @@ const opportunitySchema = z.object({
     email: z.string().optional(),
   }).optional(),
   priority: z.enum(['Low', 'Medium', 'High', 'Critical']).optional(),
-  type: z.enum(['New Business', 'Upsell', 'Cross-sell', 'Renewal', 'Migration']).optional(),
+  type: z
+    .enum(['License', 'Renewal', 'Services', 'New Business', 'Upsell', 'Cross-sell', 'Migration'])
+    .optional(),
   competitorInfo: z.string().optional(),
   nextSteps: z.string().optional(),
   crmOpportunityUrl: z.string().optional(),
@@ -258,11 +260,17 @@ export function OpportunityForm({
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
               >
                 <option value="">Select Type...</option>
-                <option value="New Business">New Business</option>
-                <option value="Upsell">Upsell</option>
-                <option value="Cross-sell">Cross-sell</option>
-                <option value="Renewal">Renewal</option>
-                <option value="Migration">Migration</option>
+                <optgroup label="CRM">
+                  <option value="License">License</option>
+                  <option value="Renewal">Renewal</option>
+                  <option value="Services">Services</option>
+                </optgroup>
+                <optgroup label="Other">
+                  <option value="New Business">New Business</option>
+                  <option value="Upsell">Upsell</option>
+                  <option value="Cross-sell">Cross-sell</option>
+                  <option value="Migration">Migration</option>
+                </optgroup>
               </select>
             </div>
 

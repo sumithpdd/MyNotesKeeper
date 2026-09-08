@@ -164,7 +164,7 @@ Return a JSON object with these fields.`
 - customerName: The customer/company name
 - followUpDate: Date for follow-up (ISO format)
 - followUpAction: What needs to be done
-- seInvolvement: Boolean - if SE involvement is needed
+- seInvolvement: One of "Yes", "No", "Not Needed" ("No" = wanted but absent; "Not Needed" = deliberately out of scope)
 - assignedTo: Who is responsible
 - priority: High, Medium, or Low
 

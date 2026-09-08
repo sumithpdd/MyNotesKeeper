@@ -17,12 +17,30 @@ Complete guide to using the new slide-out AI Assistant panel with chat interface
 
 The AI Chat Panel is a modern slide-out interface that provides:
 - 🤖 **Natural language chatbot** for data entry
-- 📚 **Comprehensive prompt library** (28+ built-in prompts)
+- 📚 **Comprehensive prompt library** (35+ built-in prompts)
 - ➕ **Custom prompt creation** and management
 - 💾 **Local storage** for custom prompts
 - ✨ **Always accessible** from any screen
 
 Natural-language answers and tool-backed actions are handled by **`POST /api/ai-chat`** using your Firebase **Bearer** token (Gemini executes on the server). Stay signed in — see **[API_GUIDE.md](API_GUIDE.md)** and **[SECURITY.md](SECURITY.md)**. Some intents still show a preview with **Confirm** / **Cancel** before touching hub data.
+
+### Asking questions, not just giving commands
+
+Beyond data entry, the assistant answers status questions from live hub data. Every answer is backed by a tool call — it will not guess, and results are scoped to your signed-in account.
+
+| Ask | Backed by |
+|-----|-----------|
+| "Where are we with Greene King?" | `account_status` |
+| "Which deals are in Discover?" / "What's closing in Q1?" | `list_opportunities` |
+| "What's on my plate this week?" | `list_tasks` |
+| "Which accounts are red?" | `list_notes` |
+| "What's going stale?" | `pipeline_health` |
+| "What's my whitespace approach for X?" | `account_planning` |
+| "Which accounts have no whitespace plan?" | `planning_coverage` |
+| "What angle should I take with X?" | `industry_approach` |
+| "Who could I cover in one Lunch & Learn?" | `accounts_by_solution` |
+
+Full tool list and behaviour: **[API_GUIDE.md](API_GUIDE.md)**. Planning pillar definitions: **[FEATURES.md](FEATURES.md)**.
 
 ### Key Features
 

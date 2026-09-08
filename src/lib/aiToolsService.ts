@@ -14,9 +14,9 @@ import 'server-only';
 import { generateText, tool, stepCountIs } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { z } from 'zod';
+import { geminiModelId } from '@/lib/aiModel';
 
-const MODEL_ID = 'gemini-2.0-flash';
-const MAX_TOOL_STEPS = 5;
+const MAX_TOOL_STEPS = 8;
 
 let providerSingleton: ReturnType<typeof createGoogleGenerativeAI> | null = null;
 
@@ -49,7 +49,19 @@ export type ToolName =
   | 'lookup_product'
   | 'create_product'
   | 'lookup_partner'
-  | 'create_partner';
+  | 'create_partner'
+  // Read-only engagement status tools
+  | 'account_status'
+  | 'list_opportunities'
+  | 'list_tasks'
+  | 'list_notes'
+  | 'pipeline_health'
+  // Account planning pillars (whitespace, multi-threading, migration, research)
+  | 'account_planning'
+  | 'planning_coverage'
+  // Industry / vertical positioning
+  | 'industry_approach'
+  | 'accounts_by_solution';
 
 export interface ToolExecutor {
   lookup_customer: (args: { customerName: string }) => Promise<object>;
@@ -70,6 +82,38 @@ export interface ToolExecutor {
   create_product?: (args: { name: string; version?: string }) => Promise<object>;
   lookup_partner?: (args: { name: string }) => Promise<object>;
   create_partner?: (args: { name: string; type?: string }) => Promise<object>;
+
+  /** Full engagement snapshot for one account: profile, notes, opportunities, tasks. */
+  account_status?: (args: { customerName: string }) => Promise<object>;
+  list_opportunities?: (args: {
+    customerName?: string;
+    stage?: string;
+    type?: string;
+    owner?: string;
+    minAgeDays?: number;
+    limit?: number;
+  }) => Promise<object>;
+  list_tasks?: (args: {
+    customerName?: string;
+    status?: string;
+    limit?: number;
+  }) => Promise<object>;
+  list_notes?: (args: {
+    customerName?: string;
+    seConfidence?: string;
+    limit?: number;
+  }) => Promise<object>;
+  pipeline_health?: (args: { staleAfterDays?: number }) => Promise<object>;
+
+  /** Four-pillar account plan for one account, with the tasks driving each pillar. */
+  account_planning?: (args: { customerName: string; pillar?: string }) => Promise<object>;
+  /** Which accounts have (or lack) a plan for a given pillar. */
+  planning_coverage?: (args: { pillar?: string; missingOnly?: boolean }) => Promise<object>;
+
+  /** Industry/vertical context for an account, or every account in a vertical. */
+  industry_approach?: (args: { customerName?: string; vertical?: string }) => Promise<object>;
+  /** Accounts grouped by shared product or vertical — for Lunch & Learns and webinars. */
+  accounts_by_solution?: (args: { product?: string; vertical?: string }) => Promise<object>;
 }
 
 export interface AIToolsContext {
@@ -89,6 +133,31 @@ CRITICAL: ALWAYS use tools for any data operation. NEVER invent or guess data. T
 - Create: use create_* tools when user wants to add something
 - Update: use update_customer, add_note for modifications
 - Search: use search_customers for filtering
+- Status questions: use the read-only status tools below
+
+STATUS AND REPORTING TOOLS — prefer these for any "how is X doing / what is the status / what is stuck / what is due" question:
+- account_status: everything about ONE account (SE confidence, latest note, open tasks, opportunities). Use for "where are we with X", "status of X", "what's happening on X".
+- list_opportunities: filter the pipeline by account, stage, type, owner, or age. Use for "which deals are in Discover", "show me licence deals", "what is closing this quarter".
+- list_tasks: engagement tasks, optionally by account or status. Use for "what's on my plate", "open tasks for X".
+- list_notes: recent notes, optionally by account or SE confidence. Use for "what did we discuss", "which accounts are red".
+- pipeline_health: accounts and deals needing attention — stale opportunities and missing SE assessments. Use for "what needs attention", "what is going stale".
+- account_planning: the four-pillar plan for ONE account. Use for "what is my plan for X", "whitespace approach for X", "is X a migration candidate".
+- planning_coverage: which accounts have or lack a plan per pillar. Use for "which accounts have no whitespace plan", "where am I not multi-threaded".
+- industry_approach: vertical context and positioning material for an account or a whole vertical. Use for "what angle should I take with X", "what is our industry approach".
+- accounts_by_solution: accounts sharing a product or vertical, for one session covering several accounts. Use for "who could I cover in one Lunch and Learn".
+
+When asked for an industry approach or point of view, call industry_approach first and build the recommendation on what comes back. Be opinionated and specific to the account's vertical and use cases — but never state a customer fact that no tool returned. If the vertical or use cases are blank, say so and ask for them rather than inventing an industry narrative.
+
+ACCOUNT PLANNING PILLARS — the SC planning model. When advising, suggest activities from the pillar's own options rather than inventing new ones:
+1. Whitespace activity — after Vee's whitespace analysis, align with the AE on the approach per account. Options: a customer-specific industry/use-case approach (be opinionated, a thought leader); a Lunch & Learn covering multiple accounts across AEs for one solution; a Webinar focused on a solution, use case/pain point, or vertical.
+2. Multi-threading — build rapport with additional stakeholders (Head of Digital, IT, Marketing). Options: 30-minute customer drop-ins on current processes and pain; knowledge workshops; mini demos on one or two use cases; open conversation.
+3. Migration — xM and xP customers ONLY. Pathways: migration to Headless, migration to SAI. Decide partner-led, direct, or both. Never propose migration planning for an account that is not on xM or xP.
+4. Deeper customer research — vertical and industry trends: new legislation, changes due to AI, economic drivers, disruptive challengers and market pressure.
+
+Reporting conventions:
+- The fiscal year starts 1 July and is labelled by the year it ends (Sep 2026 falls in Q1-2027).
+- SE involvement "No" means SE support is wanted but missing (a risk); "Not Needed" means deliberately out of scope. Never conflate them.
+- An SE confidence of "Not Applicable" is a deliberate answer; blank means nobody has assessed it. Report those differently.
 
 For "if not create": call lookup first. If found, report. If not found, call the create tool with user-provided details.
 
@@ -97,7 +166,7 @@ Your role: (1) Call the right tool(s) to get or update data.
 
 Never respond with data you haven't fetched via a tool. Match names flexibly (partial, case-insensitive).`;
 
-const seConfidenceSchema = z.enum(['Green', 'Yellow', 'Red']);
+const seConfidenceSchema = z.enum(['Green', 'Yellow', 'Red', 'Not Applicable']);
 
 /**
  * Tool definitions. Inputs are typed with Zod so the model gets a strict schema
@@ -125,6 +194,118 @@ function buildTools(executors: Partial<ToolExecutor>) {
   };
 
   return {
+    account_status: tool({
+      description:
+        'Full engagement status for ONE account: SE involvement and confidence, latest note, open engagement tasks, and opportunities with stage, value and fiscal period. Use for "where are we with X", "status of X", "what is happening on X", "how is X doing".',
+      inputSchema: z.object({
+        customerName: z.string().describe('The account name, e.g. "Greene King"'),
+      }),
+      execute: (args) => safeExec('account_status', args, executors.account_status),
+    }),
+    list_opportunities: tool({
+      description:
+        'List opportunities, optionally filtered. Use for "which deals are in Discover", "what is closing this quarter", "show licence opportunities", "which deals has nobody touched". Returns stage, amount, age in days and fiscal period.',
+      inputSchema: z.object({
+        customerName: z.string().optional().describe('Limit to one account'),
+        stage: z
+          .string()
+          .optional()
+          .describe('Stage name, e.g. Discover, Qualify, Differentiate, Propose, Close'),
+        type: z.string().optional().describe('Opportunity type, e.g. License, Renewal, Services'),
+        owner: z.string().optional().describe('Opportunity owner name'),
+        minAgeDays: z
+          .number()
+          .optional()
+          .describe('Only opportunities at least this many days old — use for staleness questions'),
+        limit: z.number().optional().describe('Max rows to return (default 25)'),
+      }),
+      execute: (args) => safeExec('list_opportunities', args, executors.list_opportunities),
+    }),
+    list_tasks: tool({
+      description:
+        'List engagement tasks (workshops, demos, follow-ups), optionally by account or status. Use for "what is on my plate", "open tasks for X", "what is due".',
+      inputSchema: z.object({
+        customerName: z.string().optional().describe('Limit to one account'),
+        status: z
+          .string()
+          .optional()
+          .describe('todo, in_progress, done, cancelled, or "open" for not done/cancelled'),
+        limit: z.number().optional().describe('Max rows to return (default 25)'),
+      }),
+      execute: (args) => safeExec('list_tasks', args, executors.list_tasks),
+    }),
+    list_notes: tool({
+      description:
+        'List recent customer notes, optionally by account or SE confidence. Use for "what did we discuss with X", "which accounts are red", "recent notes".',
+      inputSchema: z.object({
+        customerName: z.string().optional().describe('Limit to one account'),
+        seConfidence: z
+          .string()
+          .optional()
+          .describe('Green, Yellow, Red or Not Applicable'),
+        limit: z.number().optional().describe('Max rows to return (default 15)'),
+      }),
+      execute: (args) => safeExec('list_notes', args, executors.list_notes),
+    }),
+    pipeline_health: tool({
+      description:
+        'Accounts and deals needing attention: stale opportunities sitting too long, and opportunities with no SE assessment recorded. Use for "what needs attention", "what is going stale", "where am I missing SE coverage".',
+      inputSchema: z.object({
+        staleAfterDays: z
+          .number()
+          .optional()
+          .describe('Age in days past which an opportunity counts as stale (default 180)'),
+      }),
+      execute: (args) => safeExec('pipeline_health', args, executors.pipeline_health),
+    }),
+    account_planning: tool({
+      description:
+        'The four-pillar account plan for ONE account — whitespace activity, multi-threading, migration, and deeper customer research — including the approach, status, next actions and the engagement tasks driving each pillar. Use for "what is my plan for X", "whitespace approach for X", "who are we multi-threading into at X", "is X a migration candidate", "what research have we done on X".',
+      inputSchema: z.object({
+        customerName: z.string().describe('The account name'),
+        pillar: z
+          .string()
+          .optional()
+          .describe('Optional single pillar: whitespace, multi_threading, migration, research'),
+      }),
+      execute: (args) => safeExec('account_planning', args, executors.account_planning),
+    }),
+    planning_coverage: tool({
+      description:
+        'Across all accounts, which have an account plan recorded for a pillar and which do not. Use for "which accounts have no whitespace plan", "where am I not multi-threaded", "which accounts still need migration pathways", "what planning is missing".',
+      inputSchema: z.object({
+        pillar: z
+          .string()
+          .optional()
+          .describe('whitespace, multi_threading, migration, or research; omit for all four'),
+        missingOnly: z
+          .boolean()
+          .optional()
+          .describe('When true, return only accounts with nothing recorded for the pillar'),
+      }),
+      execute: (args) => safeExec('planning_coverage', args, executors.planning_coverage),
+    }),
+    industry_approach: tool({
+      description:
+        'Industry and vertical context used to build an opinionated, thought-leadership approach: the account vertical, research topics, business problem, objectives and use cases, products in play, and the recorded whitespace approach. Pass a vertical instead of an account to see every account in it. Use for "what is our industry approach for X", "what angle should I take with X", "what is happening in the higher education vertical".',
+      inputSchema: z.object({
+        customerName: z.string().optional().describe('Account to build the approach for'),
+        vertical: z
+          .string()
+          .optional()
+          .describe('Vertical/industry name, e.g. "higher education", "retail"'),
+      }),
+      execute: (args) => safeExec('industry_approach', args, executors.industry_approach),
+    }),
+    accounts_by_solution: tool({
+      description:
+        'Group accounts that share a product/solution or vertical, so one session can cover several accounts across AEs. Use for "which accounts could I cover in one Lunch and Learn", "who else is on Scrunch", "which accounts share this vertical", "who should I invite to a webinar on SAI".',
+      inputSchema: z.object({
+        product: z.string().optional().describe('Product/solution name, e.g. "Scrunch", "SitecoreAI"'),
+        vertical: z.string().optional().describe('Vertical/industry name'),
+      }),
+      execute: (args) => safeExec('accounts_by_solution', args, executors.accounts_by_solution),
+    }),
     lookup_customer: tool({
       description:
         'Look up a customer by name. Returns customer info if found, or indicates not found. Use for: "do I have customer X", "tell me about X", "show me X", "is there a customer X".',
@@ -280,7 +461,7 @@ export async function processWithTools(
 ): Promise<ProcessResult> {
   try {
     const provider = getProvider();
-    const model = provider(MODEL_ID);
+    const model = provider(geminiModelId());
 
     const contextParts: string[] = [];
     if (context.customerNames?.length)

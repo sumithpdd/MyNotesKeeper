@@ -84,9 +84,11 @@ Store business information that stays constant across interactions:
 
 #### 3. Solution Engineering
 - **SE Notes** - Detailed SE notes
-- **SE Involvement** - Is SE involved?
-- **Product Fit Assessment** - Green/Yellow/Red
-- **Confidence Assessment** - Green/Yellow/Red
+- **SE Involvement** - `Yes` / `No` / `Not Needed` (blank = not yet answered)
+  - **`No`** means SE support is wanted but absent — a coverage risk
+  - **`Not Needed`** means deliberately out of scope — not a risk
+- **Product Fit Assessment** - Green/Yellow/Red/Not Applicable
+- **Confidence Assessment** - Green/Yellow/Red/Not Applicable
 - **Reasons** - If not green, why?
 
 #### 4. Success Planning
@@ -116,10 +118,11 @@ Record details from each customer interaction:
 - **Notes** - Detailed interaction notes
 - **Note Date** - When did it happen?
 - **Created By** - Your name
-- **SE Confidence** - Green/Yellow/Red
+- **SE Confidence** - Green/Yellow/Red/Not Applicable
   - Green: On track, high confidence
   - Yellow: Some concerns
   - Red: At risk, significant issues
+  - Not Applicable: assessed and does not apply — **distinct from blank**, which means nobody has assessed it yet
 - **Other Fields** - JSON for custom data
 
 ### Features
@@ -158,7 +161,8 @@ Track sales opportunities through their lifecycle with complete stage history.
 - **Expected Close Date** - Target close
 - **Owner** - Opportunity owner
 - **Products** - Products involved
-- **Type** - New Business, Upsell, Cross-sell, Renewal, Migration
+- **Type** - CRM values (License, Renewal, Services) plus Hub-native motions (New Business, Upsell, Cross-sell, Migration)
+- **Fiscal Period** - Derived from the close date; the year starts 1 July and is labelled by the year it ends (see [OPPORTUNITY_STAGES.md](OPPORTUNITY_STAGES.md))
 - **Priority** - High, Medium, Low, Critical
 - **Competitors** - Competing vendors
 - **Next Steps** - Action items
@@ -236,12 +240,9 @@ Use conversational commands instead of forms:
 1. You type in the chat tab while signed in.
 2. **`AIChatPanel`** calls **`POST /api/ai-chat`** with your Firebase **Bearer** token and JSON **`{ message }`** (see [API_GUIDE.md](API_GUIDE.md)). Gemini runs **server-side**; writes use your verified **`uid`**.
 
-**Rule-based drafts with confirm:**
+Persisted data flows through authenticated APIs (Firestore on the backend), not arbitrary client databases.
 
-1. For certain parsed intents the UI may **preview** structured changes before apply.
-2. **Confirm** runs the Hub CRUD callbacks (customers, contacts, entities, profiles, notes) backed by **`/api/*`** routes, or **Cancel** to discard.
-
-For both flows, persisted data flows through authenticated APIs (Firestore on the backend), not arbitrary client databases.
+> **Note:** An earlier rule-based "parse then confirm" chat flow (`ChatbotInterface` + `/api/ai/chatbot/parse`) was removed in the September 2026 cleanup — it was no longer wired into the app. The prompt catalogue it used (`chatbotPrompts`) is still live behind the **Prompt Library**.
 
 ### Capabilities
 
@@ -264,6 +265,31 @@ For both flows, persisted data flows through authenticated APIs (Firestore on th
 - Create opportunities
 - Update stages
 - Change values and probabilities
+
+### Asking questions (read-only)
+
+The assistant answers status questions from live hub data — it never guesses. Every answer is backed by a tool call, and results are scoped to your signed-in account.
+
+**Engagement status**
+- *"Where are we with Greene King?"* — SE involvement and confidence, latest note, open tasks, and every opportunity with stage, value and fiscal period
+- *"Which deals are in Discover?"* / *"What's closing in Q1?"* / *"Which opportunities are older than 400 days?"*
+- *"What's on my plate this week?"* / *"Open tasks for Aston Martin"*
+- *"Which accounts are red?"* / *"What did we discuss with Pinsent Masons?"*
+- *"What needs my attention?"* — stale deals plus accounts with no SE assessment recorded
+
+**Account planning (four pillars)**
+- *"What's my plan for Aston Martin?"* — whitespace, multi-threading, migration and research, with the tasks driving each
+- *"What's the whitespace approach for Greene King?"*
+- *"Who are we multi-threading into at ASOS?"*
+- *"Which accounts have no whitespace plan?"* / *"Where am I not multi-threaded?"*
+
+Suggested activities come from the pillar's own options — whitespace offers a customer-specific approach, Lunch & Learn or webinar; multi-threading offers drop-ins, knowledge workshops, mini demos or open conversation. Migration planning is restricted to **xM and xP** accounts.
+
+**Industry approach**
+- *"What angle should I take with University of Essex?"* — builds an opinionated point of view from the account's vertical, research topics, business problem, objectives and use cases
+- *"Who could I cover in one Lunch & Learn?"* / *"Who else is on Scrunch?"* — groups accounts sharing a product or vertical, with their AEs, so one session covers several account teams
+
+If the vertical or use cases are blank, the assistant says so and asks rather than inventing an industry narrative.
 
 ### AI Features
 - **Intent detection** - Understands what you want

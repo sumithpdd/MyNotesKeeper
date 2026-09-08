@@ -29,6 +29,7 @@ import { ActivityCalendar } from './ActivityCalendar';
 import { buildActivities } from '@/lib/activityUtils';
 import { getLastAccountTaskAction, getTasksForCustomer } from '@/lib/taskAccountActivity';
 import { formatTaskPlanningWindow } from '@/lib/taskPlanningRange';
+import { seRagTone, seRagBadgeClasses, seRagLabel } from '@/domain/engagement-hub/seAssessment';
 
 interface CustomerManagementProps {
   customers: Customer[];
@@ -827,13 +828,8 @@ export function CustomerManagement({
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">SE Product Fit</label>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            selectedCustomerProfile.seProductFitAssessment === 'Green' ? 'bg-green-100 text-green-800' :
-                            selectedCustomerProfile.seProductFitAssessment === 'Yellow' ? 'bg-yellow-100 text-yellow-800' :
-                            selectedCustomerProfile.seProductFitAssessment === 'Red' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {selectedCustomerProfile.seProductFitAssessment || 'Not Set'}
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${seRagBadgeClasses(selectedCustomerProfile.seProductFitAssessment)}`}>
+                            {seRagLabel(selectedCustomerProfile.seProductFitAssessment)}
                           </span>
                         </div>
                         <div>
@@ -958,10 +954,7 @@ export function CustomerManagement({
                               {selectedCustomerProfile?.seProductFitAssessment ? (
                                 <TypeBadge
                                   label={selectedCustomerProfile.seProductFitAssessment}
-                                  variant={
-                                    selectedCustomerProfile.seProductFitAssessment === 'Green' ? 'green' :
-                                    selectedCustomerProfile.seProductFitAssessment === 'Yellow' ? 'amber' : 'red'
-                                  }
+                                  variant={seRagTone(selectedCustomerProfile.seProductFitAssessment)}
                                 />
                               ) : (
                                 <span className="text-gray-400 text-sm">—</span>

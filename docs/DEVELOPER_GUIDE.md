@@ -97,7 +97,6 @@ MyNotesKeeper/
 │   │   ├── server/             # firebaseAdmin, authorizeApiRequest, adminFirestore, workspaceLoad, tasksAdmin
 │   │   ├── firebase.ts
 │   │   ├── customerService.ts
-│   │   ├── taskService.ts
 │   │   └── …
 │   │
 │   └── types/

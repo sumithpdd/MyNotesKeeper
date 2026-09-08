@@ -30,6 +30,15 @@ const eslintConfig = [
       "@next/next/no-img-element": "warn",
     },
   },
+  {
+    // Node CommonJS tooling (maintenance scripts, env check) — `require()` is the
+    // correct module syntax here, so the TS ESM rule does not apply.
+    files: ["scripts/**/*.js", "scripts/**/*.cjs", "check-env.js"],
+    languageOptions: { sourceType: "commonjs" },
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
 ];
 
 export default eslintConfig;

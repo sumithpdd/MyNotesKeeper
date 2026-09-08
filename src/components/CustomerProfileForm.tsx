@@ -8,6 +8,7 @@ import { Save, X, Sparkles, BookOpen } from 'lucide-react';
 import { CustomerProfile, CreateCustomerProfileData } from '@/types';
 import { DXP_OBJECTIVES, DXP_USE_CASES } from '../../data/dxpPools';
 import { PromptLibrary } from './PromptLibrary';
+import { FieldHint } from '@/components/ui';
 
 const customerProfileSchema = z.object({
   customerId: z.string().min(1, 'Customer ID is required'),
@@ -29,9 +30,9 @@ const customerProfileSchema = z.object({
   mitigationPlan: z.string(),
   // Solution Engineering
   seNotes: z.string(),
-  seInvolvement: z.boolean(),
+  seInvolvement: z.enum(['Yes', 'No', 'Not Needed', '']),
   seNotesLastUpdated: z.date(),
-  seProductFitAssessment: z.enum(['Green', 'Yellow', 'Red', '']),
+  seProductFitAssessment: z.enum(['Green', 'Yellow', 'Red', 'Not Applicable', '']),
   seProductNotGreenReason: z.string(),
   seConfidenceNotGreenReason: z.string(),
   // Success Planning
@@ -115,7 +116,7 @@ export function CustomerProfileForm({
       knownTechnicalRisks: '',
       mitigationPlan: '',
       seNotes: '',
-      seInvolvement: false,
+      seInvolvement: '',
       seNotesLastUpdated: new Date(),
       seProductFitAssessment: '',
       seProductNotGreenReason: '',
@@ -402,15 +403,20 @@ Activity Details:
           <div className="bg-white p-6 rounded-lg border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Solution Engineering</h3>
             <div className="space-y-4">
-              <div className="flex items-center">
-                <input
-                  {...register('seInvolvement')}
-                  type="checkbox"
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label className="ml-2 block text-sm text-gray-900">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   SE Involvement
                 </label>
+                <select
+                  {...register('seInvolvement')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                >
+                  <option value="">Select...</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                  <option value="Not Needed">Not Needed</option>
+                </select>
+                <FieldHint text='"No" means SE support is wanted but absent; "Not Needed" means it is deliberately out of scope.' />
               </div>
 
               <div>
@@ -436,10 +442,13 @@ Activity Details:
                   <option value="Green">Green</option>
                   <option value="Yellow">Yellow</option>
                   <option value="Red">Red</option>
+                  <option value="Not Applicable">Not Applicable</option>
                 </select>
               </div>
 
-              {watchedValues.seProductFitAssessment && watchedValues.seProductFitAssessment !== 'Green' && (
+              {watchedValues.seProductFitAssessment &&
+                watchedValues.seProductFitAssessment !== 'Green' &&
+                watchedValues.seProductFitAssessment !== 'Not Applicable' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Reason for SE Product not Green <span className="text-gray-500">(if applicable)</span>

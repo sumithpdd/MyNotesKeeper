@@ -4,6 +4,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { z } from 'zod';
 import { AIGenerationRequest, AIGenerationResponse } from '@/types';
 import { formatProductDisplayName } from '@/lib/productDisplay';
+import { geminiModelId } from '@/lib/aiModel';
 
 /**
  * Server-only Gemini service. Uses the Vercel AI SDK (`ai` + `@ai-sdk/google`)
@@ -11,8 +12,6 @@ import { formatProductDisplayName } from '@/lib/productDisplay';
  *
  * Env: `GEMINI_API_KEY` (server-only). Never expose with NEXT_PUBLIC_ prefix.
  */
-
-const MODEL_ID = 'gemini-2.0-flash';
 
 let providerSingleton: ReturnType<typeof createGoogleGenerativeAI> | null = null;
 
@@ -31,7 +30,7 @@ function getModel() {
     }
     providerSingleton = createGoogleGenerativeAI({ apiKey });
   }
-  return providerSingleton(MODEL_ID);
+  return providerSingleton(geminiModelId());
 }
 
 function decoratedRuntimeError(error: unknown, fallback: string): Error {

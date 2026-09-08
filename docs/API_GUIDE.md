@@ -21,9 +21,9 @@ Obtain the token from the Firebase client after sign-in (e.g. `await auth.curren
 - **`/api/customers`**, **`/api/notes`**, **`/api/contacts`**, **`/api/entities`**, **`/api/opportunities`**, **`/api/opportunities/stage`**
 - **`/api/tasks`**, **`POST /api/task-categories`**, **`PATCH /api/customer-profiles`**
 - **`/api/martech`** — Martech catalogue CRUD
-- **`POST /api/ai-chat`**, **`POST /api/ai-command`**
+- **`POST /api/ai-chat`**, **`POST /api/ai/customer-summary`**, **`POST /api/ai/refine-text`**, **`POST /api/tasks/ai-draft`**
 
-**`userId` in JSON body:** For mutations that accept it (**customers**, **notes**, **customer-profiles**, **`ai-command`**, etc.), the body **`userId` must equal the token’s Firebase `uid`**, otherwise **403**.
+**`userId` in JSON body:** For mutations that accept it (**customers**, **notes**, **customer-profiles**, etc.), the body **`userId` must equal the token’s Firebase `uid`**, otherwise **403**.
 
 **`POST /api/ai-chat`:** Send **`{ "message": "<text>" }` only**. Do **not** rely on a client-supplied `userId`; tool actions (notes, creates, updates) use the **`uid` from the verified Bearer token**, so impersonation via body fields is impossible.
 
@@ -225,9 +225,20 @@ Returns API info and available tools.
   "message": "AI Chat API - LLM + Tools",
   "version": "1.0.0",
   "usage": "POST with Authorization: Bearer …; body { \"message\": string }; tool actions use authenticated uid",
-  "tools": ["lookup_customer", "update_customer", "add_note", "search_customers", ...]
+  "tools": ["lookup_customer", "update_customer", "add_note", "account_status", ...]
 }
 ```
+
+**Tool families** (27 tools):
+
+| Family | Tools |
+|--------|-------|
+| Lookup / create | `lookup_customer`, `customer_summary`, `create_customer`, `update_customer`, `add_note`, `search_customers`, `list_customers`, `list_internal_contacts`, `list_products`, `list_partners`, `lookup_internal_contact`, `create_internal_contact`, `lookup_customer_contact`, `create_customer_contact`, `lookup_product`, `create_product`, `lookup_partner`, `create_partner` |
+| Status (read-only) | `account_status`, `list_opportunities`, `list_tasks`, `list_notes`, `pipeline_health` |
+| Account planning | `account_planning`, `planning_coverage` |
+| Industry positioning | `industry_approach`, `accounts_by_solution` |
+
+Status, planning and positioning tools are **read-only**. Opportunities and tasks are loaded via `loadWorkspaceSnapshot`, so results are scoped to the caller's token.
 
 ### `POST /api/ai-chat`
 Natural language interface for customer data. The AI uses tools to read/update data.
@@ -242,11 +253,27 @@ Natural language interface for customer data. The AI uses tools to read/update d
 ```
 
 **Example prompts:**
+
+*Data entry*
 - "List [AE name]'s accounts" / "Show customers for [AE name]"
 - "Update [customer] notes to: [content]"
 - "Assign [AE name] to [customer]"
 - "Add a note for [customer]: [note content]"
-- "Search customers by account executive [AE name]"
+
+*Status and reporting*
+- "Where are we with [customer]?" → `account_status`
+- "Which deals are in Discover?" / "What's closing in Q1?" → `list_opportunities`
+- "What's on my plate this week?" → `list_tasks`
+- "Which accounts are red?" → `list_notes`
+- "What's going stale?" → `pipeline_health`
+
+*Account planning and positioning*
+- "What's my whitespace approach for [customer]?" → `account_planning`
+- "Which accounts have no whitespace plan?" → `planning_coverage`
+- "What angle should I take with [customer]?" → `industry_approach`
+- "Who could I cover in one Lunch & Learn?" → `accounts_by_solution`
+
+Fiscal periods in responses follow the CRM convention: the year starts **1 July** and is labelled by the year it ends (Sep 2026 → `Q1-2027`).
 
 **Response:**
 ```json

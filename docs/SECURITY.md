@@ -58,10 +58,6 @@ If this variable is **not** set, protected hub routes respond with **503** — *
 
 See [API_GUIDE.md](API_GUIDE.md) for which endpoints participate and fetch examples.
 
-### `/api/ai-command`
-
-Uses **`authorizeApiRequest`** plus **`forbidUserIdMismatch`**: send **`Authorization: Bearer <Firebase ID token>`** and set **`userId`** in the body to the token’s **`uid`**. If Admin is not configured, the route returns **503** like other hub APIs.
-
 ## Best practices checklist
 
 1. Copy env template → `.env.local` and fill only local values (`SETUP.md`).

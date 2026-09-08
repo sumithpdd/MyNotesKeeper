@@ -20,7 +20,7 @@ const noteSchema = z.object({
   createdBy: z.string().min(1, 'Created by is required'),
   updatedBy: z.string().min(1, 'Updated by is required'),
   // Dynamic fields that can change per note
-  seConfidence: z.enum(['Green', 'Yellow', 'Red', '']),
+  seConfidence: z.enum(['Green', 'Yellow', 'Red', 'Not Applicable', '']),
   otherFields: z.record(z.string(), z.unknown()),
 });
 
@@ -198,6 +198,7 @@ export function NoteForm({ customerId, note, onSave, onCancel }: NoteFormProps) 
                   <option value="Green">Green</option>
                   <option value="Yellow">Yellow</option>
                   <option value="Red">Red</option>
+                  <option value="Not Applicable">Not Applicable</option>
                 </select>
                 {errors.seConfidence && (
                   <p className="text-red-500 text-sm mt-1">{errors.seConfidence.message}</p>

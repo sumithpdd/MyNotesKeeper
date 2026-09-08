@@ -144,6 +144,56 @@ export function defaultTaskTitleForPillar(
   return `${customerName} — ${label} planning`;
 }
 
+/** Accept a pillar id, label, or loose spelling ("multi threading", "multi-thread"). */
+export function normalizePillarId(raw: unknown): AccountPlanningPillarId | null {
+  const key = norm(String(raw ?? '')).replace(/[-\s]+/g, '_');
+  if (!key) return null;
+  const direct = ACCOUNT_PLANNING_PILLARS.find((p) => p.id === key);
+  if (direct) return direct.id;
+  if (key.startsWith('multi')) return 'multi_threading';
+  if (key.startsWith('white')) return 'whitespace';
+  if (key.startsWith('migrat')) return 'migration';
+  if (key.startsWith('research') || key.startsWith('deeper')) return 'research';
+  return null;
+}
+
+/** Plan key on `AccountPlanningPlan` for each pillar. */
+const PLAN_KEY_BY_PILLAR: Record<AccountPlanningPillarId, keyof AccountPlanningPlan> = {
+  whitespace: 'whitespace',
+  multi_threading: 'multiThreading',
+  migration: 'migration',
+  research: 'research',
+};
+
+export interface ResolvedPillarFields {
+  approach: string;
+  status: string;
+  nextActions: string;
+  /** Pillar-specific extras (stakeholders, migration pathways, research topics). */
+  extras: Record<string, unknown>;
+}
+
+/**
+ * Read one pillar's fields off a plan, separating the three shared fields from
+ * the pillar-specific extras so callers (UI, AI tools) do not each re-derive it.
+ */
+export function planFieldsFor(
+  plan: AccountPlanningPlan | undefined,
+  pillarId: AccountPlanningPillarId,
+): ResolvedPillarFields {
+  const section = plan?.[PLAN_KEY_BY_PILLAR[pillarId]];
+  if (!section || typeof section !== 'object') {
+    return { approach: '', status: '', nextActions: '', extras: {} };
+  }
+  const { approach, status, nextActions, ...extras } = section as Record<string, unknown>;
+  return {
+    approach: String(approach ?? ''),
+    status: String(status ?? ''),
+    nextActions: String(nextActions ?? ''),
+    extras,
+  };
+}
+
 export function emptyAccountPlanningPlan(): AccountPlanningPlan {
   return {
     aeAlignment:

@@ -13,7 +13,7 @@ MyNotesKeeper/
 │   │   │   ├── auth/
 │   │   │   │   └── bootstrap/
 │   │   │   ├── ai-chat/
-│   │   │   ├── ai-command/
+│   │   │   ├── ai/                 # customer-summary, refine-text
 │   │   │   ├── customers/
 │   │   │   ├── contacts/
 │   │   │   ├── customer-profiles/
@@ -29,6 +29,11 @@ MyNotesKeeper/
 │   │   └── engagement-hub/
 │   │       ├── taskRemoval.ts      # Which task IDs to remove with customer/opportunity delete
 │   │       ├── dashboardStats.ts  # Hub metrics (open tasks, opp count, recent notes)
+│   │       ├── accountPlanningPillars.ts # Four SC planning pillars + task resolution
+│   │       ├── fiscalPeriod.ts     # FY starts 1 July; derives CRM-style Q labels
+│   │       ├── seAssessment.ts     # SE involvement / RAG parsing, tone, labels
+│   │       ├── meetingNoteFields.ts
+│   │       ├── noteNextSteps.ts
 │   │       └── index.ts
 │   ├── components/
 │   │   ├── ui/                     # Primitive UI (badges, detail rows, avatars)
@@ -36,7 +41,8 @@ MyNotesKeeper/
 │   │   ├── tasks/                  # Kanban, calendar, task forms
 │   │   ├── customers/
 │   │   ├── forms/
-│   │   ├── ai-chat/
+│   │   ├── notes/                  # Next-steps editor / list
+│   │   ├── planning/               # Account planning pillars
 │   │   └── …                       # Feature orchestrators (e.g. CustomerManagement, EntityManagement)
 │   ├── hooks/                      # React hooks: Firebase sync, CRUD, feature wiring
 │   │   ├── useFirebaseData.ts
@@ -54,10 +60,8 @@ MyNotesKeeper/
 │   │   │   └── authorizeApiRequest.ts
 │   │   ├── firebase.ts
 │   │   ├── customerService.ts
-│   │   ├── taskService.ts
 │   │   └── …
-│   ├── types/                      # Shared TypeScript models
-│   └── utils/
+│   └── types/                      # Shared TypeScript models
 ├── docs/
 └── README.md
 ```
@@ -69,6 +73,12 @@ MyNotesKeeper/
 - **Purpose:** Small, **pure** functions and types that encode business rules (e.g. which engagement tasks disappear when aggregate roots are removed; dashboard statistics).
 - **Constraints:** No `fetch`, no Firestore, no React imports.
 - **Example:** [`engagement-hub/taskRemoval.ts`](../src/domain/engagement-hub/taskRemoval.ts) — task ID selection for cascaded deletes.
+
+| Module | Rule it owns |
+|--------|--------------|
+| [`fiscalPeriod.ts`](../src/domain/engagement-hub/fiscalPeriod.ts) | Fiscal year starts **1 July**, labelled by the year it ends (Sep 2026 → `Q1-2027`). Always **derived** from a date — never stored — so it cannot drift from the CRM. |
+| [`seAssessment.ts`](../src/domain/engagement-hub/seAssessment.ts) | Parses SE involvement and RAG values from Firestore or a CRM export, including **legacy booleans**. Owns badge tone so `Not Applicable` never renders as a red risk signal. |
+| [`accountPlanningPillars.ts`](../src/domain/engagement-hub/accountPlanningPillars.ts) | The four SC planning pillars, their activity options, pillar↔task resolution, and `planFieldsFor` / `normalizePillarId` used by both UI and AI tools. |
 
 ### 2. **Application / hooks** (`src/hooks/`)
 
@@ -100,7 +110,7 @@ MyNotesKeeper/
 
 | Concern | Location |
 |--------|-----------|
-| Firestore persistence | `src/lib/taskService.ts` (`engagementTasks` collection; `productIds` array field) |
+| Firestore persistence | `src/lib/server/tasksAdmin.ts` behind **`/api/tasks`** (`engagementTasks` collection; `productIds` array field) |
 | Kanban reorder / column moves | `src/lib/kanbanMerge.ts` — pure `applyKanbanDrag`; four columns |
 | Task planning range / calendar math | `src/lib/taskPlanningRange.ts` — pure date normalization and range helpers |
 | Stats | `src/domain/engagement-hub/dashboardStats.ts` — **open tasks** exclude `done` and `cancelled` |
@@ -118,6 +128,30 @@ Filtering in the Tasks UI narrows visible cards/calendar items; persisted drag-m
   - timeline lanes (Gantt-style, paginated for large workloads).
 
 This keeps board/calendar concerns componentized while retaining a single source of truth in `EngagementTask`.
+
+## AI assistant (technical)
+
+**`POST /api/ai-chat`** runs Gemini server-side with a tool set defined in [`src/lib/aiToolsService.ts`](../src/lib/aiToolsService.ts). Tool *schemas* live there; their *executors* are supplied per-request by the route, so the model can never reach data the caller's token does not own.
+
+| Concern | Location |
+|---------|----------|
+| Model selection | `src/lib/aiModel.ts` — one helper, `GEMINI_MODEL` override, GA default |
+| Tool schemas + system instruction | `src/lib/aiToolsService.ts` |
+| Tool executors (server data access) | `src/app/api/ai-chat/route.ts` |
+| Prompt catalogue shown in the UI | `src/lib/comprehensivePrompts.ts` (Prompt Library), `src/lib/chatbotPrompts.ts` |
+
+**Tool families:**
+
+- **Lookup / create** — customers, notes, contacts, products, partners.
+- **Status (read-only)** — `account_status`, `list_opportunities`, `list_tasks`, `list_notes`, `pipeline_health`.
+- **Account planning** — `account_planning`, `planning_coverage` (the four pillars).
+- **Industry positioning** — `industry_approach`, `accounts_by_solution`.
+
+Opportunities and tasks reach the status tools through **`loadWorkspaceSnapshot`**, so AI answers are tenant-scoped exactly like the dashboard rather than reading a raw `getAll`.
+
+Domain rules stay in `src/domain/` — the planning tools call `planFieldsFor` and `filterTasksByPlanningPillar` rather than re-deriving pillar logic inside the route.
+
+---
 
 ## Data flow (typical UX path)
 
@@ -145,7 +179,7 @@ Older or auxiliary code paths may still use the Firebase Web SDK in the browser 
 - **Database:** Firebase Firestore
 - **Auth (users):** Firebase Auth (Google)
 - **Server API auth:** Firebase Admin (`firebase-admin`) + **`FIREBASE_SERVICE_ACCOUNT_JSON`** (**required** for hub APIs — see [SECURITY.md](SECURITY.md))
-- **AI:** Google Gemini API
+- **AI:** Google Gemini via the Vercel AI SDK (`ai` + `@ai-sdk/google`); model resolved centrally by [`src/lib/aiModel.ts`](../src/lib/aiModel.ts) and overridable with **`GEMINI_MODEL`**
 
 ---
 

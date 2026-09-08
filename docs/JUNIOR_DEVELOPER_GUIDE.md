@@ -370,8 +370,8 @@ app/
 ├── layout.tsx         → Root layout (wraps all pages)
 ├── globals.css        → Global styles
 └── api/
-    └── ai-command/
-        └── route.ts   → /api/ai-command (API endpoint)
+    └── ai-chat/
+        └── route.ts   → /api/ai-chat (API endpoint)
 ```
 
 **How it works:**
@@ -419,7 +419,7 @@ export function CustomerList() {
 
 **We use:**
 ```typescript
-// app/api/ai-command/route.ts
+// app/api/ai-chat/route.ts
 export async function POST(request: Request) {
   const body = await request.json();
   
@@ -432,7 +432,7 @@ export async function POST(request: Request) {
 ```
 
 **In our project:**
-- `/api/ai-command` - AI chatbot endpoint
+- `/api/ai-chat` - AI chatbot endpoint
 - Handles POST requests
 - Returns JSON responses
 

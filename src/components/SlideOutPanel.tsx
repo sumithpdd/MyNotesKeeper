@@ -5,6 +5,7 @@ import { X, ExternalLink, Calendar, User, Building, Tag, AlertCircle, Copy, Chec
 import { CustomerNote, Customer, CustomerProfile } from '@/types';
 import { MEETING_NOTE_OTHER_FIELDS } from '@/domain/engagement-hub/meetingNoteFields';
 import { parseNoteNextSteps } from '@/domain/engagement-hub/noteNextSteps';
+import { seInvolvementLabel } from '@/domain/engagement-hub/seAssessment';
 import { NoteNextStepsList } from './notes/NoteNextStepsList';
 import { formatDateTime } from '@/lib/utils';
 import { formatProductDisplayName } from '@/lib/productDisplay';
@@ -240,7 +241,7 @@ export function SlideOutPanel({ note, customer, customerProfile, onClose }: Slid
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm font-medium text-gray-700 mb-1">SE Involvement</p>
-                      <p className="text-sm text-gray-900">{customerProfile?.seInvolvement ? 'Yes' : 'No'}</p>
+                      <p className="text-sm text-gray-900">{seInvolvementLabel(customerProfile?.seInvolvement ?? '')}</p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-700 mb-1">SE Notes Last Updated</p>

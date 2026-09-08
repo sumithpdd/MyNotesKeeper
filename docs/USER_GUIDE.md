@@ -168,9 +168,9 @@ Customer profiles store **static business information** that doesn't change ofte
 
 **Solution Engineering:**
 - **SE Notes** - Solution Engineer notes
-- **SE Involvement** - Is SE involved?
+- **SE Involvement** - `Yes` / `No` / `Not Needed`. Pick **`No`** when SE support is wanted but absent (a coverage risk), and **`Not Needed`** when it is deliberately out of scope. Leave blank only if nobody has decided yet.
 - **SE Notes Last Updated** - When were notes updated?
-- **Product Fit Assessment** - Green/Yellow/Red
+- **Product Fit Assessment** - Green/Yellow/Red/Not Applicable
 - **Product Not Green Reason** - If not green, why?
 - **Confidence Not Green Reason** - If confidence is not green, why?
 
@@ -214,7 +214,7 @@ Notes are **dynamic interaction records** - created after each customer engageme
 - **Updated By** - Your name
 
 **Recommended:**
-- **SE Confidence** - Green/Yellow/Red
+- **SE Confidence** - Green/Yellow/Red/Not Applicable
   - Green: High confidence, on track
   - Yellow: Some concerns, needs attention
   - Red: Significant issues, at risk
@@ -297,7 +297,7 @@ Rough mapping to common Salesforce wording (informal — your org may vary):
 - **Description** - Details about the opportunity
 - **Expected Close Date** - When do you expect to close?
 - **Products** - Products involved
-- **Type** - New Business, Upsell, Cross-sell, Renewal, Migration
+- **Type** - CRM values first (License, Renewal, Services), then Hub-native motions (New Business, Upsell, Cross-sell, Migration)
 - **Priority** - High, Medium, Low, Critical
 - **Competitors** - Competing vendors
 - **Next Steps** - What's next?

@@ -20,6 +20,16 @@ import { partnerService } from '@/lib/partnerService';
 import { aiService } from '@/lib/ai';
 import type { CreateCustomerData } from '@/types';
 import { formatProductDisplayName } from '@/lib/productDisplay';
+import { loadWorkspaceSnapshot } from '@/lib/server/workspaceLoad';
+import { fiscalPeriodLabel } from '@/domain/engagement-hub/fiscalPeriod';
+import { seRagLabel, seInvolvementLabel } from '@/domain/engagement-hub/seAssessment';
+import { calendarDaysBetween, formatTimeInCurrentStage } from '@/lib/opportunityStages';
+import {
+  ACCOUNT_PLANNING_PILLARS,
+  filterTasksByPlanningPillar,
+  normalizePillarId,
+  planFieldsFor,
+} from '@/domain/engagement-hub/accountPlanningPillars';
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,6 +59,28 @@ export async function POST(request: NextRequest) {
         productService.getAllProducts(),
         partnerService.getAllPartners(),
       ]);
+
+    // Opportunities and engagement tasks come from the tenant-aware workspace
+    // loader rather than a raw `getAll`, so status answers stay scoped to the
+    // signed-in user in the same way the dashboard is.
+    const workspace = await loadWorkspaceSnapshot({ uid, email: auth.email });
+    const opportunities = workspace.opportunities;
+    const tasks = workspace.tasks;
+
+    const customerById = new Map(customers.map((c) => [c.id, c]));
+    const nameOf = (customerId?: string | null) =>
+      (customerId && customerById.get(customerId)?.customerName) || 'Unlinked';
+
+    /** Loose account matcher shared by the status tools. */
+    const findCustomer = (search?: string) => {
+      const q = search?.trim().toLowerCase();
+      if (!q) return undefined;
+      return customers.find(
+        (c) =>
+          (c.customerName || '').toLowerCase().includes(q) ||
+          q.includes((c.customerName || '').toLowerCase()),
+      );
+    };
 
     const matchName = <T extends { name: string }>(list: T[], search: string): T | undefined =>
       list.find(
@@ -362,6 +394,396 @@ export async function POST(request: NextRequest) {
         });
         return { created: true, partner: { id, name: name.trim(), type: type || '' } };
       },
+
+      account_status: async (args) => {
+        const { customerName } = args as { customerName: string };
+        const match = findCustomer(customerName);
+        if (!match) return { found: false, message: `No account matching "${customerName}".` };
+
+        const profile = profiles.find((p) => p.customerId === match.id);
+        const accountNotes = notes
+          .filter((n) => n.customerId === match.id)
+          .sort((a, b) => new Date(b.noteDate).getTime() - new Date(a.noteDate).getTime());
+        const accountOpps = opportunities.filter((o) => o.customerId === match.id);
+        const accountOppIds = new Set(accountOpps.map((o) => o.id));
+        const openTasks = tasks.filter(
+          (t) =>
+            t.status !== 'done' &&
+            t.status !== 'cancelled' &&
+            (t.customerId === match.id || (t.opportunityId && accountOppIds.has(t.opportunityId))),
+        );
+
+        return {
+          found: true,
+          account: match.customerName,
+          seInvolvement: seInvolvementLabel(profile?.seInvolvement ?? ''),
+          seProductFit: seRagLabel(profile?.seProductFitAssessment ?? ''),
+          seNotesLastUpdated: profile?.seNotesLastUpdated ?? null,
+          latestNote: accountNotes[0]
+            ? {
+                date: accountNotes[0].noteDate,
+                seConfidence: seRagLabel(accountNotes[0].seConfidence),
+                excerpt: (accountNotes[0].notes || '').slice(0, 400),
+              }
+            : null,
+          noteCount: accountNotes.length,
+          openTaskCount: openTasks.length,
+          openTasks: openTasks.slice(0, 10).map((t) => ({
+            title: t.title,
+            status: t.status,
+            start: t.startDate ?? t.dueDate ?? null,
+            end: t.endDate ?? t.dueDate ?? null,
+          })),
+          opportunities: accountOpps.map((o) => ({
+            name: o.opportunityName,
+            stage: o.currentStage,
+            type: o.type ?? null,
+            amount: o.estimatedValue ?? null,
+            currency: o.currency ?? null,
+            closeDate: o.expectedCloseDate ?? null,
+            fiscalPeriod: fiscalPeriodLabel(o.expectedCloseDate),
+            timeInStage: formatTimeInCurrentStage(o),
+          })),
+        };
+      },
+
+      list_opportunities: async (args) => {
+        const { customerName, stage, type, owner, minAgeDays, limit } = args as {
+          customerName?: string;
+          stage?: string;
+          type?: string;
+          owner?: string;
+          minAgeDays?: number;
+          limit?: number;
+        };
+        const target = customerName ? findCustomer(customerName) : undefined;
+        if (customerName && !target) {
+          return { found: false, message: `No account matching "${customerName}".` };
+        }
+        const lc = (v: unknown) => String(v ?? '').toLowerCase();
+
+        const rows = opportunities
+          .filter((o) => (target ? o.customerId === target.id : true))
+          .filter((o) => (stage ? lc(o.currentStage) === lc(stage) : true))
+          .filter((o) => (type ? lc(o.type) === lc(type) : true))
+          .filter((o) => (owner ? lc(o.owner?.name).includes(lc(owner)) : true))
+          .map((o) => ({
+            account: nameOf(o.customerId),
+            name: o.opportunityName,
+            stage: o.currentStage,
+            type: o.type ?? null,
+            amount: o.estimatedValue ?? null,
+            currency: o.currency ?? null,
+            owner: o.owner?.name ?? null,
+            ageDays: o.createdAt ? calendarDaysBetween(new Date(o.createdAt)) : null,
+            closeDate: o.expectedCloseDate ?? null,
+            fiscalPeriod: fiscalPeriodLabel(o.expectedCloseDate),
+          }))
+          .filter((r) => (minAgeDays ? (r.ageDays ?? 0) >= minAgeDays : true))
+          .sort((a, b) => (b.ageDays ?? 0) - (a.ageDays ?? 0));
+
+        return { count: rows.length, opportunities: rows.slice(0, limit ?? 25) };
+      },
+
+      list_tasks: async (args) => {
+        const { customerName, status, limit } = args as {
+          customerName?: string;
+          status?: string;
+          limit?: number;
+        };
+        const target = customerName ? findCustomer(customerName) : undefined;
+        if (customerName && !target) {
+          return { found: false, message: `No account matching "${customerName}".` };
+        }
+        const wanted = status?.trim().toLowerCase();
+        const oppIdsForTarget = new Set(
+          target ? opportunities.filter((o) => o.customerId === target.id).map((o) => o.id) : [],
+        );
+
+        const rows = tasks
+          .filter((t) =>
+            target
+              ? t.customerId === target.id ||
+                (t.opportunityId && oppIdsForTarget.has(t.opportunityId))
+              : true,
+          )
+          .filter((t) => {
+            if (!wanted) return true;
+            if (wanted === 'open') return t.status !== 'done' && t.status !== 'cancelled';
+            return t.status === wanted;
+          })
+          .map((t) => ({
+            title: t.title,
+            status: t.status,
+            account: nameOf(t.customerId),
+            start: t.startDate ?? t.dueDate ?? null,
+            end: t.endDate ?? t.dueDate ?? null,
+            lastActionedAt: t.lastActionedAt ?? null,
+          }));
+
+        return { count: rows.length, tasks: rows.slice(0, limit ?? 25) };
+      },
+
+      list_notes: async (args) => {
+        const { customerName, seConfidence, limit } = args as {
+          customerName?: string;
+          seConfidence?: string;
+          limit?: number;
+        };
+        const target = customerName ? findCustomer(customerName) : undefined;
+        if (customerName && !target) {
+          return { found: false, message: `No account matching "${customerName}".` };
+        }
+        const wanted = seConfidence?.trim().toLowerCase();
+
+        const rows = notes
+          .filter((n) => (target ? n.customerId === target.id : true))
+          .filter((n) => (wanted ? String(n.seConfidence ?? '').toLowerCase() === wanted : true))
+          .sort((a, b) => new Date(b.noteDate).getTime() - new Date(a.noteDate).getTime())
+          .map((n) => ({
+            account: nameOf(n.customerId),
+            date: n.noteDate,
+            seConfidence: seRagLabel(n.seConfidence),
+            createdBy: n.createdBy,
+            excerpt: (n.notes || '').slice(0, 300),
+          }));
+
+        return { count: rows.length, notes: rows.slice(0, limit ?? 15) };
+      },
+
+      pipeline_health: async (args) => {
+        const { staleAfterDays } = args as { staleAfterDays?: number };
+        const threshold = staleAfterDays ?? 180;
+
+        const withAge = opportunities.map((o) => ({
+          opp: o,
+          ageDays: o.createdAt ? calendarDaysBetween(new Date(o.createdAt)) : 0,
+        }));
+
+        const stale = withAge
+          .filter(({ ageDays }) => ageDays >= threshold)
+          .sort((a, b) => b.ageDays - a.ageDays)
+          .slice(0, 20)
+          .map(({ opp, ageDays }) => ({
+            account: nameOf(opp.customerId),
+            name: opp.opportunityName,
+            stage: opp.currentStage,
+            ageDays,
+            timeInStage: formatTimeInCurrentStage(opp),
+          }));
+
+        // An account is "unassessed" when no profile RAG has ever been recorded.
+        const unassessed = customers
+          .filter((c) => {
+            const profile = profiles.find((p) => p.customerId === c.id);
+            return !profile || profile.seProductFitAssessment === '';
+          })
+          .filter((c) => opportunities.some((o) => o.customerId === c.id))
+          .map((c) => c.customerName)
+          .slice(0, 25);
+
+        return {
+          staleAfterDays: threshold,
+          staleCount: withAge.filter(({ ageDays }) => ageDays >= threshold).length,
+          staleOpportunities: stale,
+          accountsWithoutSEAssessment: unassessed,
+          totalOpportunities: opportunities.length,
+        };
+      },
+
+      account_planning: async (args) => {
+        const { customerName, pillar } = args as { customerName: string; pillar?: string };
+        const match = findCustomer(customerName);
+        if (!match) return { found: false, message: `No account matching "${customerName}".` };
+
+        const plan = match.accountPlanning;
+        const wanted = normalizePillarId(pillar);
+        const pillars = wanted
+          ? ACCOUNT_PLANNING_PILLARS.filter((p) => p.id === wanted)
+          : ACCOUNT_PLANNING_PILLARS;
+
+        const accountOppIds = new Set(
+          opportunities.filter((o) => o.customerId === match.id).map((o) => o.id),
+        );
+        const accountTasks = tasks.filter(
+          (t) =>
+            t.customerId === match.id ||
+            (t.opportunityId && accountOppIds.has(t.opportunityId)),
+        );
+
+        return {
+          found: true,
+          account: match.customerName,
+          aeAlignment: plan?.aeAlignment ?? null,
+          pillars: pillars.map((def) => {
+            const fields = planFieldsFor(plan, def.id);
+            const pillarTasks = filterTasksByPlanningPillar(
+              accountTasks,
+              workspace.taskCategories,
+              def.id,
+            );
+            return {
+              pillar: def.id,
+              label: def.label,
+              summary: def.summary,
+              activityOptions: def.activityOptions ?? [],
+              approach: fields.approach || null,
+              status: fields.status || null,
+              nextActions: fields.nextActions || null,
+              extras: fields.extras,
+              hasPlan: Boolean(fields.approach || fields.status || fields.nextActions),
+              taskCount: pillarTasks.length,
+              tasks: pillarTasks.slice(0, 8).map((t) => ({
+                title: t.title,
+                status: t.status,
+                start: t.startDate ?? t.dueDate ?? null,
+                end: t.endDate ?? t.dueDate ?? null,
+              })),
+            };
+          }),
+        };
+      },
+
+      planning_coverage: async (args) => {
+        const { pillar, missingOnly } = args as { pillar?: string; missingOnly?: boolean };
+        const wanted = normalizePillarId(pillar);
+        const pillars = wanted
+          ? ACCOUNT_PLANNING_PILLARS.filter((p) => p.id === wanted)
+          : ACCOUNT_PLANNING_PILLARS;
+
+        return {
+          pillars: pillars.map((def) => {
+            const withPlan: string[] = [];
+            const withoutPlan: string[] = [];
+            for (const c of customers) {
+              const f = planFieldsFor(c.accountPlanning, def.id);
+              const has = Boolean(f.approach || f.status || f.nextActions);
+              (has ? withPlan : withoutPlan).push(c.customerName || '(unnamed)');
+            }
+            return {
+              pillar: def.id,
+              label: def.label,
+              plannedCount: withPlan.length,
+              missingCount: withoutPlan.length,
+              ...(missingOnly
+                ? { accountsMissingPlan: withoutPlan.slice(0, 50) }
+                : {
+                    accountsWithPlan: withPlan.slice(0, 50),
+                    accountsMissingPlan: withoutPlan.slice(0, 50),
+                  }),
+            };
+          }),
+          totalAccounts: customers.length,
+        };
+      },
+
+      industry_approach: async (args) => {
+        const { customerName, vertical } = args as { customerName?: string; vertical?: string };
+
+        /** Vertical is recorded on the research pillar of the account plan. */
+        const verticalOf = (c: (typeof customers)[number]) =>
+          planFieldsFor(c.accountPlanning, 'research').extras.vertical as string | undefined;
+
+        const describe = (c: (typeof customers)[number]) => {
+          const profile = profiles.find((p) => p.customerId === c.id);
+          const research = planFieldsFor(c.accountPlanning, 'research');
+          const whitespace = planFieldsFor(c.accountPlanning, 'whitespace');
+          return {
+            account: c.customerName,
+            vertical: verticalOf(c) ?? null,
+            researchTopics: (research.extras.topics as string) ?? null,
+            researchApproach: research.approach || null,
+            whitespaceApproach: whitespace.approach || null,
+            products: (c.products || []).map((p) => formatProductDisplayName(p)),
+            businessProblem: profile?.businessProblem || null,
+            whyUs: profile?.whyUs || null,
+            whyNow: profile?.whyNow || null,
+            objectives: [
+              profile?.customerObjective1,
+              profile?.customerObjective2,
+              profile?.customerObjective3,
+            ].filter(Boolean),
+            useCases: [
+              profile?.customerUseCase1,
+              profile?.customerUseCase2,
+              profile?.customerUseCase3,
+            ].filter(Boolean),
+          };
+        };
+
+        if (customerName) {
+          const match = findCustomer(customerName);
+          if (!match) return { found: false, message: `No account matching "${customerName}".` };
+          const self = describe(match);
+          const peers = customers
+            .filter(
+              (c) =>
+                c.id !== match.id &&
+                self.vertical &&
+                (verticalOf(c) || '').toLowerCase() === self.vertical.toLowerCase(),
+            )
+            .map((c) => c.customerName);
+          return { found: true, ...self, peersInSameVertical: peers };
+        }
+
+        if (vertical) {
+          const q = vertical.trim().toLowerCase();
+          const inVertical = customers.filter((c) =>
+            (verticalOf(c) || '').toLowerCase().includes(q),
+          );
+          return {
+            vertical,
+            accountCount: inVertical.length,
+            accounts: inVertical.slice(0, 30).map(describe),
+          };
+        }
+
+        // Neither filter supplied — report which verticals are on record.
+        const counts = new Map<string, number>();
+        for (const c of customers) {
+          const v = verticalOf(c);
+          if (v) counts.set(v, (counts.get(v) ?? 0) + 1);
+        }
+        return {
+          message: 'No account or vertical given — these verticals are recorded.',
+          verticals: [...counts.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .map(([name, count]) => ({ vertical: name, accountCount: count })),
+          accountsWithoutVertical: customers.filter((c) => !verticalOf(c)).length,
+        };
+      },
+
+      accounts_by_solution: async (args) => {
+        const { product, vertical } = args as { product?: string; vertical?: string };
+        const verticalOf = (c: (typeof customers)[number]) =>
+          planFieldsFor(c.accountPlanning, 'research').extras.vertical as string | undefined;
+
+        const matches = customers.filter((c) => {
+          const productOk = product
+            ? (c.products || []).some((p) =>
+                formatProductDisplayName(p).toLowerCase().includes(product.toLowerCase()),
+              )
+            : true;
+          const verticalOk = vertical
+            ? (verticalOf(c) || '').toLowerCase().includes(vertical.toLowerCase())
+            : true;
+          return productOk && verticalOk;
+        });
+
+        return {
+          product: product ?? null,
+          vertical: vertical ?? null,
+          accountCount: matches.length,
+          accounts: matches.slice(0, 40).map((c) => ({
+            account: c.customerName,
+            vertical: verticalOf(c) ?? null,
+            products: (c.products || []).map((p) => formatProductDisplayName(p)),
+            accountExecutives: (c.accountExecutives || c.internalContacts || [])
+              .map((ic) => ic.name)
+              .slice(0, 3),
+          })),
+        };
+      },
     };
 
     const result = await processWithTools(message, {
@@ -415,6 +837,15 @@ export async function GET() {
       'create_product',
       'lookup_partner',
       'create_partner',
+      'account_status',
+      'list_opportunities',
+      'list_tasks',
+      'list_notes',
+      'pipeline_health',
+      'account_planning',
+      'planning_coverage',
+      'industry_approach',
+      'accounts_by_solution',
     ],
   });
 }

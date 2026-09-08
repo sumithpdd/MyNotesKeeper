@@ -13,6 +13,47 @@ export const OPPORTUNITY_STAGE_ORDER: readonly OpportunityStage[] = [
   'Expand',
 ] as const;
 
+/**
+ * CRM stage name → Hub stage. The CRM uses five stage names; two differ from
+ * ours by label only (`Propose & Commit` → `Propose`, `Contract to Close` →
+ * `Close`). Keys are matched case-insensitively after trimming.
+ *
+ * This is the executable form of the `crmCue` notes below — importers must use
+ * it rather than re-deriving the mapping.
+ */
+const CRM_STAGE_ENTRIES: readonly [string, OpportunityStage][] = [
+  ['discover', 'Discover'],
+  ['qualify', 'Qualify'],
+  ['differentiate', 'Differentiate'],
+  ['propose', 'Propose'],
+  ['propose & commit', 'Propose'],
+  ['propose and commit', 'Propose'],
+  ['close', 'Close'],
+  ['contract to close', 'Close'],
+  ['plan', 'Plan'],
+  ['prospect', 'Prospect'],
+  ['delivery and success', 'Delivery and Success'],
+  ['expand', 'Expand'],
+];
+
+const CRM_STAGE_MAP = new Map<string, OpportunityStage>(CRM_STAGE_ENTRIES);
+
+/** Resolve a CRM stage label to a Hub stage. Returns `null` when unrecognised. */
+export function stageFromCrmLabel(raw: unknown): OpportunityStage | null {
+  const key = String(raw ?? '').trim().toLowerCase();
+  if (!key) return null;
+  return CRM_STAGE_MAP.get(key) ?? null;
+}
+
+/** Stages that represent live pursuit — excludes post-signature and pre-pursuit. */
+export const ACTIVE_PURSUIT_STAGES: readonly OpportunityStage[] = [
+  'Qualify',
+  'Discover',
+  'Differentiate',
+  'Propose',
+  'Close',
+] as const;
+
 export type OpportunityStageHelpEntry = {
   /** Short label shown in UI help. */
   summary: string;

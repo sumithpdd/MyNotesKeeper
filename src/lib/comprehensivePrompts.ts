@@ -190,7 +190,7 @@ export const comprehensivePrompts: ComprehensivePromptTemplate[] = [
       'discovery', 'techDeepDive', 'seProductFitAssessment', 'seNotes'
     ],
     requiredFields: ['customerName'],
-    systemPrompt: `Extract profile data: customerName (required), businessProblem, whyUs, whyNow (compelling event), techSelect (boolean), objectives (1-3), use cases (1-3), discovery details, techDeepDive, seProductFitAssessment (Green/Yellow/Red), seNotes`,
+    systemPrompt: `Extract profile data: customerName (required), businessProblem, whyUs, whyNow (compelling event), techSelect (boolean), objectives (1-3), use cases (1-3), discovery details, techDeepDive, seProductFitAssessment (Green/Yellow/Red/Not Applicable), seNotes`,
     intent: 'create_profile',
     confidence: 0.9
   },
@@ -237,7 +237,7 @@ export const comprehensivePrompts: ComprehensivePromptTemplate[] = [
       'products', 'owner', 'competitorInfo', 'nextSteps'
     ],
     requiredFields: ['customerName', 'opportunityName', 'currentStage'],
-    systemPrompt: `Extract opportunity data: customerName (required), opportunityName (required), description, currentStage (Plan/Prospect/Qualify/Discover/Differentiate/Propose/Close/Delivery and Success/Expand), type (New Business/Upsell/Cross-sell/Renewal/Migration), priority (Low/Medium/High/Critical), estimatedValue (number), currency (USD/EUR/GBP), probability (0-100), expectedCloseDate (ISO), products (array), owner (name), competitorInfo, nextSteps`,
+    systemPrompt: `Extract opportunity data: customerName (required), opportunityName (required), description, currentStage (Plan/Prospect/Qualify/Discover/Differentiate/Propose/Close/Delivery and Success/Expand), type (License/Renewal/Services/New Business/Upsell/Cross-sell/Migration), priority (Low/Medium/High/Critical), estimatedValue (number), currency (USD/EUR/GBP), probability (0-100), expectedCloseDate (ISO), products (array), owner (name), competitorInfo, nextSteps`,
     intent: 'create_opportunity',
     confidence: 0.9
   },
@@ -395,7 +395,189 @@ export const comprehensivePrompts: ComprehensivePromptTemplate[] = [
     systemPrompt: `Extract request: customerName (required). This will fetch complete customer info including notes, profile, and opportunities.`,
     intent: 'customer_summary',
     confidence: 0.95
-  }
+  },
+
+  // ================== STATUS & REPORTING PROMPTS ==================
+  // Backed by the read-only status tools in `aiToolsService` — see
+  // `account_status`, `list_opportunities`, `list_tasks`, `list_notes`,
+  // `pipeline_health`.
+  {
+    id: 'account-status',
+    title: 'Account Engagement Status',
+    description:
+      'Where an account stands right now: SE involvement and confidence, latest note, open tasks, and every opportunity with stage and fiscal period',
+    entity: 'customer',
+    operation: 'read',
+    category: 'report',
+    examples: [
+      'Where are we with Greene King?',
+      'What is the status of ASOS?',
+      'What is happening on Bupa right now?',
+    ],
+    fields: ['customerName'],
+    requiredFields: ['customerName'],
+    systemPrompt: `Call account_status with customerName. Report SE involvement, SE confidence, the latest note, open tasks and each opportunity with stage, amount and fiscal period. Treat "No" and "Not Needed" SE involvement as different things.`,
+    intent: 'account_status',
+    confidence: 0.95,
+  },
+  {
+    id: 'list-opportunities-filtered',
+    title: 'Query the Pipeline',
+    description:
+      'Filter opportunities by account, stage, type, owner or age — returns amount, age in days and fiscal period',
+    entity: 'opportunity',
+    operation: 'list',
+    category: 'report',
+    examples: [
+      'Which deals are in Discover?',
+      'Show me all licence opportunities',
+      'What is closing in Q1?',
+      'Which opportunities are older than 400 days?',
+    ],
+    fields: ['customerName', 'stage', 'type', 'owner', 'minAgeDays', 'limit'],
+    requiredFields: [],
+    systemPrompt: `Call list_opportunities with any of: customerName, stage (Plan/Prospect/Qualify/Discover/Differentiate/Propose/Close/Delivery and Success/Expand), type (License/Renewal/Services/New Business/Upsell/Cross-sell/Migration), owner, minAgeDays, limit. The fiscal year starts 1 July and is labelled by the year it ends.`,
+    intent: 'list_opportunities',
+    confidence: 0.9,
+  },
+  {
+    id: 'list-tasks-status',
+    title: 'Engagement Tasks & Workload',
+    description: 'Open engagement tasks — workshops, demos, follow-ups — by account or status',
+    entity: 'customer',
+    operation: 'list',
+    category: 'report',
+    examples: [
+      'What is on my plate this week?',
+      'Open tasks for Aston Martin',
+      'What workshops are coming up?',
+    ],
+    fields: ['customerName', 'status', 'limit'],
+    requiredFields: [],
+    systemPrompt: `Call list_tasks with optional customerName, status (todo/in_progress/done/cancelled, or "open" for anything not done or cancelled) and limit.`,
+    intent: 'list_tasks',
+    confidence: 0.9,
+  },
+  {
+    id: 'list-notes-status',
+    title: 'Recent Notes & SE Confidence',
+    description: 'Recent customer notes, filterable by account or SE confidence',
+    entity: 'note',
+    operation: 'list',
+    category: 'report',
+    examples: [
+      'What did we discuss with Pinsent Masons?',
+      'Which accounts are red?',
+      'Show me recent notes',
+    ],
+    fields: ['customerName', 'seConfidence', 'limit'],
+    requiredFields: [],
+    systemPrompt: `Call list_notes with optional customerName, seConfidence (Green/Yellow/Red/Not Applicable) and limit. "Not Applicable" is a deliberate answer; a blank confidence means nobody has assessed it — report those differently.`,
+    intent: 'list_notes',
+    confidence: 0.9,
+  },
+  {
+    id: 'pipeline-health',
+    title: 'What Needs Attention',
+    description:
+      'Stale opportunities and accounts with no SE assessment recorded — the pipeline hygiene view',
+    entity: 'opportunity',
+    operation: 'special',
+    category: 'report',
+    examples: [
+      'What needs my attention?',
+      'Which deals are going stale?',
+      'Where am I missing SE coverage?',
+    ],
+    fields: ['staleAfterDays'],
+    requiredFields: [],
+    systemPrompt: `Call pipeline_health with optional staleAfterDays (default 180). Report the oldest stuck opportunities with their stage and time in stage, then the accounts that have opportunities but no SE product fit assessment.`,
+    intent: 'pipeline_health',
+    confidence: 0.9,
+  },
+
+  // ================== ACCOUNT PLANNING PILLARS ==================
+  // Whitespace / multi-threading / migration / research — backed by
+  // `account_planning` and `planning_coverage`.
+  {
+    id: 'account-planning-plan',
+    title: 'Account Plan (Four Pillars)',
+    description:
+      'The whitespace, multi-threading, migration and research plan for one account, with the tasks driving each pillar',
+    entity: 'customer',
+    operation: 'read',
+    category: 'planning',
+    examples: [
+      'What is my plan for Aston Martin?',
+      'What is the whitespace approach for Greene King?',
+      'Who are we multi-threading into at ASOS?',
+      'Is Smith & Nephew a migration candidate?',
+    ],
+    fields: ['customerName', 'pillar'],
+    requiredFields: ['customerName'],
+    systemPrompt: `Call account_planning with customerName and optional pillar (whitespace, multi_threading, migration, research). Report the approach, status and next actions per pillar plus the tasks driving them. When suggesting activities, use the pillar's own options: whitespace → customer-specific approach / Lunch & Learn / Webinar; multi-threading → customer drop-ins / knowledge workshops / mini demos / open conversation; migration → Headless or SAI pathway, partner-led or direct (xM and xP customers ONLY); research → legislation, AI, economic drivers, disruptive challengers.`,
+    intent: 'account_planning',
+    confidence: 0.95,
+  },
+  {
+    id: 'planning-coverage',
+    title: 'Planning Coverage & Gaps',
+    description:
+      'Which accounts have a plan recorded for each pillar and which have nothing yet',
+    entity: 'customer',
+    operation: 'special',
+    category: 'planning',
+    examples: [
+      'Which accounts have no whitespace plan?',
+      'Where am I not multi-threaded?',
+      'Which accounts still need a migration pathway?',
+      'What planning is missing across my book?',
+    ],
+    fields: ['pillar', 'missingOnly'],
+    requiredFields: [],
+    systemPrompt: `Call planning_coverage with optional pillar (whitespace, multi_threading, migration, research) and missingOnly. Report counts first, then name the accounts with gaps. Do not propose migration planning for accounts that are not on xM or xP.`,
+    intent: 'planning_coverage',
+    confidence: 0.9,
+  },
+  {
+    id: 'industry-approach',
+    title: 'Industry & Vertical Approach',
+    description:
+      'Build an opinionated, thought-leadership angle for an account or a whole vertical from its research, objectives and use cases',
+    entity: 'customer',
+    operation: 'read',
+    category: 'planning',
+    examples: [
+      'What is our industry approach for Aston Martin?',
+      'What angle should I take with University of Essex?',
+      'What is happening in the higher education vertical?',
+      'Which verticals do I cover?',
+    ],
+    fields: ['customerName', 'vertical'],
+    requiredFields: [],
+    systemPrompt: `Call industry_approach with customerName or vertical. Build an opinionated point of view from the returned vertical, research topics, business problem, objectives and use cases. Be specific and thought-leading, but never assert a customer fact the tool did not return — if the vertical or use cases are blank, say so and ask.`,
+    intent: 'industry_approach',
+    confidence: 0.9,
+  },
+  {
+    id: 'accounts-by-solution',
+    title: 'Group Accounts for a Session',
+    description:
+      'Accounts sharing a product or vertical, so one Lunch & Learn or webinar can cover several across AEs',
+    entity: 'customer',
+    operation: 'list',
+    category: 'planning',
+    examples: [
+      'Which accounts could I cover in one Lunch and Learn?',
+      'Who else is on Scrunch?',
+      'Who should I invite to a webinar on SitecoreAI?',
+    ],
+    fields: ['product', 'vertical'],
+    requiredFields: [],
+    systemPrompt: `Call accounts_by_solution with product and/or vertical. Return the accounts with their AEs so a single session can be planned across multiple account teams.`,
+    intent: 'accounts_by_solution',
+    confidence: 0.9,
+  },
 ];
 
 /**

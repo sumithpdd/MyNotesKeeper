@@ -10,8 +10,37 @@ export type OpportunityStage =
   | 'Differentiate' 
   | 'Propose' 
   | 'Close' 
-  | 'Delivery and Success' 
+  | 'Delivery and Success'
   | 'Expand';
+
+/**
+ * Opportunity type. The first three mirror the CRM picklist (`License`,
+ * `Renewal`, `Services`) so Salesforce records can be represented verbatim;
+ * the rest are Hub-native motions retained for existing data.
+ */
+export type OpportunityType =
+  | 'License'
+  | 'Renewal'
+  | 'Services'
+  | 'New Business'
+  | 'Upsell'
+  | 'Cross-sell'
+  | 'Migration';
+
+/** CRM picklist subset — offered first in pickers and used by importers. */
+export const CRM_OPPORTUNITY_TYPES: readonly OpportunityType[] = [
+  'License',
+  'Renewal',
+  'Services',
+] as const;
+
+export const OPPORTUNITY_TYPES: readonly OpportunityType[] = [
+  ...CRM_OPPORTUNITY_TYPES,
+  'New Business',
+  'Upsell',
+  'Cross-sell',
+  'Migration',
+] as const;
 
 // Stage History Entry
 export interface StageHistoryEntry {
@@ -48,7 +77,7 @@ export interface Opportunity {
   
   // Additional Details
   priority?: 'Low' | 'Medium' | 'High' | 'Critical';
-  type?: 'New Business' | 'Upsell' | 'Cross-sell' | 'Renewal' | 'Migration';
+  type?: OpportunityType;
   competitorInfo?: string;
   nextSteps?: string;
   /** CRM record URL (e.g. Salesforce Lightning opportunity). */
@@ -74,7 +103,7 @@ export interface CreateOpportunityData {
   products: Product[];
   owner?: InternalContact;
   priority?: 'Low' | 'Medium' | 'High' | 'Critical';
-  type?: 'New Business' | 'Upsell' | 'Cross-sell' | 'Renewal' | 'Migration';
+  type?: OpportunityType;
   competitorInfo?: string;
   nextSteps?: string;
   crmOpportunityUrl?: string;

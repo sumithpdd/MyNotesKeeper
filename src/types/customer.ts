@@ -2,6 +2,20 @@ import { Product } from './product';
 import { MartechTool } from './martechTool';
 import { CustomerContact, InternalContact, Partner } from './contacts';
 
+/**
+ * SE involvement on an account, mirroring the CRM picklist.
+ * `'No'` (should be involved but is not) and `'Not Needed'` (deliberately out
+ * of scope) are deliberately distinct — collapsing them hides real risk.
+ * `''` means nobody has answered yet.
+ */
+export type SEInvolvement = 'Yes' | 'No' | 'Not Needed' | '';
+
+/**
+ * RAG assessment used for SE confidence and product fit.
+ * `'Not Applicable'` (assessed, does not apply) is distinct from `''` (unset).
+ */
+export type SERagAssessment = 'Green' | 'Yellow' | 'Red' | 'Not Applicable' | '';
+
 /** Per-pillar free-text fields on an account planning record. */
 export interface AccountPlanningPillarFields {
   approach?: string;
@@ -134,9 +148,9 @@ export interface CustomerProfile {
   mitigationPlan: string;
   // Solution Engineering (static)
   seNotes: string;
-  seInvolvement: boolean;
+  seInvolvement: SEInvolvement;
   seNotesLastUpdated: Date;
-  seProductFitAssessment: 'Green' | 'Yellow' | 'Red' | '';
+  seProductFitAssessment: SERagAssessment;
   seProductNotGreenReason: string;
   seConfidenceNotGreenReason: string;
   // Success Planning (static)
@@ -171,9 +185,9 @@ export interface CreateCustomerProfileData {
   mitigationPlan: string;
   // Solution Engineering (static)
   seNotes: string;
-  seInvolvement: boolean;
+  seInvolvement: SEInvolvement;
   seNotesLastUpdated: Date;
-  seProductFitAssessment: 'Green' | 'Yellow' | 'Red' | '';
+  seProductFitAssessment: SERagAssessment;
   seProductNotGreenReason: string;
   seConfidenceNotGreenReason: string;
   // Success Planning (static)
@@ -199,7 +213,7 @@ export interface CustomerNote {
   createdBy: string;
   updatedBy: string;
   // Dynamic fields that can change per note
-  seConfidence: 'Green' | 'Yellow' | 'Red' | '';
+  seConfidence: SERagAssessment;
   otherFields: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
@@ -212,7 +226,7 @@ export interface CreateCustomerNoteData {
   createdBy: string;
   updatedBy: string;
   // Dynamic fields that can change per note
-  seConfidence: 'Green' | 'Yellow' | 'Red' | '';
+  seConfidence: SERagAssessment;
   otherFields: Record<string, unknown>;
 }
 
