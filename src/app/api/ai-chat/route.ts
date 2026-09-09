@@ -42,6 +42,7 @@ import {
   qualificationGaps,
   qualificationCoverage,
 } from '@/domain/engagement-hub/dealQualification';
+import { workspaceCompleteness, type EntityKind } from '@/domain/engagement-hub/completeness';
 
 export async function POST(request: NextRequest) {
   try {
@@ -767,6 +768,80 @@ export async function POST(request: NextRequest) {
         };
       },
 
+      record_completeness: async (args) => {
+        const { entity, customerName, limit } = args as {
+          entity?: string;
+          customerName?: string;
+          limit?: number;
+        };
+
+        let scope = {
+          customers,
+          opportunities,
+          customerProfiles: profiles,
+          notes,
+          tasks,
+        };
+
+        if (customerName) {
+          const match = findCustomer(customerName);
+          if (!match) return { found: false, message: `No account matching "${customerName}".` };
+          const oppIds = new Set(opportunities.filter((o) => o.customerId === match.id).map((o) => o.id));
+          scope = {
+            customers: [match],
+            opportunities: opportunities.filter((o) => o.customerId === match.id),
+            customerProfiles: profiles.filter((p) => p.customerId === match.id),
+            notes: notes.filter((n) => n.customerId === match.id),
+            tasks: tasks.filter(
+              (t) => t.customerId === match.id || (t.opportunityId && oppIds.has(t.opportunityId)),
+            ),
+          };
+        }
+
+        const report = workspaceCompleteness(scope);
+        const wanted = entity?.trim().toLowerCase() as EntityKind | undefined;
+        const kinds: EntityKind[] = wanted
+          ? ([wanted].filter((k) =>
+              ['customer', 'opportunity', 'profile', 'note', 'task'].includes(k),
+            ) as EntityKind[])
+          : ['customer', 'opportunity', 'profile', 'note', 'task'];
+
+        if (kinds.length === 0) {
+          return { error: `Unknown entity "${entity}". Use customer, opportunity, profile, note or task.` };
+        }
+
+        return {
+          overallScore: report.overallScore,
+          summaries: report.summaries
+            .filter((s) => kinds.includes(s.kind))
+            .map((s) => ({
+              entity: s.kind,
+              records: s.count,
+              averageScore: s.averageScore,
+              missingSomethingRequired: s.incomplete,
+              commonGaps: s.topGaps.slice(0, 6).map((g) => ({
+                field: g.label,
+                level: g.level,
+                affectedRecords: g.count,
+                why: g.why,
+              })),
+            })),
+          // Worst records first — this is the worklist.
+          records: kinds
+            .flatMap((k) => report.byEntity[k])
+            .filter((r) => r.requiredMissing.length > 0 || r.recommendedMissing.length > 0)
+            .sort((a, b) => a.score - b.score)
+            .slice(0, limit ?? 15)
+            .map((r) => ({
+              entity: r.kind,
+              name: r.name,
+              score: r.score,
+              missingRequired: r.requiredMissing.map((m) => ({ field: m.label, why: m.why })),
+              missingRecommended: r.recommendedMissing.map((m) => m.label),
+            })),
+        };
+      },
+
       deal_qualification: async (args) => {
         const { customerName, opportunityName, gapsOnly } = args as {
           customerName?: string;
@@ -913,6 +988,7 @@ export async function GET() {
       'industry_approach',
       'accounts_by_solution',
       'deal_qualification',
+      'record_completeness',
     ],
   });
 }

@@ -63,7 +63,9 @@ export type ToolName =
   | 'industry_approach'
   | 'accounts_by_solution'
   // Deal qualification (MEDDPICC / BANT)
-  | 'deal_qualification';
+  | 'deal_qualification'
+  // Data completeness
+  | 'record_completeness';
 
 export interface ToolExecutor {
   lookup_customer: (args: { customerName: string }) => Promise<object>;
@@ -123,6 +125,13 @@ export interface ToolExecutor {
     opportunityName?: string;
     gapsOnly?: boolean;
   }) => Promise<object>;
+
+  /** Which records are incomplete and what is missing from them. */
+  record_completeness?: (args: {
+    entity?: string;
+    customerName?: string;
+    limit?: number;
+  }) => Promise<object>;
 }
 
 export interface AIToolsContext {
@@ -155,6 +164,9 @@ STATUS AND REPORTING TOOLS — prefer these for any "how is X doing / what is th
 - industry_approach: vertical context and positioning material for an account or a whole vertical. Use for "what angle should I take with X", "what is our industry approach".
 - accounts_by_solution: accounts sharing a product or vertical, for one session covering several accounts. Use for "who could I cover in one Lunch and Learn".
 - deal_qualification: MEDDPICC / BANT for a deal and the gaps still open. Use for "how well qualified is X", "what do I still need to find out".
+- record_completeness: which records are incomplete and exactly which fields are missing. Use for "what data am I missing", "how complete is X", "which accounts need filling in", "what should I fix first".
+
+COMPLETENESS: report the missing FIELDS and why they matter, not just a percentage — the number is only useful as a route to the worklist. Required gaps come before recommended ones. A field holding a placeholder (XXXXXX, TODO, N/A) counts as missing, not filled; say so plainly rather than reporting it as populated.
 
 QUALIFICATION — two different numbers, never conflate them:
 - signalCount is how often a topic came up in a call (conversation analytics). It measures COVERAGE. A low count means the conversation never went there — a gap in the pursuit, not a verdict on the deal.
@@ -320,6 +332,22 @@ function buildTools(executors: Partial<ToolExecutor>) {
         vertical: z.string().optional().describe('Vertical/industry name'),
       }),
       execute: (args) => safeExec('accounts_by_solution', args, executors.accounts_by_solution),
+    }),
+    record_completeness: tool({
+      description:
+        'How complete the records are, and exactly which fields are missing from each. Covers accounts, opportunities, profiles, notes and tasks. Use for "what data am I missing", "how complete is X", "which accounts need filling in", "what should I fix first", "where are the gaps in my data".',
+      inputSchema: z.object({
+        entity: z
+          .string()
+          .optional()
+          .describe('Limit to one kind: customer, opportunity, profile, note, task'),
+        customerName: z
+          .string()
+          .optional()
+          .describe('Limit to one account and everything hanging off it'),
+        limit: z.number().optional().describe('Max records to list (default 15)'),
+      }),
+      execute: (args) => safeExec('record_completeness', args, executors.record_completeness),
     }),
     deal_qualification: tool({
       description:

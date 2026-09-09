@@ -6,3 +6,4 @@ export * from './accountPlanningPillars';
 export * from './fiscalPeriod';
 export * from './seAssessment';
 export * from './dealQualification';
+export * from './completeness';
