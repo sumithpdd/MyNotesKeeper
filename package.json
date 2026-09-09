@@ -1,6 +1,6 @@
 {
   "name": "customer-engagement-hub",
-  "version": "2.6.1",
+  "version": "2.6.2",
   "description": "A comprehensive Next.js application for managing customer relationships, tracking engagement progress, and maintaining detailed customer notes",
   "private": true,
   "keywords": [
@@ -48,12 +48,12 @@
     "db:dedupe-task-categories": "node scripts/deduplicateTaskCategories.js"
   },
   "dependencies": {
-    "@ai-sdk/google": "^3.0.67",
+    "@ai-sdk/google": "^4.0.65",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.2.2",
-    "ai": "^6.0.175",
+    "ai": "^7.0.94",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",

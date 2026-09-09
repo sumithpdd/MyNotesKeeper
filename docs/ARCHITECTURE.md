@@ -87,8 +87,20 @@ MyNotesKeeper/
 
 ### 3. **Infrastructure / services** (`src/lib/`)
 
-- **Purpose:** Legacy and shared helpers: CRUD implementations used by **`/api/*` route handlers**, resolvers, and some browser paths. Routes may call these with Firebase Admin contexts; Firestore rules still apply where the client SDK reads/writes directly.
-- **Server-only:** `src/lib/server/*` — Firebase Admin JWT verification (**`authorizeApiRequest`**), **`adminFirestore`** (Admin SDK Firestore access), **`workspaceLoad`** (tenant-aware workspace aggregation), **`tasksAdmin`**, plus `firebaseAdmin.ts`.
+- **Purpose:** Shared helpers and **browser-side** CRUD, plus resolvers and formatting used by both sides.
+- ⚠️ **`src/lib/*Service.ts` must never be called from a route handler.** They use the Firebase **web** SDK, which authenticates as the signed-in browser user. Server-side there is no such user, so `request.auth` is null and every rule in `firestore.rules` denies the operation with `permission-denied`. Route handlers use the **Admin** modules in `src/lib/server/*` instead.
+- **Server-only:** `src/lib/server/*` — Firebase Admin JWT verification (**`authorizeApiRequest`**), **`adminFirestore`** (Admin SDK Firestore access), **`workspaceLoad`** (tenant-aware workspace aggregation), plus `firebaseAdmin.ts`.
+
+| Admin data module | Collections |
+|-------------------|-------------|
+| `customersAdmin` | `customers` |
+| `notesAdmin` | `customerNotes` |
+| `contactsAdmin` | `customerContacts`, `internalContacts` |
+| `entitiesAdmin` | `products`, `partners` |
+| `opportunitiesAdmin` | `opportunities` (incl. stage history) |
+| `tasksAdmin` | `engagementTasks`, `taskCategories` |
+| `martechToolsAdmin` | `martechTools` |
+| `adminConvert` | shared date ↔ `Timestamp` conversion for the above |
 
 ### 4. **Presentation** (`src/app/`, `src/components/`)
 
