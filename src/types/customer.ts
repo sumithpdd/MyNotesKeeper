@@ -49,6 +49,9 @@ export interface Customer {
   products?: Product[]; // Resolved for display only (not stored in DB)
   customerContactIds: string[]; // References to customerContacts collection
   customerContacts?: CustomerContact[]; // Resolved for display only (not stored in DB)
+  /** The customer-side primary contact (CRM "Primary Contact" role). Must also appear in `customerContactIds`. */
+  primaryCustomerContactId?: string;
+  primaryCustomerContact?: CustomerContact; // Resolved for display only (not stored in DB)
   internalContactIds: string[]; // References to internalContacts collection
   internalContacts?: InternalContact[]; // Resolved for display only (not stored in DB)
   accountExecutiveId?: string; // Primary AE (backward compat)
@@ -93,6 +96,7 @@ export interface CreateCustomerData {
   products?: Product[]; // For backward compatibility
   customerContactIds: string[]; // References only
   customerContacts?: CustomerContact[]; // For backward compatibility
+  primaryCustomerContactId?: string;
   internalContactIds: string[]; // References only
   internalContacts?: InternalContact[]; // For backward compatibility
   accountExecutiveId?: string; // Primary AE (backward compat)

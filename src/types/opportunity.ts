@@ -1,5 +1,6 @@
 import { Product } from './product';
 import { InternalContact } from './contacts';
+import type { DealQualification } from '@/domain/engagement-hub/dealQualification';
 
 // Opportunity Stage Types
 export type OpportunityStage = 
@@ -82,6 +83,8 @@ export interface Opportunity {
   nextSteps?: string;
   /** CRM record URL (e.g. Salesforce Lightning opportunity). */
   crmOpportunityUrl?: string;
+  /** MEDDPICC / BANT qualification — see `domain/engagement-hub/dealQualification.ts`. */
+  dealQualification?: DealQualification;
 
   // Metadata
   createdBy: string;
@@ -107,6 +110,7 @@ export interface CreateOpportunityData {
   competitorInfo?: string;
   nextSteps?: string;
   crmOpportunityUrl?: string;
+  dealQualification?: DealQualification;
   createdBy: string;
   updatedBy: string;
 }

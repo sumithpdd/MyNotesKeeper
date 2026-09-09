@@ -37,6 +37,11 @@ import {
   normalizePillarId,
   planFieldsFor,
 } from '@/domain/engagement-hub/accountPlanningPillars';
+import {
+  parseDealQualification,
+  qualificationGaps,
+  qualificationCoverage,
+} from '@/domain/engagement-hub/dealQualification';
 
 export async function POST(request: NextRequest) {
   try {
@@ -762,6 +767,58 @@ export async function POST(request: NextRequest) {
         };
       },
 
+      deal_qualification: async (args) => {
+        const { customerName, opportunityName, gapsOnly } = args as {
+          customerName?: string;
+          opportunityName?: string;
+          gapsOnly?: boolean;
+        };
+
+        let candidates = opportunities;
+        if (customerName) {
+          const match = findCustomer(customerName);
+          if (!match) return { found: false, message: `No account matching "${customerName}".` };
+          candidates = candidates.filter((o) => o.customerId === match.id);
+        }
+        if (opportunityName) {
+          const q = opportunityName.trim().toLowerCase();
+          candidates = candidates.filter((o) => (o.opportunityName || '').toLowerCase().includes(q));
+        }
+        if (candidates.length === 0) {
+          return { found: false, message: 'No matching opportunity.' };
+        }
+
+        return {
+          found: true,
+          count: candidates.length,
+          opportunities: candidates.slice(0, 10).map((o) => {
+            const q = parseDealQualification(o.dealQualification);
+            const gaps = qualificationGaps(q);
+            const coverage = qualificationCoverage(q);
+            return {
+              account: nameOf(o.customerId),
+              opportunity: o.opportunityName,
+              stage: o.currentStage,
+              source: q?.source ?? null,
+              coverage: `MEDDPICC ${coverage.meddpicc.recorded}/${coverage.meddpicc.total}, BANT ${coverage.bant.recorded}/${coverage.bant.total}`,
+              ...(gapsOnly
+                ? {}
+                : {
+                    meddpicc: q?.meddpicc ?? null,
+                    bant: q?.bant ?? null,
+                  }),
+              gaps: gaps.map((g) => ({
+                framework: g.framework,
+                element: g.label,
+                reason: g.reason,
+                signalCount: g.signalCount ?? null,
+                askAbout: g.prompt,
+              })),
+            };
+          }),
+        };
+      },
+
       accounts_by_solution: async (args) => {
         const { product, vertical } = args as { product?: string; vertical?: string };
         const verticalOf = (c: (typeof customers)[number]) =>
@@ -855,6 +912,7 @@ export async function GET() {
       'planning_coverage',
       'industry_approach',
       'accounts_by_solution',
+      'deal_qualification',
     ],
   });
 }

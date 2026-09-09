@@ -61,7 +61,9 @@ export type ToolName =
   | 'planning_coverage'
   // Industry / vertical positioning
   | 'industry_approach'
-  | 'accounts_by_solution';
+  | 'accounts_by_solution'
+  // Deal qualification (MEDDPICC / BANT)
+  | 'deal_qualification';
 
 export interface ToolExecutor {
   lookup_customer: (args: { customerName: string }) => Promise<object>;
@@ -114,6 +116,13 @@ export interface ToolExecutor {
   industry_approach?: (args: { customerName?: string; vertical?: string }) => Promise<object>;
   /** Accounts grouped by shared product or vertical — for Lunch & Learns and webinars. */
   accounts_by_solution?: (args: { product?: string; vertical?: string }) => Promise<object>;
+
+  /** MEDDPICC / BANT qualification for a deal, with the gaps still to close. */
+  deal_qualification?: (args: {
+    customerName?: string;
+    opportunityName?: string;
+    gapsOnly?: boolean;
+  }) => Promise<object>;
 }
 
 export interface AIToolsContext {
@@ -145,6 +154,12 @@ STATUS AND REPORTING TOOLS — prefer these for any "how is X doing / what is th
 - planning_coverage: which accounts have or lack a plan per pillar. Use for "which accounts have no whitespace plan", "where am I not multi-threaded".
 - industry_approach: vertical context and positioning material for an account or a whole vertical. Use for "what angle should I take with X", "what is our industry approach".
 - accounts_by_solution: accounts sharing a product or vertical, for one session covering several accounts. Use for "who could I cover in one Lunch and Learn".
+- deal_qualification: MEDDPICC / BANT for a deal and the gaps still open. Use for "how well qualified is X", "what do I still need to find out".
+
+QUALIFICATION — two different numbers, never conflate them:
+- signalCount is how often a topic came up in a call (conversation analytics). It measures COVERAGE. A low count means the conversation never went there — a gap in the pursuit, not a verdict on the deal.
+- score is a deliberate 0-10 read on how well the element is actually satisfied, set by a person.
+Report a low signalCount as "barely discussed / not covered", never as "scored badly". A deal can have overwhelming evidence of pain and still be unqualified because nobody has met the economic buyer.
 
 When asked for an industry approach or point of view, call industry_approach first and build the recommendation on what comes back. Be opinionated and specific to the account's vertical and use cases — but never state a customer fact that no tool returned. If the vertical or use cases are blank, say so and ask for them rather than inventing an industry narrative.
 
@@ -305,6 +320,16 @@ function buildTools(executors: Partial<ToolExecutor>) {
         vertical: z.string().optional().describe('Vertical/industry name'),
       }),
       execute: (args) => safeExec('accounts_by_solution', args, executors.accounts_by_solution),
+    }),
+    deal_qualification: tool({
+      description:
+        'MEDDPICC and BANT qualification for a deal, plus the elements still unrecorded or barely discussed. Use for "what is the MEDDPICC on X", "how well qualified is X", "what do I still need to find out", "who is the economic buyer on X", "what are the gaps".',
+      inputSchema: z.object({
+        customerName: z.string().optional().describe('Account name'),
+        opportunityName: z.string().optional().describe('Specific opportunity, if the account has several'),
+        gapsOnly: z.boolean().optional().describe('Return only the gaps, not every element'),
+      }),
+      execute: (args) => safeExec('deal_qualification', args, executors.deal_qualification),
     }),
     lookup_customer: tool({
       description:
