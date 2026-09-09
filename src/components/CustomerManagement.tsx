@@ -29,6 +29,8 @@ import { buildActivities } from '@/lib/activityUtils';
 import { getLastAccountTaskAction, getTasksForCustomer } from '@/lib/taskAccountActivity';
 import { formatTaskPlanningWindow } from '@/lib/taskPlanningRange';
 import { seRagTone, seRagBadgeClasses, seRagLabel } from '@/domain/engagement-hub/seAssessment';
+import { scoreEntity, CUSTOMER_FIELDS } from '@/domain/engagement-hub/completeness';
+import { CompletenessPanel } from './completeness/CompletenessPanel';
 
 interface CustomerManagementProps {
   customers: Customer[];
@@ -629,6 +631,26 @@ export function CustomerManagement({
                 </div>
 
                 {selectedCustomerData ? (
+                  <div className="mb-6">
+                    <CompletenessPanel
+                      completeness={scoreEntity(
+                        'customer',
+                        selectedCustomerData.id,
+                        selectedCustomerData.customerName,
+                        selectedCustomerData,
+                        CUSTOMER_FIELDS,
+                        {
+                          profiles: customerProfiles,
+                          notes,
+                          opportunities,
+                          tasks,
+                        },
+                      )}
+                    />
+                  </div>
+                ) : null}
+
+                {selectedCustomerData ? (
                   <AccountPlanningSection
                     customer={selectedCustomerData}
                     tasks={customerRelatedTasks}
@@ -1146,6 +1168,7 @@ export function CustomerManagement({
             setShowOpportunityForm(true);
           }}
           onStageChange={handleOpportunityStageChange}
+          tasks={tasks}
         />
       )}
     </div>

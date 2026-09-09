@@ -10,12 +10,19 @@ import { Opportunity, OpportunityStage } from '@/types';
 import { safeFormatDate, safeFormatDateTime } from '@/lib/utils';
 import { formatProductDisplayName } from '@/lib/productDisplay';
 import { OPPORTUNITY_STAGE_ORDER, OPPORTUNITY_STAGE_HELP, formatTimeInCurrentStage } from '@/lib/opportunityStages';
+import { parseDealQualification } from '@/domain/engagement-hub/dealQualification';
+import { scoreEntity, OPPORTUNITY_FIELDS } from '@/domain/engagement-hub/completeness';
+import { DealQualificationPanel } from './opportunities/DealQualificationPanel';
+import { CompletenessPanel } from './completeness/CompletenessPanel';
+import type { EngagementTask } from '@/types';
 
 interface OpportunityDetailProps {
   opportunity: Opportunity;
   onClose: () => void;
   onEdit: () => void;
   onStageChange: (newStage: OpportunityStage, notes?: string) => void;
+  /** Used only to judge whether the deal has tasks driving it. */
+  tasks?: EngagementTask[];
 }
 
 const STAGES = OPPORTUNITY_STAGE_ORDER;
@@ -36,7 +43,8 @@ export function OpportunityDetail({
   opportunity,
   onClose,
   onEdit,
-  onStageChange
+  onStageChange,
+  tasks = [],
 }: OpportunityDetailProps) {
   const [showStageChange, setShowStageChange] = useState(false);
   const [newStage, setNewStage] = useState<OpportunityStage>(opportunity.currentStage);
@@ -363,6 +371,21 @@ export function OpportunityDetail({
               </div>
             )}
           </div>
+
+          {/* MEDDPICC / BANT */}
+          <DealQualificationPanel qualification={parseDealQualification(opportunity.dealQualification)} />
+
+          {/* Record completeness */}
+          <CompletenessPanel
+            completeness={scoreEntity(
+              'opportunity',
+              opportunity.id,
+              opportunity.opportunityName,
+              opportunity,
+              OPPORTUNITY_FIELDS,
+              { tasks },
+            )}
+          />
 
           {/* Stage History */}
           <div className="bg-white border border-gray-200 rounded-lg p-4">

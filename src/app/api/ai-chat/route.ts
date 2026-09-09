@@ -29,7 +29,7 @@ import type { CreateCustomerData } from '@/types';
 import { formatProductDisplayName } from '@/lib/productDisplay';
 import { loadWorkspaceSnapshot } from '@/lib/server/workspaceLoad';
 import { fiscalPeriodLabel } from '@/domain/engagement-hub/fiscalPeriod';
-import { seRagLabel, seInvolvementLabel } from '@/domain/engagement-hub/seAssessment';
+import { reportSEInvolvement, reportSERag } from '@/domain/engagement-hub/seAssessment';
 import { calendarDaysBetween, formatTimeInCurrentStage } from '@/lib/opportunityStages';
 import {
   ACCOUNT_PLANNING_PILLARS,
@@ -431,13 +431,13 @@ export async function POST(request: NextRequest) {
         return {
           found: true,
           account: match.customerName,
-          seInvolvement: seInvolvementLabel(profile?.seInvolvement ?? ''),
-          seProductFit: seRagLabel(profile?.seProductFitAssessment ?? ''),
+          seInvolvement: reportSEInvolvement(profile?.seInvolvement),
+          seProductFit: reportSERag(profile?.seProductFitAssessment),
           seNotesLastUpdated: profile?.seNotesLastUpdated ?? null,
           latestNote: accountNotes[0]
             ? {
                 date: accountNotes[0].noteDate,
-                seConfidence: seRagLabel(accountNotes[0].seConfidence),
+                seConfidence: reportSERag(accountNotes[0].seConfidence),
                 excerpt: (accountNotes[0].notes || '').slice(0, 400),
               }
             : null,
@@ -558,7 +558,7 @@ export async function POST(request: NextRequest) {
           .map((n) => ({
             account: nameOf(n.customerId),
             date: n.noteDate,
-            seConfidence: seRagLabel(n.seConfidence),
+            seConfidence: reportSERag(n.seConfidence),
             createdBy: n.createdBy,
             excerpt: (n.notes || '').slice(0, 300),
           }));

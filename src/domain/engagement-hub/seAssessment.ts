@@ -115,3 +115,74 @@ export function seRagLabel(value: SERagAssessment): string {
 export function seInvolvementLabel(value: SEInvolvement): string {
   return value === '' ? 'Not Set' : value;
 }
+
+/**
+ * Self-describing field value for machine consumers (the AI tools).
+ *
+ * A bare `"Not Set"` string is easy to read as a negative — an LLM handed
+ * `seInvolvement: "Not Set"` will happily report "SE involvement: No". Carrying
+ * `recorded` and an explicit `meaning` alongside the value removes the room to
+ * infer, rather than relying on prompt wording to hold the line.
+ */
+export interface ReportedFieldValue {
+  value: string;
+  label: string;
+  /** False when nobody has answered — distinct from a recorded negative. */
+  recorded: boolean;
+  meaning: string;
+}
+
+export function reportSEInvolvement(value: SEInvolvement | undefined): ReportedFieldValue {
+  const v = value ?? '';
+  switch (v) {
+    case 'Yes':
+      return { value: v, label: 'Yes', recorded: true, meaning: 'SE is involved.' };
+    case 'No':
+      return {
+        value: v,
+        label: 'No',
+        recorded: true,
+        meaning: 'SE support is wanted but absent — a coverage risk.',
+      };
+    case 'Not Needed':
+      return {
+        value: v,
+        label: 'Not Needed',
+        recorded: true,
+        meaning: 'Deliberately out of scope. Not a risk.',
+      };
+    default:
+      return {
+        value: '',
+        label: 'Not Set',
+        recorded: false,
+        meaning:
+          'Nobody has answered this yet. This is NOT "No" — do not report it as a negative, report it as unanswered.',
+      };
+  }
+}
+
+export function reportSERag(value: SERagAssessment | undefined): ReportedFieldValue {
+  const v = value ?? '';
+  switch (v) {
+    case 'Green':
+    case 'Yellow':
+    case 'Red':
+      return { value: v, label: v, recorded: true, meaning: `Assessed as ${v}.` };
+    case 'Not Applicable':
+      return {
+        value: v,
+        label: 'Not Applicable',
+        recorded: true,
+        meaning: 'Assessed and judged not to apply. A deliberate answer, not a risk.',
+      };
+    default:
+      return {
+        value: '',
+        label: 'Not Set',
+        recorded: false,
+        meaning:
+          'Nobody has assessed this yet. This is NOT "Red" and NOT "Not Applicable" — report it as unassessed.',
+      };
+  }
+}
