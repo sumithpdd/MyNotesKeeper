@@ -1,0 +1,32 @@
+# Line endings.
+#
+# The repository stores LF and checks out LF, on every platform. This matches
+# `"endOfLine": "lf"` in .prettierrc — without it, a `core.autocrlf=true` clone
+# checks files out as CRLF, Prettier rewrites them to LF, and every touched file
+# shows a whole-file diff that is pure line endings and no content.
+* text=auto eol=lf
+
+# Windows batch files are read by cmd.exe, which wants CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# UTF-16LE, so it contains NUL bytes. Marked non-text because line-ending
+# normalisation would corrupt the encoding.
+.env.example -text
+
+# Binary assets — never normalised, never shown as text diffs.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.pdf binary
+*.zip binary
+
+# Generated: keep out of diffs and language stats.
+package-lock.json linguist-generated=true -diff
