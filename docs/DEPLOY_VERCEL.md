@@ -6,7 +6,7 @@ Production host for **Customer Engagement Hub** (GitHub: [sumithpdd/MyNotesKeepe
 
 | Item | Value |
 |------|--------|
-| **Live app** | [https://my-notes-keeper.vercel.app/](https://my-notes-keeper.vercel.app/) |
+| **Live app** | [https://customerengagementhub.vercel.app/](https://customerengagementhub.vercel.app/) |
 | **Vercel dashboard** | [novo-wallet / my-notes-keeper](https://vercel.com/novo-wallet/my-notes-keeper) |
 | **Team** | `novo-wallet` |
 | **Project** | `my-notes-keeper` |
@@ -27,14 +27,15 @@ If the dashboard shows **“No Production Deployment”** and checklist **0/5**:
    - **Production Branch:** `main`
 
 2. **Environment variables**  
-   [Settings → Environment Variables](https://vercel.com/novo-wallet/my-notes-keeper/settings/environment-variables) — add every **Required** name below for **Production** (and **Preview** if you use PR previews). Copy values from your local `.env.local` / old Vercel project (never commit values to git).
+   [Settings → Environment Variables](https://vercel.com/novo-wallet/my-notes-keeper/settings/environment-variables) — add every **Required** name below for **Production** (and **Preview** if you use PR previews). Copy values from your local `.env.local` / old Vercel project (never commit values to git).  
+   **Important:** `NEXT_PUBLIC_FIREBASE_*` must be set **before** the build runs — Vercel inlines them at build time. Wrong or missing `NEXT_PUBLIC_FIREBASE_API_KEY` causes **`auth/invalid-api-key`** during `next build`.
 
 3. **Deploy**  
    Push to `main` or **Deployments → Redeploy**. Build uses **Node 24.x** (`package.json` `engines` + `.nvmrc`).
 
 4. **Firebase authorized domain**  
    [Firebase Console](https://console.firebase.google.com) → **Authentication** → **Settings** → **Authorized domains** → add:  
-   **`my-notes-keeper.vercel.app`** (no `https://`)
+   **`customerengagementhub.vercel.app`** (no `https://`)
 
 5. **Smoke test**  
    Sign in → home loads with **Quicklook** / stats → DevTools → `GET /api/workspace` → **200**.
@@ -68,14 +69,31 @@ Optional Vercel env: **`HUSKY=0`** (hooks already skipped via `scripts/prepare-h
 
 Do **not** use `FIREBASE_SERVICE_ACCOUNT_PATH` on Vercel (local file paths only).
 
+### Publish from `.env.local` via CLI
+
+```bash
+npx vercel login
+node scripts/publishVercelEnv.local.js --dry-run
+node scripts/publishVercelEnv.local.js
+npx vercel --prod
+```
+
+Targets team **`novo-wallet`**, project **`my-notes-keeper`** (override with `--scope=` / `--project=`).  
+The script reads **`FIREBASE_SERVICE_ACCOUNT_PATH`** locally and uploads **`FIREBASE_SERVICE_ACCOUNT_JSON`** to Vercel.
+
+If the CLI errors with **self-signed certificate in certificate chain**, use the same terminal only (corporate SSL inspection):
+
+PowerShell: `$env:NODE_TLS_REJECT_UNAUTHORIZED='0'`
+
 ---
 
 ## Domains
 
-Default hostname **`my-notes-keeper.vercel.app`** is assigned to this project when the slug is `my-notes-keeper`.  
-Optional: **Settings → Domains** → add **`my-engagement-hub.vercel.app`** (or another alias) on **this same project** after the first successful deploy.
+**Production hostname:** **`customerengagementhub.vercel.app`** — add it under [Settings → Domains](https://vercel.com/novo-wallet/my-notes-keeper/settings/domains) on project **`my-notes-keeper`** (team **`novo-wallet`**) if it is not already assigned.
 
-Update **GitHub → Repository → Website** to [https://my-notes-keeper.vercel.app/](https://my-notes-keeper.vercel.app/).
+Vercel also provides **`my-notes-keeper.vercel.app`** from the project slug; both can point at the same deployment.
+
+Update **GitHub → Repository → Website** to [https://customerengagementhub.vercel.app/](https://customerengagementhub.vercel.app/).
 
 ---
 
@@ -85,7 +103,7 @@ Update **GitHub → Repository → Website** to [https://my-notes-keeper.vercel.
 |---------|-----|
 | **No Production Deployment** | Connect Git (above); push `main` or import deploy |
 | **`NOT_FOUND`** on URL | Domain on wrong project or no deploy — use **Visit** from a **Ready** deployment on [my-notes-keeper](https://vercel.com/novo-wallet/my-notes-keeper) |
-| **`auth/unauthorized-domain`** | Add `my-notes-keeper.vercel.app` in Firebase authorized domains |
+| **`auth/unauthorized-domain`** | Add `customerengagementhub.vercel.app` in Firebase authorized domains |
 | Blank data after login | Fix `FIREBASE_SERVICE_ACCOUNT_JSON`; redeploy |
 | **`husky` / not a git repository** | Repo skips husky on Vercel; optional `HUSKY=0` |
 | Node version message | Use **`24.x`** in `engines` (already in repo) |

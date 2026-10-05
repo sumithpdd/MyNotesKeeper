@@ -25,7 +25,7 @@
   "bugs": {
     "url": "https://github.com/sumithpdd/MyNotesKeeper/issues"
   },
-  "homepage": "https://my-notes-keeper.vercel.app/",
+  "homepage": "https://customerengagementhub.vercel.app/",
   "scripts": {
     "dev": "next dev",
     "dev:turbo": "next dev --turbopack",

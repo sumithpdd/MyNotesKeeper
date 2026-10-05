@@ -3,14 +3,12 @@ import { customerContactService, internalContactService } from './contactService
 import { productService } from './productService';
 import { partnerService } from './partnerService';
 import { martechToolService } from './martechToolService';
+import {
+  enrichCustomersFromIndexes,
+  type ResolverIndexes,
+} from './contactResolverIndexes';
 
-export interface ResolverIndexes {
-  customerContactsById: Map<string, CustomerContact>;
-  internalContactsById: Map<string, InternalContact>;
-  productsById: Map<string, Product>;
-  partnersById: Map<string, Partner>;
-  martechById: Map<string, MartechTool>;
-}
+export type { ResolverIndexes };
 
 /**
  * Helper service to resolve contact references
@@ -158,54 +156,7 @@ export const contactResolver = {
     return Promise.all(customers.map(c => this.enrichCustomer(c)));
   },
 
-  /**
-   * Resolve references using catalog maps loaded on the server (no client Firestore).
-   */
-  enrichCustomersFromIndexes(customers: Customer[], indexes: ResolverIndexes): Customer[] {
-    return customers.map((customer) => {
-      const customerContacts = this.resolveCustomerContactsIndexed(
-        customer.customerContactIds || [],
-        indexes.customerContactsById,
-      );
-      const internalContacts = this.resolveInternalContactsIndexed(
-        customer.internalContactIds || [],
-        indexes.internalContactsById,
-      );
-      const aeIds =
-        customer.accountExecutiveIds?.length
-          ? customer.accountExecutiveIds
-          : customer.accountExecutiveId
-            ? [customer.accountExecutiveId]
-            : [];
-      const accountExecutive = aeIds.length
-        ? indexes.internalContactsById.get(customer.accountExecutiveId || aeIds[0])
-        : undefined;
-      const accountExecutives = aeIds
-        .map((id) => indexes.internalContactsById.get(id))
-        .filter((c): c is InternalContact => !!c);
-
-      const products = (customer.productIds || [])
-        .map((id) => indexes.productsById.get(id))
-        .filter((p): p is Product => !!p);
-      const partners = (customer.partnerIds || [])
-        .map((id) => indexes.partnersById.get(id))
-        .filter((p): p is Partner => !!p);
-      const martechTools = (customer.martechToolIds || [])
-        .map((id) => indexes.martechById.get(id))
-        .filter((m): m is MartechTool => !!m);
-
-      return {
-        ...customer,
-        customerContacts,
-        internalContacts,
-        accountExecutive: accountExecutive || accountExecutives[0],
-        accountExecutives: accountExecutives.length > 0 ? accountExecutives : accountExecutive ? [accountExecutive] : [],
-        products,
-        partners,
-        martechTools,
-      };
-    });
-  },
+  enrichCustomersFromIndexes,
 
   resolveCustomerContactsIndexed(ids: string[], byId: Map<string, CustomerContact>): CustomerContact[] {
     return ids.map((id) => byId.get(id)).filter((c): c is CustomerContact => !!c);

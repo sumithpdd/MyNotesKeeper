@@ -80,7 +80,7 @@ Firebase provides authentication and cloud database storage.
 1. Still in Authentication → Sign-in method
 2. Scroll to **"Authorized domains"**
 3. Add **`localhost`** (should already be there)
-4. For production, add **`my-notes-keeper.vercel.app`** — see [DEPLOY_VERCEL.md](DEPLOY_VERCEL.md)
+4. For production, add **`customerengagementhub.vercel.app`** — see [DEPLOY_VERCEL.md](DEPLOY_VERCEL.md)
 
 ### Step 5: Get Firebase Config
 
@@ -209,7 +209,7 @@ Use **one** of:
 
 ### Vercel Production
 
-Hosted app: **[https://my-notes-keeper.vercel.app/](https://my-notes-keeper.vercel.app/)** ([Vercel dashboard](https://vercel.com/novo-wallet/my-notes-keeper))
+Hosted app: **[https://customerengagementhub.vercel.app/](https://customerengagementhub.vercel.app/)** ([Vercel dashboard](https://vercel.com/novo-wallet/my-notes-keeper))
 
 Copy the same variable **names** into **Vercel → Project → Settings → Environment Variables → Production**. On Vercel use **`FIREBASE_SERVICE_ACCOUNT_JSON`** (one-line JSON), not `FIREBASE_SERVICE_ACCOUNT_PATH`. Full checklist and smoke tests: **[DEPLOY_VERCEL.md](DEPLOY_VERCEL.md)**.
 
@@ -319,7 +319,7 @@ Navigate to **http://localhost:3000**
 **Fix:**
 1. Firebase Console → Authentication → Settings → **Authorized domains**
 2. Add `localhost` for local dev
-3. Add your production host exactly (e.g. `my-notes-keeper.vercel.app`) — no `https://`
+3. Add your production host exactly (e.g. `customerengagementhub.vercel.app`) — no `https://`
 4. Try signing in again on that host
 
 ### AI Errors

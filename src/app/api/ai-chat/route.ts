@@ -44,6 +44,8 @@ import {
 } from '@/domain/engagement-hub/dealQualification';
 import { workspaceCompleteness, type EntityKind } from '@/domain/engagement-hub/completeness';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const auth = await authorizeApiRequest(request);

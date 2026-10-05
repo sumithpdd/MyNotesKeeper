@@ -17,7 +17,7 @@ import type {
   Product,
 } from '@/types';
 import type { EngagementTask, TaskCategory } from '@/types/task';
-import { contactResolver, type ResolverIndexes } from '@/lib/contactResolver';
+import { enrichCustomersFromIndexes, type ResolverIndexes } from '@/lib/contactResolverIndexes';
 import { requireAdminFirestore } from '@/lib/server/adminFirestore';
 import { engagementTaskFromDoc } from '@/lib/server/tasksAdmin';
 
@@ -369,7 +369,7 @@ export async function loadWorkspaceSnapshot(params: { uid: string; email: string
     martechById,
   };
 
-  const customersEnriched = contactResolver.enrichCustomersFromIndexes(customersBare, indexes);
+  const customersEnriched = enrichCustomersFromIndexes(customersBare, indexes);
   const customerContacts = [...customerContactsMap.values()].sort((a, b) =>
     (a.name || '').localeCompare(b.name || ''),
   );
