@@ -42,7 +42,7 @@
     "clean": "rm -rf .next node_modules package-lock.json",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "husky install",
+    "prepare": "node scripts/prepare-husky.js",
     "deploy:rules": "firebase deploy --only firestore:rules",
     "merge:duplicates": "node scripts/mergeDuplicateCustomers.js",
     "db:upsert-products": "node scripts/upsertCanonicalProducts.js",
@@ -89,7 +89,7 @@
     "typescript": "^5"
   },
   "engines": {
-    "node": ">=18.0.0",
+    "node": "20.x",
     "npm": ">=8.0.0"
   },
   "browserslist": {

@@ -110,12 +110,21 @@ If you add a **custom domain** later, add that hostname here too.
 
 | Symptom | Likely cause | Fix |
 |---------|----------------|-----|
-| Vercel **`NOT_FOUND`** / “The page could not be found” | Domain not linked or no Production deploy | Attach domain to correct project; redeploy Production |
+| Vercel **`NOT_FOUND`** / “This page doesn’t exist” (`lhr1::…`) | **Hostname has no deployment** — often the domain is on a **different/empty** Vercel project than the one Git deploys to | Open the **Ready** deployment on `customer-engagement-hub` → **Visit** (use that URL). Then **Settings → Domains**: remove `my-customer-engagement-hub.vercel.app` from any empty project and **add it to the Git-linked project**; redeploy Production |
+| **`NOT_FOUND`** on custom name but deploy is **Ready** | Project slug mismatch (e.g. deploy on `customer-engagement-hub`, browser on `my-customer-engagement-hub`) | Same as above — domains must be on the project that owns the deployment |
+| Another app on `customer-engagement-hub.vercel.app` | That global name may belong to **another team’s project** | Do **not** assume the short name; always use **Visit** from *your* deployment or your team alias |
 | **`auth/unauthorized-domain`** | Host not in Firebase authorized domains | Add exact hostname (no `https://`) |
 | **`auth/invalid-api-key`** | Wrong or missing `NEXT_PUBLIC_FIREBASE_*` | Copy from Firebase web app config; redeploy |
 | Blank data after login | Missing / invalid `FIREBASE_SERVICE_ACCOUNT_JSON` | Regenerate service account JSON; paste one-line JSON in Vercel; redeploy |
 | AI features fail | Missing `GEMINI_API_KEY` | Set server key; redeploy |
 | Build fails on Vercel | Env or lockfile / monorepo root | Check build logs; see `next.config.ts` / parent lockfile warnings locally with `npm run build` |
+| **`husky` / `not a git repository` during `npm install`** | `prepare` runs Git hooks install on Vercel | Fixed in repo: `prepare` skips when `VERCEL` or `CI` is set. Optional: add env **`HUSKY=0`** on Vercel. |
+| **`engines` Node auto-upgrade warning** | Open range `>=18` on Vercel | Repo pins **`20.x`** via `package.json` `engines` and **`.nvmrc`**. |
+| Log shows **`@1.1.0`** but local is newer | Deploy is an **older commit** | Redeploy latest **`main`** from GitHub (e.g. `2.6.x`). |
+
+### npm install warnings (safe to ignore on Vercel)
+
+Deprecated transitive packages (`inflight`, `glob@7`, etc.) come from dependencies; they do not block the build. **`added N packages`** without **`npm ERR!`** means install succeeded.
 
 ---
 
