@@ -12,7 +12,7 @@ npm run dev
 
 Open **http://localhost:3000** — the hub opens on **Tasks & Kanban** by default.
 
-**Production demo:** [https://my-customer-engagement-hub.vercel.app/](https://my-customer-engagement-hub.vercel.app/) — env vars and Firebase domains: [docs/DEPLOY_VERCEL.md](docs/DEPLOY_VERCEL.md).
+**Production:** [https://my-notes-keeper.vercel.app/](https://my-notes-keeper.vercel.app/) — Vercel project [novo-wallet/my-notes-keeper](https://vercel.com/novo-wallet/my-notes-keeper); setup: [docs/DEPLOY_VERCEL.md](docs/DEPLOY_VERCEL.md).
 
 ## Documentation
 

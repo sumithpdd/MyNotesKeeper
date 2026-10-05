@@ -20,12 +20,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/customer-engagement-hub.git"
+    "url": "https://github.com/sumithpdd/MyNotesKeeper.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/customer-engagement-hub/issues"
+    "url": "https://github.com/sumithpdd/MyNotesKeeper/issues"
   },
-  "homepage": "https://github.com/yourusername/customer-engagement-hub#readme",
+  "homepage": "https://my-notes-keeper.vercel.app/",
   "scripts": {
     "dev": "next dev",
     "dev:turbo": "next dev --turbopack",
