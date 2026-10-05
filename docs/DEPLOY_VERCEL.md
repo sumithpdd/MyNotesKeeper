@@ -119,7 +119,7 @@ If you add a **custom domain** later, add that hostname here too.
 | AI features fail | Missing `GEMINI_API_KEY` | Set server key; redeploy |
 | Build fails on Vercel | Env or lockfile / monorepo root | Check build logs; see `next.config.ts` / parent lockfile warnings locally with `npm run build` |
 | **`husky` / `not a git repository` during `npm install`** | `prepare` runs Git hooks install on Vercel | Fixed in repo: `prepare` skips when `VERCEL` or `CI` is set. Optional: add env **`HUSKY=0`** on Vercel. |
-| **`engines` Node auto-upgrade warning** | Open range `>=18` on Vercel | Repo pins **`20.x`** via `package.json` `engines` and **`.nvmrc`**. |
+| **`engines` Node version** | Vercel requires a supported major | Repo pins **`24.x`** via `package.json` `engines` and **`.nvmrc`** (Vercel may deprecate older majors). |
 | Log shows **`@1.1.0`** but local is newer | Deploy is an **older commit** | Redeploy latest **`main`** from GitHub (e.g. `2.6.x`). |
 
 ### npm install warnings (safe to ignore on Vercel)
