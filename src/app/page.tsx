@@ -12,7 +12,8 @@ import { UserHeader } from '@/components/UserHeader';
 import { AIChatPanel } from '@/components/AIChatPanel';
 import { FloatingAIButton } from '@/components/FloatingAIButton';
 import { TasksManagement } from '@/components/tasks';
-import { HomeTabButton, StatCard } from '@/components/home';
+import { HomeTabButton, QuicklookDashboard, StatCard } from '@/components/home';
+import { computeQuicklookStats } from '@/domain/engagement-hub/quicklookStats';
 import { useAuth } from '@/lib/auth';
 import { hubAuthFetch, hubAuthJson } from '@/lib/client/hubAuthFetch';
 import { computeEngagementDashboardStats } from '@/domain/engagement-hub';
@@ -198,6 +199,17 @@ export default function HomePage() {
     [customers, notes, opportunities, tasks],
   );
 
+  const quicklook = useMemo(
+    () =>
+      computeQuicklookStats({
+        customers,
+        profiles: customerProfiles.length ? customerProfiles : firebaseProfiles,
+        opportunities,
+        tasks,
+      }),
+    [customers, customerProfiles, firebaseProfiles, opportunities, tasks],
+  );
+
   const persistHubProduct = useCallback(
     async (args: {
       action: 'create' | 'update' | 'delete';
@@ -342,6 +354,12 @@ export default function HomePage() {
               <StatCard icon={FileText} label="Total Notes" value={notes.length} color="green" />
               <StatCard icon={Target} label="Opportunities" value={stats.opportunityCount} color="orange" hint="Stages and time-in-stage visible on each deal." />
             </div>
+
+            <QuicklookDashboard
+              stats={quicklook}
+              onOpenTasks={() => setActiveTab('tasks')}
+              onOpenCustomer={(customerId) => openCustomerWorkspace(customerId)}
+            />
           </div>
 
           <button
