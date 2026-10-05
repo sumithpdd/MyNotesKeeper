@@ -27,9 +27,10 @@
   },
   "homepage": "https://github.com/yourusername/customer-engagement-hub#readme",
   "scripts": {
-    "dev": "next dev --turbopack",
-    "dev:wpack": "next dev",
-    "build": "next build --turbopack",
+    "dev": "next dev",
+    "dev:turbo": "next dev --turbopack",
+    "build": "next build",
+    "build:turbo": "next build --turbopack",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",

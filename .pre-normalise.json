@@ -1,0 +1,22 @@
+{
+  ".env.example": {
+    "sha": "dfc31eff5a25c22f",
+    "bytes": 3490
+  },
+  "RESTART_DEV_SERVER.bat": {
+    "sha": "b3d9586cb60948b9",
+    "bytes": 172
+  },
+  "public/icon-192x192.png": {
+    "sha": "657798134c848d22",
+    "bytes": 1820
+  },
+  "public/favicon.svg": {
+    "sha": "21cac2e8c9712808",
+    "bytes": 1472
+  },
+  "src/app/layout.tsx": {
+    "sha": "900d9993518b9e29",
+    "bytes": 1656
+  }
+}

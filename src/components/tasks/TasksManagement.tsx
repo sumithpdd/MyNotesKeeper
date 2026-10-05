@@ -504,6 +504,10 @@ export function TasksManagement({
                 const merged = tasks.map((t) => nextSubset.find((n) => n.id === t.id) ?? t);
                 return persistKanbanTasks(tasks, merged);
               }}
+              onQuickStatusChange={async (taskId, status) => {
+                const merged = tasks.map((t) => (t.id === taskId ? { ...t, status } : t));
+                await persistKanbanTasks(tasks, merged);
+              }}
               onEdit={(t) => {
                 setEditingTask(t);
                 setDrawerOpen(true);

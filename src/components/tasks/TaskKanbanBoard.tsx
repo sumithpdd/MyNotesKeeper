@@ -114,6 +114,8 @@ interface TaskKanbanBoardProps {
   opportunities: Opportunity[];
   customers: Customer[];
   onDragCommit: (nextTasks: EngagementTask[]) => Promise<void>;
+  /** Change column without opening the full task drawer */
+  onQuickStatusChange?: (taskId: string, status: TaskKanbanStatus) => Promise<void>;
   onEdit: (task: EngagementTask) => void;
   onDelete: (taskId: string) => Promise<void>;
   onOpenCustomerWorkspace?: (customerId: string, opportunityId?: string | null) => void;
@@ -127,6 +129,7 @@ export function TaskKanbanBoard({
   opportunities,
   customers,
   onDragCommit,
+  onQuickStatusChange,
   onEdit,
   onDelete,
   onOpenCustomerWorkspace,
@@ -172,6 +175,7 @@ export function TaskKanbanBoard({
             products={products}
             opportunities={opportunities}
             customers={customers}
+            onQuickStatusChange={onQuickStatusChange}
             onEdit={onEdit}
             onDelete={onDelete}
             onOpenCustomerWorkspace={onOpenCustomerWorkspace}
@@ -190,6 +194,7 @@ function KanbanColumn({
   products,
   opportunities,
   customers,
+  onQuickStatusChange,
   onEdit,
   onDelete,
   onOpenCustomerWorkspace,
@@ -201,6 +206,7 @@ function KanbanColumn({
   products: Product[];
   opportunities: Opportunity[];
   customers: Customer[];
+  onQuickStatusChange?: (taskId: string, status: TaskKanbanStatus) => Promise<void>;
   onEdit: (t: EngagementTask) => void;
   onDelete: (id: string) => Promise<void>;
   onOpenCustomerWorkspace?: (customerId: string, opportunityId?: string | null) => void;
@@ -243,6 +249,7 @@ function KanbanColumn({
               products={products}
               opportunities={opportunities}
               customers={customers}
+              onQuickStatusChange={onQuickStatusChange}
               onEdit={onEdit}
               onDelete={onDelete}
               onOpenCustomerWorkspace={onOpenCustomerWorkspace}
@@ -267,6 +274,7 @@ function SortableTaskCard({
   products,
   opportunities,
   customers,
+  onQuickStatusChange,
   onEdit,
   onDelete,
   onOpenCustomerWorkspace,
@@ -278,6 +286,7 @@ function SortableTaskCard({
   products: Product[];
   opportunities: Opportunity[];
   customers: Customer[];
+  onQuickStatusChange?: (taskId: string, status: TaskKanbanStatus) => Promise<void>;
   onEdit: (t: EngagementTask) => void;
   onDelete: (id: string) => Promise<void>;
   onOpenCustomerWorkspace?: (customerId: string, opportunityId?: string | null) => void;
@@ -489,6 +498,27 @@ function SortableTaskCard({
               <Building2 className="h-3.5 w-3.5" aria-hidden strokeWidth={1.75} />
               Unlinked
             </div>
+          ) : null}
+
+          {onQuickStatusChange && !dragDisabled ? (
+            <label
+              className="mt-2 flex items-center gap-2 text-[11px] font-semibold text-slate-600"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="shrink-0 text-slate-400 uppercase tracking-wide text-[10px]">Status</span>
+              <select
+                value={task.status}
+                onChange={(e) => void onQuickStatusChange(task.id, e.target.value as TaskKanbanStatus)}
+                className="flex-1 min-w-0 rounded-lg border border-black/[0.08] bg-white px-2 py-1 text-[11px] font-semibold text-gray-900"
+                aria-label="Quick update task status"
+              >
+                <option value="todo">Not started</option>
+                <option value="in_progress">In progress</option>
+                <option value="done">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </label>
           ) : null}
 
           <p className="text-[10px] font-medium text-slate-400 mt-2">Updated {safeFormatDate(task.updatedAt)}</p>
