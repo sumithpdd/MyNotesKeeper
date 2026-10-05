@@ -80,7 +80,7 @@ Firebase provides authentication and cloud database storage.
 1. Still in Authentication → Sign-in method
 2. Scroll to **"Authorized domains"**
 3. Add **`localhost`** (should already be there)
-4. For production, add your deployment domain later
+4. For production, add your Vercel hostname (e.g. `my-customer-engagement-hub.vercel.app`) — see [DEPLOY_VERCEL.md](DEPLOY_VERCEL.md)
 
 ### Step 5: Get Firebase Config
 
@@ -207,6 +207,12 @@ Use **one** of:
 - No quotes around values
 - No spaces around `=`
 
+### Vercel Production
+
+Hosted demo: **[https://my-customer-engagement-hub.vercel.app/](https://my-customer-engagement-hub.vercel.app/)**
+
+Copy the same variable **names** into **Vercel → Project → Settings → Environment Variables → Production**. On Vercel use **`FIREBASE_SERVICE_ACCOUNT_JSON`** (one-line JSON), not `FIREBASE_SERVICE_ACCOUNT_PATH`. Full checklist and smoke tests: **[DEPLOY_VERCEL.md](DEPLOY_VERCEL.md)**.
+
 ---
 
 ## Database Initialization
@@ -308,13 +314,13 @@ Navigate to **http://localhost:3000**
 
 #### "Firebase: Error (auth/unauthorized-domain)"
 
-**Cause:** `localhost` not in authorized domains
+**Cause:** Current hostname not in Firebase authorized domains
 
 **Fix:**
-1. Firebase Console → Authentication → Settings
-2. Scroll to "Authorized domains"
-3. Add `localhost`
-4. Try signing in again
+1. Firebase Console → Authentication → Settings → **Authorized domains**
+2. Add `localhost` for local dev
+3. Add your production host exactly (e.g. `my-customer-engagement-hub.vercel.app`) — no `https://`
+4. Try signing in again on that host
 
 ### AI Errors
 

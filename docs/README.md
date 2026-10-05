@@ -25,6 +25,7 @@ Welcome! This guide helps you get started and find what you need quickly.
 | **[NORMALIZATION_COMPLETE.md](NORMALIZATION_COMPLETE.md)** | Normalization report | Technical |
 | **[SECURITY.md](SECURITY.md)** | Security guidelines (env, APIs, Firebase) | Everyone |
 | **[DEPLOY_FIRESTORE_RULES.md](DEPLOY_FIRESTORE_RULES.md)** | Fix Firestore permissions | Developers |
+| **[DEPLOY_VERCEL.md](DEPLOY_VERCEL.md)** | Vercel Production URL, env vars, domains | Everyone |
 
 ---
 

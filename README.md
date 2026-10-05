@@ -12,6 +12,8 @@ npm run dev
 
 Open **http://localhost:3000** — the hub opens on **Tasks & Kanban** by default.
 
+**Production demo:** [https://my-customer-engagement-hub.vercel.app/](https://my-customer-engagement-hub.vercel.app/) — env vars and Firebase domains: [docs/DEPLOY_VERCEL.md](docs/DEPLOY_VERCEL.md).
+
 ## Documentation
 
 **All documentation is in the [`docs/`](docs/) folder.**
@@ -26,6 +28,7 @@ Open **http://localhost:3000** — the hub opens on **Tasks & Kanban** by defaul
 | [docs/OPPORTUNITY_STAGES.md](docs/OPPORTUNITY_STAGES.md) | Nine opportunity stages & time-in-stage |
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | Version history |
 | [docs/DEPLOY_FIRESTORE_RULES.md](docs/DEPLOY_FIRESTORE_RULES.md) | Fix Firestore permissions |
+| [docs/DEPLOY_VERCEL.md](docs/DEPLOY_VERCEL.md) | Vercel Production deploy & environment variables |
 | [docs/API_GUIDE.md](docs/API_GUIDE.md) | REST APIs, **`GET /api/workspace`**, Firebase Admin Bearer auth |
 | [docs/SECURITY.md](docs/SECURITY.md) | Security practices (clients, APIs, Firebase) |
 
