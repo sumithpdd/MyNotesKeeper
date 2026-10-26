@@ -146,9 +146,14 @@ function taskOwned(t: EngagementTask, uid: string, email: string | null): boolea
  *
  * Related rows (notes, opps scoped by customer IDs, referenced contacts, etc.) follow whichever customers load.
  */
-export async function loadWorkspaceSnapshot(params: { uid: string; email: string | null }) {
+export async function loadWorkspaceSnapshot(params: {
+  uid: string;
+  email: string | null;
+  /** Deep-link account id — always include this customer if the doc exists. */
+  includeCustomerId?: string | null;
+}) {
   const db = requireAdminFirestore();
-  const { uid, email } = params;
+  const { uid, email, includeCustomerId } = params;
 
   await seedTaskCategoriesIfEmpty(db);
   await ensureAccountPlanningCategories(db);
@@ -202,6 +207,12 @@ export async function loadWorkspaceSnapshot(params: { uid: string; email: string
   } else {
     const all = await db.collection('customers').get();
     customerDocMap = mergeCustDocs([all]);
+  }
+
+  const deepLinkId = includeCustomerId?.trim();
+  if (deepLinkId && !customerDocMap.has(deepLinkId)) {
+    const extra = await db.collection('customers').doc(deepLinkId).get();
+    if (extra.exists) customerDocMap.set(extra.id, extra);
   }
 
   const customersBare = [...customerDocMap.values()].map((d) => {

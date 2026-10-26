@@ -9,7 +9,12 @@ export async function GET(request: NextRequest) {
   const auth = await authorizeApiRequest(request);
   if (auth instanceof NextResponse) return auth;
   try {
-    const snapshot = await loadWorkspaceSnapshot({ uid: auth.uid, email: auth.email });
+    const includeCustomerId = request.nextUrl.searchParams.get('customer')?.trim() || null;
+    const snapshot = await loadWorkspaceSnapshot({
+      uid: auth.uid,
+      email: auth.email,
+      includeCustomerId,
+    });
     return NextResponse.json({ success: true, data: snapshot });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Failed to load workspace';

@@ -65,8 +65,18 @@ export function useFirebaseData(opts: {
       const token = await getFirebaseIdToken();
       if (!token) throw new Error('Missing auth token');
 
+      const includeCustomer =
+        typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search).get('customer')?.trim()
+          : '';
+      const workspacePath = (
+        includeCustomer
+          ? `/api/workspace?customer=${encodeURIComponent(includeCustomer)}`
+          : '/api/workspace'
+      ) as `/api/${string}`;
+
       const envelope = await hubAuthJson<{ success: boolean; data: Record<string, unknown> }>(
-        '/api/workspace',
+        workspacePath,
         token,
         { method: 'GET' },
       );

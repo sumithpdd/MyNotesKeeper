@@ -951,6 +951,7 @@ export function registerHubTools(server: McpServer): void {
         if (existing) {
           await updateOpportunityAdmin({
             id: existing.id,
+            opportunityName,
             ...(currentStage ? { currentStage } : {}),
             ...(crmOpportunityUrl ? { crmOpportunityUrl } : {}),
           });
