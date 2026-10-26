@@ -54,6 +54,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.2.2",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "ai": "^7.0.94",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",

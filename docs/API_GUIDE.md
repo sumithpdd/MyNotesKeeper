@@ -22,6 +22,8 @@ Obtain the token from the Firebase client after sign-in (e.g. `await auth.curren
 - **`/api/tasks`**, **`POST /api/task-categories`**, **`PATCH /api/customer-profiles`**
 - **`/api/martech`** — Martech catalogue CRUD
 - **`POST /api/ai-chat`**, **`POST /api/ai/customer-summary`**, **`POST /api/ai/refine-text`**, **`POST /api/tasks/ai-draft`**
+- **`GET|POST|DELETE /api/mcp`** — Hosted MCP for external LLMs (`Bearer hubmcp_…` or Firebase ID token). See [MCP.md](MCP.md).
+- **`GET|POST /api/mcp/tokens`**, **`DELETE /api/mcp/tokens/[id]`** — Mint/revoke MCP tokens (Firebase Bearer only).
 
 **`userId` in JSON body:** For mutations that accept it (**customers**, **notes**, **customer-profiles**, etc.), the body **`userId` must equal the token’s Firebase `uid`**, otherwise **403**.
 

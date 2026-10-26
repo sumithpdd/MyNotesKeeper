@@ -58,6 +58,17 @@ If this variable is **not** set, protected hub routes respond with **503** — *
 
 See [API_GUIDE.md](API_GUIDE.md) for which endpoints participate and fetch examples.
 
+## MCP (`/api/mcp`)
+
+External LLM clients (Claude, ChatGPT, Cursor, Copilot) connect via **hosted MCP** with **`Authorization: Bearer hubmcp_…`** tokens minted on **`/mcp`**.
+
+- Token secrets are **hashed** in Firestore `mcpAccessTokens`; collection is **denied** in client rules — Admin SDK only.
+- Scopes **`read`** / **`write`** limit tool mutations; prefer read-only tokens when testing.
+- **Never** embed `GEMINI_API_KEY` or service account JSON in MCP client configs; summarization tools call Gemini on the server.
+- Revoke compromised tokens on `/mcp` immediately.
+
+Details: [MCP.md](MCP.md).
+
 ## Best practices checklist
 
 1. Copy env template → `.env.local` and fill only local values (`SETUP.md`).

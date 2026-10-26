@@ -11,6 +11,7 @@ Welcome! This guide helps you get started and find what you need quickly.
 | **[USER_GUIDE.md](USER_GUIDE.md)** | How to use the app | Users/SEs |
 | **[OPPORTUNITY_STAGES.md](OPPORTUNITY_STAGES.md)** | **Deal stages**, CRM wording, **time in stage** | Everyone |
 | **[AI_CHAT_PANEL_GUIDE.md](AI_CHAT_PANEL_GUIDE.md)** | AI Assistant & Prompt Library | Everyone |
+| **[MCP.md](MCP.md)** | Connect Claude / ChatGPT / Cursor via MCP | Everyone |
 | **[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)** | Development guide | Developers |
 | **[COMPONENT_DESIGN.md](COMPONENT_DESIGN.md)** | Component patterns & reusability | Developers |
 | **[JUNIOR_DEVELOPER_GUIDE.md](JUNIOR_DEVELOPER_GUIDE.md)** | Learn React/Next.js/TypeScript | Junior devs |
