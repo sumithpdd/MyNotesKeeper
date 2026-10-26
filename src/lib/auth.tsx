@@ -111,32 +111,38 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      firebaseUserRef.current = firebaseUser;
+    let unsubscribe: (() => void) | undefined;
+    try {
+      unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        firebaseUserRef.current = firebaseUser;
 
-      if (firebaseUser) {
-        try {
-          const userData = await syncUserBootstrap(firebaseUser);
-          setUser(userData);
-        } catch {
-          console.warn('[auth] Using client-only profile fallback (bootstrap/API unavailable)');
-          setUser({
-            id: firebaseUser.uid,
-            email: firebaseUser.email!,
-            name: firebaseUser.displayName || 'Unknown User',
-            initials: generateInitials(firebaseUser.displayName || 'Unknown User'),
-            photoURL: firebaseUser.photoURL || undefined,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
+        if (firebaseUser) {
+          try {
+            const userData = await syncUserBootstrap(firebaseUser);
+            setUser(userData);
+          } catch {
+            console.warn('[auth] Using client-only profile fallback (bootstrap/API unavailable)');
+            setUser({
+              id: firebaseUser.uid,
+              email: firebaseUser.email!,
+              name: firebaseUser.displayName || 'Unknown User',
+              initials: generateInitials(firebaseUser.displayName || 'Unknown User'),
+              photoURL: firebaseUser.photoURL || undefined,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            });
+          }
+        } else {
+          setUser(null);
         }
-      } else {
-        setUser(null);
-      }
+        setLoading(false);
+      });
+    } catch (e) {
+      console.error('[auth] Firebase Auth failed to initialize:', e);
       setLoading(false);
-    });
+    }
 
-    return unsubscribe;
+    return () => unsubscribe?.();
   }, []);
 
   const value: AuthContextType = {

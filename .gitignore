@@ -162,3 +162,4 @@ data/realCustomerData.ts
 # customer-specific URLs. Never commit these — copy/edit locally per run.
 scripts/*.local.*
 scripts/*.local
+.env*

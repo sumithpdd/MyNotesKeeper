@@ -104,6 +104,8 @@ Update **GitHub → Repository → Website** to [https://customerengagementhub.v
 | **No Production Deployment** | Connect Git (above); push `main` or import deploy |
 | **`NOT_FOUND`** on URL | Domain on wrong project or no deploy — use **Visit** from a **Ready** deployment on [my-notes-keeper](https://vercel.com/novo-wallet/my-notes-keeper) |
 | **`auth/unauthorized-domain`** | Add `customerengagementhub.vercel.app` in Firebase authorized domains |
+| **Google sign-in fails / blank after login** | 1) Firebase **Authorized domains** (above). 2) Optional: API key **Application restrictions** — **None** is fine if you rely on Firebase Auth + rules. 3) Set **`FIREBASE_SERVICE_ACCOUNT_JSON`** on Vercel → **Redeploy** (check `GET /api/hub-status` → `adminConfigured: true`). |
+| **`GET /api/workspace` → 503** | Missing **`FIREBASE_SERVICE_ACCOUNT_JSON`** on this Vercel project — run `node scripts/publishVercelEnv.local.js` then `npx vercel --prod` |
 | Blank data after login | Fix `FIREBASE_SERVICE_ACCOUNT_JSON`; redeploy |
 | **`husky` / not a git repository** | Repo skips husky on Vercel; optional `HUSKY=0` |
 | Node version message | Use **`24.x`** in `engines` (already in repo) |
