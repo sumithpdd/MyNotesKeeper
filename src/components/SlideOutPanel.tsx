@@ -242,6 +242,9 @@ export function SlideOutPanel({ note, customer, customerProfile, onClose }: Slid
                     <div>
                       <p className="text-sm font-medium text-gray-700 mb-1">SE Involvement</p>
                       <p className="text-sm text-gray-900">{seInvolvementLabel(customerProfile?.seInvolvement ?? '')}</p>
+                      {customerProfile?.seInvolvementDetail ? (
+                        <p className="text-xs text-gray-600 mt-1 whitespace-pre-wrap">{customerProfile.seInvolvementDetail}</p>
+                      ) : null}
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-700 mb-1">SE Notes Last Updated</p>
@@ -281,20 +284,27 @@ export function SlideOutPanel({ note, customer, customerProfile, onClose }: Slid
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-700 mb-1">SE Confidence</p>
-                      {note?.seConfidence && (
+                      {(customerProfile?.seConfidence || note?.seConfidence) && (
                         <span
                           className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            note.seConfidence === 'Green' ? 'bg-green-100 text-green-800' :
-                            note.seConfidence === 'Yellow' ? 'bg-yellow-100 text-yellow-800' :
-                            note.seConfidence === 'Red' ? 'bg-red-100 text-red-800' :
+                            (customerProfile?.seConfidence || note?.seConfidence) === 'Green' ? 'bg-green-100 text-green-800' :
+                            (customerProfile?.seConfidence || note?.seConfidence) === 'Yellow' ? 'bg-yellow-100 text-yellow-800' :
+                            (customerProfile?.seConfidence || note?.seConfidence) === 'Red' ? 'bg-red-100 text-red-800' :
                             'bg-gray-100 text-gray-800'
                           }`}
                         >
-                          {note.seConfidence}
+                          {customerProfile?.seConfidence || note?.seConfidence}
                         </span>
                       )}
                     </div>
                   </div>
+
+                  {customerProfile?.seValidatedQualification != null && (
+                    <p className="text-sm text-gray-800">
+                      <span className="font-medium text-gray-700">SE validated qualification: </span>
+                      {customerProfile.seValidatedQualification ? 'Yes' : 'No — confirm after workshop'}
+                    </p>
+                  )}
 
                   {customerProfile?.seProductNotGreenReason && (
                     <CopyableField
@@ -311,6 +321,37 @@ export function SlideOutPanel({ note, customer, customerProfile, onClose }: Slid
                   )}
                 </div>
               </div>
+
+              {(customerProfile?.servicesInvolvement ||
+                customerProfile?.servicesNotes ||
+                customerProfile?.servicesFitAssessment) && (
+                <div className="border border-gray-200 rounded-lg">
+                  <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                    <h3 className="text-lg font-medium text-gray-900">Services</h3>
+                  </div>
+                  <div className="p-4 space-y-3">
+                    {customerProfile?.servicesInvolvement && (
+                      <CopyableField label="Services involvement" value={customerProfile.servicesInvolvement} />
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {customerProfile?.servicesFitAssessment && (
+                        <CopyableField label="Services fit" value={customerProfile.servicesFitAssessment} />
+                      )}
+                      {customerProfile?.servicesConfidence && (
+                        <CopyableField label="Services confidence" value={customerProfile.servicesConfidence} />
+                      )}
+                    </div>
+                    {customerProfile?.servicesNotesLastUpdated && (
+                      <p className="text-xs text-gray-500">
+                        Last updated {formatDateTime(customerProfile.servicesNotesLastUpdated)}
+                      </p>
+                    )}
+                    {customerProfile?.servicesNotes && (
+                      <CopyableField label="Services notes" value={customerProfile.servicesNotes} />
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Success Planning Section */}
               <div className="border border-gray-200 rounded-lg">

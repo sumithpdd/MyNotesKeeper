@@ -9,3 +9,5 @@ export * from './seAssessment';
 export * from './dealQualification';
 export * from './conversationAnalytics';
 export * from './completeness';
+export * from './meetingPrepFramework';
+export * from './customerRelations';

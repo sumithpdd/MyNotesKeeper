@@ -8,6 +8,7 @@ import { getAccountExecutiveColor } from '@/lib/accountExecutiveColors';
 import { getMartechToolColor } from '@/lib/martechToolColors';
 import { formatProductDisplayName } from '@/lib/productDisplay';
 import { customerWebsiteList } from '@/lib/customerWebsites';
+import { partitionCustomerContactsForAccount } from '@/domain/engagement-hub/customerRelations';
 
 interface CustomerGridCardProps {
   customer: Customer;
@@ -22,6 +23,7 @@ function formatContactNameRole(contact: { name: string; role?: string } | undefi
 }
 
 export function CustomerGridCard({ customer, isSelected, onClick, onEdit }: CustomerGridCardProps) {
+  const { accountContacts } = partitionCustomerContactsForAccount(customer);
   const products = customer.products || [];
   const primaryAe = (customer.accountExecutives?.[0] || customer.internalContacts?.[0] || customer.accountExecutive);
   const aeColor = getAccountExecutiveColor(primaryAe?.name);
@@ -127,7 +129,7 @@ export function CustomerGridCard({ customer, isSelected, onClick, onEdit }: Cust
         {/* Footer */}
         <div className="flex items-center justify-between pt-3 border-t border-gray-100 gap-2 min-w-0">
           <div className="flex items-center gap-3 text-xs text-gray-500">
-            <span>{customer.customerContacts?.length ?? 0} contacts</span>
+            <span>{accountContacts.length} contacts</span>
             <span>{customer.partners?.length ?? 0} partners</span>
           </div>
           <div className="flex items-center gap-2 shrink-0">

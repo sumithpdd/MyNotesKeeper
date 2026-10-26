@@ -10,6 +10,7 @@ import { getAccountExecutiveColor } from '@/lib/accountExecutiveColors';
 import { getMartechToolColor } from '@/lib/martechToolColors';
 import { formatProductDisplayName } from '@/lib/productDisplay';
 import { customerWebsiteList } from '@/lib/customerWebsites';
+import { partitionCustomerContactsForAccount } from '@/domain/engagement-hub/customerRelations';
 
 interface CustomerTableViewProps {
   customers: Customer[];
@@ -198,7 +199,7 @@ export function CustomerTableView({
                     {(customer.partners?.length ?? 0) > 0 ? (customer.partners?.length ?? 0) : '—'}
                   </td>
                   <td className="px-3 py-3 text-sm font-medium text-gray-800">
-                    {customer.customerContacts?.length ?? 0}
+                    {partitionCustomerContactsForAccount(customer).accountContacts.length}
                   </td>
                   <td className="px-3 py-3">
                     {hasProducts ? (

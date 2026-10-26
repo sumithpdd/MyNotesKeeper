@@ -26,6 +26,10 @@ import { hubAuthJson } from '@/lib/client/hubAuthFetch';
 import { formatProductDisplayName } from '@/lib/productDisplay';
 import { FieldHint } from '@/components/ui/FieldHint';
 import { normalizeIncomingTaskLinks } from '@/lib/taskLinks';
+import {
+  buildMeetingPrepChecklist,
+  MEETING_PREPARATION_CATEGORY,
+} from '@/domain/engagement-hub/meetingPrepFramework';
 
 const checklistRow = z.object({
   id: z.string(),
@@ -209,7 +213,21 @@ export function TaskFormDrawer({
   const ccSelected = form.watch('customerContactIds') ?? [];
   const icSelected = form.watch('internalContactIds') ?? [];
   const categoryIdsSelected = form.watch('categoryIds') ?? [];
+  const isMeetingPrepCategory = categoryIdsSelected.some(
+    (id) => categories.find((c) => c.id === id)?.name === MEETING_PREPARATION_CATEGORY,
+  );
   const oppsFiltered = custId ? opportunities.filter((o) => o.customerId === custId) : opportunities;
+
+  const applyComAaaChecklist = () => {
+    const prep = buildMeetingPrepChecklist();
+    const existing = form.getValues('checklist') ?? [];
+    const labels = new Set(existing.map((e) => e.label.trim()));
+    const merged = [...existing];
+    for (const row of prep) {
+      if (!labels.has(row.label)) merged.push(row);
+    }
+    form.setValue('checklist', merged, { shouldDirty: true });
+  };
 
   const effectiveAccountId = useMemo(() => {
     const c = String(custId ?? '').trim();
@@ -445,16 +463,28 @@ export function TaskFormDrawer({
           <p className="text-xs text-gray-500 -mt-1">For a single day, pick the same date in both fields, or leave one empty.</p>
 
           <div>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
               <label className="text-sm font-medium text-gray-700">Checklist</label>
-              <button
-                type="button"
-                onClick={() => checklistFA.append({ id: newId('c'), label: '', done: false })}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-violet-700 hover:text-violet-900"
-              >
-                <Plus className="h-4 w-4" />
-                Row
-              </button>
+              <div className="flex items-center gap-2">
+                {isMeetingPrepCategory ? (
+                  <button
+                    type="button"
+                    onClick={applyComAaaChecklist}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-sky-800 hover:text-sky-950"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    COM + AAA
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => checklistFA.append({ id: newId('c'), label: '', done: false })}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-violet-700 hover:text-violet-900"
+                >
+                  <Plus className="h-4 w-4" />
+                  Row
+                </button>
+              </div>
             </div>
             <div className="space-y-2 rounded-lg border border-gray-200 p-3 bg-gray-50/70 max-h-64 overflow-y-auto">
               {checklistFA.fields.length === 0 ? (

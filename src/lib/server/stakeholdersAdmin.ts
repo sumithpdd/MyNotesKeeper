@@ -1,4 +1,5 @@
 import 'server-only';
+import { FieldValue } from 'firebase-admin/firestore';
 import { requireAdminFirestore } from '@/lib/server/adminFirestore';
 import { tsFrom, stripUndefined } from '@/lib/server/adminConvert';
 import { updateCustomerAdmin } from '@/lib/server/customersAdmin';
@@ -40,7 +41,7 @@ async function findByEmailOrName<T extends { name?: string; email?: string }>(
 }
 
 export async function upsertInternalContactAdmin(
-  input: Omit<InternalContact, 'id'>,
+  input: Omit<InternalContact, 'id'> & { clearEmail?: boolean },
 ): Promise<string> {
   const db = requireAdminFirestore();
   const existing = await findByEmailOrName<InternalContact>(
@@ -48,12 +49,14 @@ export async function upsertInternalContactAdmin(
     input.name,
     input.email,
   );
-  const payload = stripUndefined({
+  const emailTrim = input.email?.trim();
+  const payload: Record<string, unknown> = stripUndefined({
     name: input.name.trim(),
     role: input.role?.trim() || undefined,
-    email: input.email?.trim() || undefined,
+    ...(input.clearEmail ? {} : emailTrim ? { email: emailTrim } : {}),
     updatedAt: tsFrom(new Date()),
   });
+  if (input.clearEmail) payload.email = FieldValue.delete();
   if (existing) {
     await db.collection(INTERNAL_CONTACTS).doc(existing.id).update(payload);
     return existing.id;

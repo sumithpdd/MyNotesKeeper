@@ -153,10 +153,18 @@ export interface CustomerProfile {
   // Solution Engineering (static)
   seNotes: string;
   seInvolvement: SEInvolvement;
+  seInvolvementDetail?: string;
   seNotesLastUpdated: Date;
   seProductFitAssessment: SERagAssessment;
   seProductNotGreenReason: string;
+  seConfidence?: SERagAssessment;
   seConfidenceNotGreenReason: string;
+  seValidatedQualification?: boolean;
+  servicesInvolvement?: string;
+  servicesFitAssessment?: SERagAssessment;
+  servicesConfidence?: SERagAssessment;
+  servicesNotesLastUpdated?: Date;
+  servicesNotes?: string;
   // Success Planning (static)
   customerObjective1: string;
   customerObjective2: string;
@@ -190,10 +198,18 @@ export interface CreateCustomerProfileData {
   // Solution Engineering (static)
   seNotes: string;
   seInvolvement: SEInvolvement;
+  seInvolvementDetail?: string;
   seNotesLastUpdated: Date;
   seProductFitAssessment: SERagAssessment;
   seProductNotGreenReason: string;
+  seConfidence?: SERagAssessment;
   seConfidenceNotGreenReason: string;
+  seValidatedQualification?: boolean;
+  servicesInvolvement?: string;
+  servicesFitAssessment?: SERagAssessment;
+  servicesConfidence?: SERagAssessment;
+  servicesNotesLastUpdated?: Date;
+  servicesNotes?: string;
   // Success Planning (static)
   customerObjective1: string;
   customerObjective2: string;

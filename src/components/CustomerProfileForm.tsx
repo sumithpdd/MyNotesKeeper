@@ -31,10 +31,18 @@ const customerProfileSchema = z.object({
   // Solution Engineering
   seNotes: z.string(),
   seInvolvement: z.enum(['Yes', 'No', 'Not Needed', '']),
+  seInvolvementDetail: z.string().optional(),
   seNotesLastUpdated: z.date(),
   seProductFitAssessment: z.enum(['Green', 'Yellow', 'Red', 'Not Applicable', '']),
   seProductNotGreenReason: z.string(),
+  seConfidence: z.enum(['Green', 'Yellow', 'Red', 'Not Applicable', '']).optional(),
   seConfidenceNotGreenReason: z.string(),
+  seValidatedQualification: z.boolean().optional(),
+  servicesInvolvement: z.string().optional(),
+  servicesFitAssessment: z.enum(['Green', 'Yellow', 'Red', 'Not Applicable', '']).optional(),
+  servicesConfidence: z.enum(['Green', 'Yellow', 'Red', 'Not Applicable', '']).optional(),
+  servicesNotesLastUpdated: z.date().optional(),
+  servicesNotes: z.string().optional(),
   // Success Planning
   customerObjective1: z.string(),
   customerObjective2: z.string(),
@@ -88,10 +96,18 @@ export function CustomerProfileForm({
       mitigationPlan: customerProfile.mitigationPlan,
       seNotes: customerProfile.seNotes,
       seInvolvement: customerProfile.seInvolvement,
+      seInvolvementDetail: customerProfile.seInvolvementDetail || '',
       seNotesLastUpdated: customerProfile.seNotesLastUpdated,
       seProductFitAssessment: customerProfile.seProductFitAssessment,
       seProductNotGreenReason: customerProfile.seProductNotGreenReason || '',
+      seConfidence: customerProfile.seConfidence || '',
       seConfidenceNotGreenReason: customerProfile.seConfidenceNotGreenReason || '',
+      seValidatedQualification: customerProfile.seValidatedQualification ?? false,
+      servicesInvolvement: customerProfile.servicesInvolvement || '',
+      servicesFitAssessment: customerProfile.servicesFitAssessment || '',
+      servicesConfidence: customerProfile.servicesConfidence || '',
+      servicesNotesLastUpdated: customerProfile.servicesNotesLastUpdated ?? new Date(),
+      servicesNotes: customerProfile.servicesNotes || '',
       customerObjective1: customerProfile.customerObjective1,
       customerObjective2: customerProfile.customerObjective2,
       customerObjective3: customerProfile.customerObjective3,
@@ -117,10 +133,18 @@ export function CustomerProfileForm({
       mitigationPlan: '',
       seNotes: '',
       seInvolvement: '',
+      seInvolvementDetail: '',
       seNotesLastUpdated: new Date(),
       seProductFitAssessment: '',
       seProductNotGreenReason: '',
+      seConfidence: '',
       seConfidenceNotGreenReason: '',
+      seValidatedQualification: false,
+      servicesInvolvement: '',
+      servicesFitAssessment: '',
+      servicesConfidence: '',
+      servicesNotesLastUpdated: new Date(),
+      servicesNotes: '',
       customerObjective1: '',
       customerObjective2: '',
       customerObjective3: '',
@@ -421,6 +445,18 @@ Activity Details:
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                  SE involvement detail
+                </label>
+                <textarea
+                  {...register('seInvolvementDetail')}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                  placeholder="e.g. Active: discovery, demo and workshop (27 Oct 2026)…"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   SE Notes Last Updated
                 </label>
                 <input
@@ -464,6 +500,22 @@ Activity Details:
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                  SE Confidence
+                </label>
+                <select
+                  {...register('seConfidence')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                >
+                  <option value="">Select assessment...</option>
+                  <option value="Green">Green</option>
+                  <option value="Yellow">Yellow</option>
+                  <option value="Red">Red</option>
+                  <option value="Not Applicable">Not Applicable</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Reason for SE Confidence not Green <span className="text-gray-500">(if applicable)</span>
                 </label>
                 <textarea
@@ -473,6 +525,11 @@ Activity Details:
                   placeholder="Explain if SE Confidence is not Green..."
                 />
               </div>
+
+              <label className="flex items-center gap-2 text-sm text-gray-800">
+                <input type="checkbox" {...register('seValidatedQualification')} className="rounded border-gray-300" />
+                SE validated qualification (tick after workshop confirms budget owner and timeline)
+              </label>
 
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -516,6 +573,66 @@ Activity Details:
                   />
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Services */}
+          <div className="bg-white p-6 rounded-lg border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Services</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Services involvement</label>
+                <textarea
+                  {...register('servicesInvolvement')}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                  placeholder="Partner-led delivery, PS scope, etc."
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Services fit assessment</label>
+                  <select
+                    {...register('servicesFitAssessment')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                  >
+                    <option value="">Select...</option>
+                    <option value="Green">Green</option>
+                    <option value="Yellow">Yellow</option>
+                    <option value="Red">Red</option>
+                    <option value="Not Applicable">Not Applicable</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Services confidence</label>
+                  <select
+                    {...register('servicesConfidence')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                  >
+                    <option value="">Select...</option>
+                    <option value="Green">Green</option>
+                    <option value="Yellow">Yellow</option>
+                    <option value="Red">Red</option>
+                    <option value="Not Applicable">Not Applicable</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Services notes last updated</label>
+                <input
+                  {...register('servicesNotesLastUpdated', { valueAsDate: true })}
+                  type="date"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Services notes</label>
+                <textarea
+                  {...register('servicesNotes')}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                />
+              </div>
             </div>
           </div>
 

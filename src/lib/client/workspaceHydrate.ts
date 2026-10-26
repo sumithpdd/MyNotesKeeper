@@ -100,6 +100,10 @@ export function hydrateWorkspacePayload(json: Record<string, unknown>): {
     ...p,
     latestDemoDate: coerceDate((p as { latestDemoDate?: unknown }).latestDemoDate),
     seNotesLastUpdated: coerceDate((p as { seNotesLastUpdated?: unknown }).seNotesLastUpdated),
+    servicesNotesLastUpdated:
+      (p as { servicesNotesLastUpdated?: unknown }).servicesNotesLastUpdated != null
+        ? coerceDate((p as { servicesNotesLastUpdated?: unknown }).servicesNotesLastUpdated)
+        : undefined,
     createdAt: coerceDate((p as { createdAt?: unknown }).createdAt),
     updatedAt: coerceDate((p as { updatedAt?: unknown }).updatedAt),
   }));

@@ -10,6 +10,7 @@ import { MEETING_NOTE_OTHER_FIELDS } from '@/domain/engagement-hub/meetingNoteFi
 import { parseNoteNextSteps } from '@/domain/engagement-hub/noteNextSteps';
 import type { AccountPlanningPillarId } from '@/domain/engagement-hub/accountPlanningPillars';
 import { AccountPlanningSection } from './planning/AccountPlanningSection';
+import { MeetingPrepPanel } from './planning/MeetingPrepPanel';
 import { CustomerEditSlideOut } from './CustomerEditSlideOut';
 import { NoteForm } from './NoteForm';
 import { CustomerProfileForm } from './CustomerProfileForm';
@@ -30,6 +31,10 @@ import { getLastAccountTaskAction, getTasksForCustomer } from '@/lib/taskAccount
 import { formatTaskPlanningWindow } from '@/lib/taskPlanningRange';
 import { seRagTone, seRagBadgeClasses, seRagLabel } from '@/domain/engagement-hub/seAssessment';
 import { scoreEntity, CUSTOMER_FIELDS } from '@/domain/engagement-hub/completeness';
+import {
+  normalizeOrgKey,
+  partitionCustomerContactsForAccount,
+} from '@/domain/engagement-hub/customerRelations';
 import { CompletenessPanel } from './completeness/CompletenessPanel';
 
 interface CustomerManagementProps {
@@ -439,17 +444,17 @@ export function CustomerManagement({
                 
                 {/* Sitecore Contacts (Name - Role) with color coding */}
                 {(() => {
-                  const contacts = selectedCustomerData?.accountExecutives?.length
-                    ? selectedCustomerData.accountExecutives
-                    : selectedCustomerData?.internalContacts?.length
-                      ? selectedCustomerData.internalContacts
+                  const contacts = selectedCustomerData?.internalContacts?.length
+                    ? selectedCustomerData.internalContacts
+                    : selectedCustomerData?.accountExecutives?.length
+                      ? selectedCustomerData.accountExecutives
                       : selectedCustomerData?.accountExecutive
                         ? [selectedCustomerData.accountExecutive]
                         : [];
                   if (contacts.length === 0) return null;
                   return (
                     <div>
-                      <h3 className="text-sm font-bold text-gray-800 mb-2">Sitecore Contacts</h3>
+                      <h3 className="text-sm font-bold text-gray-800 mb-2">Sitecore team</h3>
                       <div className="flex flex-wrap gap-2">
                         {contacts.map((c) => {
                           const label = c.role ? `${c.name} - ${c.role}` : c.name;
@@ -540,60 +545,92 @@ export function CustomerManagement({
                   )}
                 </div>
 
-                {/* Customer Contacts */}
-                <div>
-                  <h3 className="text-sm font-bold text-gray-800 mb-3">
-                    Customer Contacts ({(selectedCustomerData?.customerContacts ?? []).length})
-                  </h3>
-                  {(selectedCustomerData?.customerContacts ?? []).length ? (
-                    <div className="space-y-2">
-                      {(selectedCustomerData?.customerContacts ?? []).map((contact) => (
-                        <div key={contact.id} className="bg-gray-50 rounded-lg p-3">
-                          <div className="font-medium text-gray-900">{contact.name}</div>
-                          {contact.companyName && (
-                            <div className="text-sm text-gray-600 mt-1">{contact.companyName}</div>
-                          )}
-                          {contact.role && (
-                            <div className="text-sm text-gray-600 mt-1">{contact.role}</div>
-                          )}
-                          {contact.email && (
-                            <div className="text-sm text-gray-600 mt-1">{contact.email}</div>
-                          )}
-                          {contact.phone && (
-                            <div className="text-sm text-gray-600 mt-1">{contact.phone}</div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-500">No customer contacts</p>
-                  )}
-                </div>
+                {(() => {
+                  if (!selectedCustomerData) return null;
+                  const { accountContacts, partnerContacts } = partitionCustomerContactsForAccount(
+                    selectedCustomerData,
+                  );
+                  const primaryId = selectedCustomerData.primaryCustomerContactId;
 
-
-                {/* Partners */}
-                <div>
-                  <h3 className="text-sm font-bold text-gray-800 mb-3">
-                    Partners ({(selectedCustomerData?.partners ?? []).length})
-                  </h3>
-                  {(selectedCustomerData?.partners ?? []).length ? (
-                    <div className="space-y-2">
-                      {(selectedCustomerData?.partners ?? []).map((partner) => (
-                        <div key={partner.id} className="bg-gray-50 rounded-lg p-3">
-                          <div className="font-medium text-gray-900">{partner.name}</div>
-                          {partner.type && (
-                            <div className="text-sm text-gray-600 mt-1">{partner.type}</div>
-                          )}
-                          {partner.website && (
-                            <div className="text-sm text-gray-600 mt-1">{partner.website}</div>
-                          )}
-                        </div>
-                      ))}
+                  const contactCard = (contact: (typeof accountContacts)[0], primary?: boolean) => (
+                    <div key={contact.id} className="bg-gray-50 rounded-lg p-3">
+                      <div className="font-medium text-gray-900 flex items-center gap-2 flex-wrap">
+                        {contact.name}
+                        {primary ? (
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded">
+                            Primary
+                          </span>
+                        ) : null}
+                      </div>
+                      {contact.role && <div className="text-sm text-gray-600 mt-1">{contact.role}</div>}
+                      {contact.email && (
+                        <a href={`mailto:${contact.email}`} className="text-sm text-blue-600 hover:underline mt-1 block">
+                          {contact.email}
+                        </a>
+                      )}
+                      {contact.phone && <div className="text-sm text-gray-600 mt-1">{contact.phone}</div>}
                     </div>
-                  ) : (
-                    <p className="text-sm text-gray-500">No partners</p>
-                  )}
-                </div>
+                  );
+
+                  return (
+                    <>
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-800 mb-1">
+                          Customer contacts ({accountContacts.length})
+                        </h3>
+                        <p className="text-xs text-gray-500 mb-3">
+                          People at the account. Partner contacts are listed under Partners below.
+                        </p>
+                        {accountContacts.length ? (
+                          <div className="space-y-2">{accountContacts.map((c) => contactCard(c, c.id === primaryId))}</div>
+                        ) : (
+                          <p className="text-sm text-gray-500">No customer contacts</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-800 mb-3">
+                          Partners ({(selectedCustomerData.partners ?? []).length})
+                        </h3>
+                        {(selectedCustomerData.partners ?? []).length ? (
+                          <div className="space-y-3">
+                            {(selectedCustomerData.partners ?? []).map((partner) => {
+                              const partnerKey = normalizeOrgKey(partner.name);
+                              const people = partnerContacts.filter((c) => {
+                                const ck = normalizeOrgKey(c.companyName || '');
+                                return (
+                                  ck === partnerKey ||
+                                  ck.includes(partnerKey) ||
+                                  partnerKey.includes(ck)
+                                );
+                              });
+                              return (
+                                <div key={partner.id} className="rounded-lg border border-gray-100 bg-gray-50/80 p-3">
+                                  <div className="font-medium text-gray-900">{partner.name}</div>
+                                  {partner.type && (
+                                    <div className="text-sm text-gray-600 mt-1">{partner.type}</div>
+                                  )}
+                                  {partner.website && (
+                                    <div className="text-sm text-gray-600 mt-1">{partner.website}</div>
+                                  )}
+                                  {people.length ? (
+                                    <div className="mt-3 space-y-2 border-t border-gray-200 pt-3">
+                                      {people.map((c) => contactCard(c))}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : partnerContacts.length ? (
+                          <div className="space-y-2">{partnerContacts.map((c) => contactCard(c))}</div>
+                        ) : (
+                          <p className="text-sm text-gray-500">No partners</p>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
 
                 {/* Related engagement tasks */}
                 <div className="border-t border-gray-200 pt-4">
@@ -648,6 +685,15 @@ export function CustomerManagement({
                       )}
                     />
                   </div>
+                ) : null}
+
+                {selectedCustomerData ? (
+                  <MeetingPrepPanel
+                    customerId={selectedCustomerData.id}
+                    tasks={tasks}
+                    taskCategories={taskCategories}
+                    className="mb-6"
+                  />
                 ) : null}
 
                 {selectedCustomerData ? (

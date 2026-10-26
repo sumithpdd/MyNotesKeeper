@@ -272,6 +272,9 @@ export async function loadWorkspaceSnapshot(params: { uid: string; email: string
           ...data,
           latestDemoDate: toDate(data.latestDemoDate),
           seNotesLastUpdated: toDate(data.seNotesLastUpdated),
+          servicesNotesLastUpdated: data.servicesNotesLastUpdated
+            ? toDate(data.servicesNotesLastUpdated)
+            : undefined,
           createdAt: toDate(data.createdAt),
           updatedAt: toDate(data.updatedAt),
         } as CustomerProfile;
