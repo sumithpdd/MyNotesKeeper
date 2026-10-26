@@ -66,6 +66,9 @@ export interface Customer {
   salesforceLink: string;
   additionalLink?: string;
   additionalInfo?: string;
+  /** Company snapshot, market trends, and industry research (editable; AI can draft from hub context). */
+  aboutCompany?: string;
+  aboutCompanyLastUpdated?: Date;
   // Migration Opportunity Fields
   existingMigrationOpp?: string; // Flag: 'yes', 'no', 'YES', 'n', 'N' - determines if this is a migration opp
   perpetualOrSubscription?: 'Perpetual' | 'Subscription' | 'Churn';
@@ -111,6 +114,8 @@ export interface CreateCustomerData {
   salesforceLink: string;
   additionalLink?: string;
   additionalInfo?: string;
+  aboutCompany?: string;
+  aboutCompanyLastUpdated?: Date;
   // Migration Opportunity Fields
   existingMigrationOpp?: string;
   perpetualOrSubscription?: 'Perpetual' | 'Subscription' | 'Churn';

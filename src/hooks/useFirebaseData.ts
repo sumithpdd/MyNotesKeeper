@@ -88,6 +88,7 @@ export function useFirebaseData(opts: {
         salesforceLink: customer.salesforceLink || '',
         additionalLink: customer.additionalLink || '',
         additionalInfo: customer.additionalInfo || '',
+        aboutCompany: customer.aboutCompany || '',
         createdAt: customer.createdAt || new Date(),
         updatedAt: customer.updatedAt || new Date(),
       }));

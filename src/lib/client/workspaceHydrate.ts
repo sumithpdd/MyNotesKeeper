@@ -201,6 +201,10 @@ export function hydrateWorkspacePayload(json: Record<string, unknown>): {
     ...c,
     createdAt: coerceDate((c as { createdAt?: unknown }).createdAt),
     updatedAt: coerceDate((c as { updatedAt?: unknown }).updatedAt),
+    aboutCompanyLastUpdated:
+      (c as { aboutCompanyLastUpdated?: unknown }).aboutCompanyLastUpdated != null
+        ? coerceDate((c as { aboutCompanyLastUpdated?: unknown }).aboutCompanyLastUpdated)
+        : undefined,
     products: c.products ?? [],
     customerContacts: c.customerContacts ?? [],
     internalContacts: c.internalContacts ?? [],

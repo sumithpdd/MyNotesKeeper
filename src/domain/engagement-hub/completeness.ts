@@ -137,6 +137,7 @@ export const CUSTOMER_FIELDS: readonly FieldSpec<Customer>[] = [
   { id: 'customerContacts', label: 'Customer contacts', level: 'required', why: 'Multi-threading is impossible without named stakeholders.', filled: (c) => hasRealValue(c.customerContactIds) },
   { id: 'primaryContact', label: 'Primary contact', level: 'required', why: 'Identifies who to go to first; mirrors the CRM Primary Contact role.', filled: (c) => hasRealValue(c.primaryCustomerContactId) },
   { id: 'website', label: 'Website', level: 'recommended', why: 'Needed for vertical research and AI-visibility checks.', filled: (c) => hasRealValue(c.website) || hasRealValue(c.websiteUrls) },
+  { id: 'aboutCompany', label: 'About the company', level: 'recommended', why: 'Market snapshot and industry trends for SE/AE briefing.', filled: (c) => hasRealValue(c.aboutCompany) },
   { id: 'internalContacts', label: 'Internal team', level: 'recommended', why: 'Records who else at Sitecore is on the account.', filled: (c) => hasRealValue(c.internalContactIds) },
   { id: 'salesforceLink', label: 'Salesforce link', level: 'recommended', why: 'Ties the Hub record to the CRM. Placeholders do not count.', filled: (c) => hasRealValue(c.salesforceLink) },
   { id: 'sharePointUrl', label: 'SharePoint link', level: 'recommended', why: 'Where the account artefacts live.', filled: (c) => hasRealValue(c.sharePointUrl) },

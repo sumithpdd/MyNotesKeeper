@@ -234,6 +234,67 @@ Be specific and actionable.`;
       throw decoratedRuntimeError(error, 'Failed to generate customer summary');
     }
   }
+
+  /**
+   * Industry / company research brief from hub context. Does not browse the live web;
+   * grounds in stored account facts and general industry knowledge, and flags what to verify.
+   */
+  async generateCompanyResearch(input: {
+    customerName: string;
+    website?: string;
+    products?: string;
+    hostingLocation?: string;
+    compellingEvent?: string;
+    partners?: string;
+    aboutCompany?: string;
+    businessProblem?: string;
+    whyUs?: string;
+    whyNow?: string;
+    useCases?: string;
+    recentNotes?: string;
+    opportunities?: string;
+    extraFocus?: string;
+  }): Promise<string> {
+    try {
+      const prompt = `You are a Sales Engineer researcher preparing an "About the company" brief for Sitecore Customer Engagement Hub.
+
+Write a concise, factual briefing an AE/SE can paste into CRM. Use ONLY:
+1) Hub facts listed below (treat as source of truth).
+2) Widely known industry patterns for this sector (camping/membership/leisure, retail, etc. as implied by the facts).
+Do not invent revenue, market share, or named competitors unless they appear in the hub facts. If a claim is industry-typical rather than from the hub, prefix with "Industry pattern:". Flag gaps as "To verify:".
+
+Hub facts:
+- Account: ${input.customerName}
+- Website: ${input.website || 'not set'}
+- Owned products: ${input.products || 'not set'}
+- Hosting: ${input.hostingLocation || 'not set'}
+- Partners: ${input.partners || 'not set'}
+- Compelling event: ${input.compellingEvent || 'not set'}
+- Business problem: ${input.businessProblem || 'not set'}
+- Why us: ${input.whyUs || 'not set'}
+- Why now: ${input.whyNow || 'not set'}
+- Use cases: ${input.useCases || 'not set'}
+- Open opportunities: ${input.opportunities || 'none listed'}
+- Recent notes: ${input.recentNotes || 'none'}
+- Existing About the company: ${input.aboutCompany || '(empty)'}
+${input.extraFocus ? `- Extra focus from the user: ${input.extraFocus}` : ''}
+
+Output markdown with these headings:
+## Company snapshot
+## Market and industry trends
+## Digital and competitive context
+## Implications for Sitecore
+## To verify
+
+Keep under 500 words. Merge useful points from the existing About the company text; do not drop confirmed hub facts.`;
+
+      const { text } = await generateText({ model: getModel(), prompt });
+      return text;
+    } catch (error) {
+      console.error('Error generating company research:', error);
+      throw decoratedRuntimeError(error, 'Failed to generate company research');
+    }
+  }
 }
 
 export const aiService = new AIService();

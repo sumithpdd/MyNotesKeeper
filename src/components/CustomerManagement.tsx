@@ -39,6 +39,7 @@ import {
   partitionCustomerContactsForAccount,
 } from '@/domain/engagement-hub/customerRelations';
 import { CompletenessPanel } from './completeness/CompletenessPanel';
+import { AboutCompanySection } from './AboutCompanySection';
 
 interface CustomerManagementProps {
   customers: Customer[];
@@ -702,6 +703,10 @@ export function CustomerManagement({
                     taskCategories={taskCategories}
                     className="mb-6"
                   />
+                ) : null}
+
+                {selectedCustomerData ? (
+                  <AboutCompanySection customer={selectedCustomerData} onSave={onSaveCustomer} />
                 ) : null}
 
                 {selectedCustomerData ? (

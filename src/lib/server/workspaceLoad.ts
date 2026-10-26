@@ -218,6 +218,9 @@ export async function loadWorkspaceSnapshot(params: { uid: string; email: string
       salesforceLink: data.salesforceLink ?? '',
       createdAt: toDate((data as { createdAt?: unknown }).createdAt),
       updatedAt: toDate((data as { updatedAt?: unknown }).updatedAt),
+      aboutCompanyLastUpdated: (data as { aboutCompanyLastUpdated?: unknown }).aboutCompanyLastUpdated
+        ? toDate((data as { aboutCompanyLastUpdated?: unknown }).aboutCompanyLastUpdated)
+        : undefined,
     } as Customer;
   });
 

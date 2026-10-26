@@ -63,6 +63,7 @@ const customerSchema = z.object({
   salesforceLink: z.string(),
   additionalLink: z.string().optional(),
   additionalInfo: z.string().optional(),
+  aboutCompany: z.string().optional(),
   // Migration fields
   existingMigrationOpp: z.string().optional(),
   perpetualOrSubscription: z.string().optional(),
@@ -122,6 +123,7 @@ export function CustomerForm({ customer, products = [], partners = [], martechTo
       salesforceLink: customer.salesforceLink,
       additionalLink: customer.additionalLink,
       additionalInfo: customer.additionalInfo,
+      aboutCompany: customer.aboutCompany,
       existingMigrationOpp: customer.existingMigrationOpp || '',
       perpetualOrSubscription: customer.perpetualOrSubscription || '',
       hostingLocation: customer.hostingLocation || '',
@@ -149,6 +151,7 @@ export function CustomerForm({ customer, products = [], partners = [], martechTo
       salesforceLink: '',
       additionalLink: '',
       additionalInfo: '',
+      aboutCompany: '',
       existingMigrationOpp: '',
       perpetualOrSubscription: '',
       hostingLocation: '',
@@ -285,6 +288,26 @@ export function CustomerForm({ customer, products = [], partners = [], martechTo
                 />
                 <ExternalLink className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-semibold text-gray-700">About the company</label>
+                <AIButton
+                  currentText={watchedValues.aboutCompany || ''}
+                  onGenerated={(text) => setValue('aboutCompany', text)}
+                  context={`Customer: ${watchedValues.customerName}. Company snapshot, market trends, industry research for SE briefing.`}
+                />
+              </div>
+              <textarea
+                {...register('aboutCompany')}
+                rows={6}
+                className="input-field resize-y min-h-[8rem]"
+                placeholder="Company background, latest market trends, competitive notes, industry research…"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Use Industry research on the account page to draft this from hub context.
+              </p>
             </div>
 
             <div>

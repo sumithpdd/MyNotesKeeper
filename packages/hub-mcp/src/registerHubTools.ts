@@ -241,6 +241,62 @@ export function registerHubTools(server: McpServer): void {
   );
 
   server.registerTool(
+    'research_company',
+    {
+      description:
+        'Draft an About-the-company / industry-research brief from hub context (profile, notes, opps). Does not browse the live web. Save via update_customer_account aboutCompany. Read-only.',
+      inputSchema: {
+        customerName: z.string().min(1),
+        extraFocus: z.string().optional(),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async ({ customerName, extraFocus }) => {
+      try {
+        const { workspace } = await loadHubWorkspace();
+        const match = findCustomerByName(workspace.customers, customerName);
+        if (!match) return errResult(`Customer not found: ${customerName}`);
+        const profile = workspace.customerProfiles.find((p) => p.customerId === match.id);
+        const notes = workspace.notes
+          .filter((n) => n.customerId === match.id)
+          .slice(0, 6)
+          .map((n) => `- ${(n.notes || '').slice(0, 280)}`)
+          .join('\n');
+        const opps = workspace.opportunities
+          .filter((o) => o.customerId === match.id)
+          .map((o) => `${o.opportunityName} (${o.currentStage})`)
+          .join('; ');
+        const research = await aiService.generateCompanyResearch({
+          customerName: match.customerName,
+          website: match.website || match.websiteUrls?.[0],
+          products: (match.products || []).map((p) => formatProductDisplayName(p)).join(', '),
+          hostingLocation: match.hostingLocation,
+          compellingEvent: match.compellingEvent,
+          partners: (match.partners || []).map((p) => p.name).join(', '),
+          aboutCompany: match.aboutCompany,
+          businessProblem: profile?.businessProblem,
+          whyUs: profile?.whyUs,
+          whyNow: profile?.whyNow,
+          useCases: [profile?.customerUseCase1, profile?.customerUseCase2, profile?.customerUseCase3]
+            .filter((u) => u?.trim())
+            .join('; '),
+          recentNotes: notes,
+          opportunities: opps,
+          extraFocus,
+        });
+        return okResult({
+          customerId: match.id,
+          hubReviewUrl: buildAccountReviewUrl({ customerId: match.id }),
+          research,
+          hint: 'Save with update_customer_account { aboutCompany: <research> }',
+        });
+      } catch (e) {
+        return errResult(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  server.registerTool(
     'account_review_url',
     {
       description:
@@ -385,6 +441,8 @@ export function registerHubTools(server: McpServer): void {
             frontEndTech: match.frontEndTech,
             migrationNotes: match.migrationNotes?.slice(0, 500),
             additionalInfo: match.additionalInfo,
+            aboutCompany: match.aboutCompany?.slice(0, 1200),
+            aboutCompanyLastUpdated: match.aboutCompanyLastUpdated,
             mergedNotes: match.mergedNotes?.slice(0, 500),
             compellingEvent: match.compellingEvent,
             existingMigrationOpp: match.existingMigrationOpp,
@@ -696,6 +754,7 @@ export function registerHubTools(server: McpServer): void {
         mergedNotes: z.string().optional(),
         salesforceLink: z.string().optional(),
         additionalInfo: z.string().optional(),
+        aboutCompany: z.string().optional().describe('Company snapshot, market trends, industry research'),
         website: z.string().optional(),
         productIds: z
           .array(z.string())
@@ -715,6 +774,9 @@ export function registerHubTools(server: McpServer): void {
         if (!match) return errResult(`Customer not found: ${input.customerName}`);
         const { customerName: _n, productIds, productLabels, ...rest } = input;
         const patch: Record<string, unknown> = { ...rest };
+        if (typeof rest.aboutCompany === 'string') {
+          patch.aboutCompanyLastUpdated = new Date();
+        }
         if (productIds !== undefined || productLabels !== undefined) {
           const resolved = resolveProductIdsFromInput(workspace.products, { productIds, productLabels });
           if (resolved.unresolved.length) {
