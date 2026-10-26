@@ -26,6 +26,11 @@ export function firebaseAuthErrorMessage(error: unknown): string {
       );
     case 'auth/network-request-failed':
       return 'Network error talking to Firebase. Check your connection or corporate proxy.';
+    case 'auth/timeout':
+      return (
+        'Sign-in timed out (popup may have closed without completing). Try again — production uses ' +
+        'a full-page Google redirect, which is more reliable than popups in Chrome.'
+      );
     default:
       if (message.includes('Firebase client is not configured')) {
         return 'Firebase web config is missing. Set NEXT_PUBLIC_FIREBASE_* on Vercel and redeploy.';

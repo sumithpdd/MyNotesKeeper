@@ -11,6 +11,8 @@ import React, {
 import {
   User as FirebaseUser,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   GoogleAuthProvider,
@@ -19,6 +21,9 @@ import { auth } from '@/lib/firebase';
 import { User, AuthContextType } from '@/types';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const BOOTSTRAP_TIMEOUT_MS = 12_000;
+const POPUP_TIMEOUT_MS = 90_000;
 
 export function useAuth() {
   const context = useContext(AuthContext);
@@ -32,18 +37,51 @@ interface AuthProviderProps {
   children: React.ReactNode;
 }
 
+function generateInitials(name: string): string {
+  return name
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase())
+    .join('')
+    .slice(0, 2);
+}
+
+function hubUserFromFirebase(firebaseUser: FirebaseUser): User {
+  const name = firebaseUser.displayName || 'Unknown User';
+  return {
+    id: firebaseUser.uid,
+    email: firebaseUser.email!,
+    name,
+    initials: generateInitials(name),
+    photoURL: firebaseUser.photoURL || undefined,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, code: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      const err = new Error(code);
+      (err as Error & { code?: string }).code = code;
+      reject(err);
+    }, ms);
+    promise
+      .then((v) => {
+        clearTimeout(timer);
+        resolve(v);
+      })
+      .catch((e) => {
+        clearTimeout(timer);
+        reject(e);
+      });
+  });
+}
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const firebaseUserRef = useRef<FirebaseUser | null>(null);
-
-  const generateInitials = (name: string): string => {
-    return name
-      .split(' ')
-      .map((word) => word.charAt(0).toUpperCase())
-      .join('')
-      .slice(0, 2);
-  };
+  const redirectHandled = useRef(false);
 
   const getFirebaseIdToken = useCallback(async (): Promise<string | null> => {
     const u = firebaseUserRef.current;
@@ -55,45 +93,70 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
-  const syncUserBootstrap = async (firebaseUser: FirebaseUser): Promise<User> => {
+  const syncUserBootstrap = useCallback(async (firebaseUser: FirebaseUser): Promise<User> => {
     const token = await firebaseUser.getIdToken();
-    const res = await fetch('/api/auth/bootstrap', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: firebaseUser.displayName || '',
-        photoURL: firebaseUser.photoURL || '',
-      }),
-    });
-    const json = (await res.json().catch(() => ({}))) as { error?: string };
-    if (!res.ok) throw new Error(json.error || res.statusText);
-    return {
-      id: firebaseUser.uid,
-      email: firebaseUser.email!,
-      name: firebaseUser.displayName || 'Unknown User',
-      initials: generateInitials(firebaseUser.displayName || 'Unknown User'),
-      photoURL: firebaseUser.photoURL || undefined,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-  };
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), BOOTSTRAP_TIMEOUT_MS);
+    try {
+      const res = await fetch('/api/auth/bootstrap', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: firebaseUser.displayName || '',
+          photoURL: firebaseUser.photoURL || '',
+        }),
+        signal: controller.signal,
+      });
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(json.error || res.statusText);
+      return hubUserFromFirebase(firebaseUser);
+    } finally {
+      clearTimeout(timer);
+    }
+  }, []);
+
+  const applyFirebaseUser = useCallback(
+    (firebaseUser: FirebaseUser | null) => {
+      firebaseUserRef.current = firebaseUser;
+      if (!firebaseUser) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      setUser(hubUserFromFirebase(firebaseUser));
+      setLoading(false);
+      void syncUserBootstrap(firebaseUser)
+        .then(setUser)
+        .catch(() => {
+          console.warn('[auth] Bootstrap API failed — using client profile');
+        });
+    },
+    [syncUserBootstrap],
+  );
 
   const signInWithGoogle = async () => {
-    try {
-      const provider = new GoogleAuthProvider();
-      provider.addScope('email');
-      provider.addScope('profile');
+    const provider = new GoogleAuthProvider();
+    provider.addScope('email');
+    provider.addScope('profile');
+    provider.setCustomParameters({ prompt: 'select_account' });
 
-      const result = await signInWithPopup(auth, provider);
-      firebaseUserRef.current = result.user;
-      try {
-        await syncUserBootstrap(result.user);
-      } catch {
-        console.warn('[auth] Bootstrap API failed — ensure FIREBASE_SERVICE_ACCOUNT_JSON is set on the server');
-      }
+    const useRedirect =
+      typeof window !== 'undefined' && window.location.hostname !== 'localhost';
+
+    if (useRedirect) {
+      await signInWithRedirect(auth, provider);
+      return;
+    }
+
+    try {
+      await withTimeout(
+        signInWithPopup(auth, provider),
+        POPUP_TIMEOUT_MS,
+        'auth/timeout',
+      );
     } catch (error) {
       console.error('Error signing in with Google:', error);
       throw error;
@@ -112,30 +175,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
-    try {
-      unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-        firebaseUserRef.current = firebaseUser;
 
-        if (firebaseUser) {
-          try {
-            const userData = await syncUserBootstrap(firebaseUser);
-            setUser(userData);
-          } catch {
-            console.warn('[auth] Using client-only profile fallback (bootstrap/API unavailable)');
-            setUser({
-              id: firebaseUser.uid,
-              email: firebaseUser.email!,
-              name: firebaseUser.displayName || 'Unknown User',
-              initials: generateInitials(firebaseUser.displayName || 'Unknown User'),
-              photoURL: firebaseUser.photoURL || undefined,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            });
-          }
-        } else {
-          setUser(null);
+    void (async () => {
+      if (!redirectHandled.current) {
+        redirectHandled.current = true;
+        try {
+          await getRedirectResult(auth);
+        } catch (e) {
+          console.error('[auth] getRedirectResult failed:', e);
         }
-        setLoading(false);
+      }
+    })();
+
+    try {
+      unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+        applyFirebaseUser(firebaseUser);
       });
     } catch (e) {
       console.error('[auth] Firebase Auth failed to initialize:', e);
@@ -143,7 +197,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     return () => unsubscribe?.();
-  }, []);
+  }, [applyFirebaseUser]);
 
   const value: AuthContextType = {
     user,
