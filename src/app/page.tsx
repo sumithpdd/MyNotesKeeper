@@ -155,11 +155,13 @@ export default function HomePage() {
     getFirebaseIdToken,
   });
 
-  const { notes, setNotes, saveNote, deleteNote } = useNoteOperations({
+  const { setNotes, saveNote, deleteNote } = useNoteOperations({
     userId: user?.id,
     getFirebaseIdToken,
     reloadWorkspace,
   });
+  /** Workspace payload is the source of truth — operation hooks must not replace it with `[]`. */
+  const notes = firebaseNotes;
 
   const { setCustomers, saveCustomer, deleteCustomer } = useCustomerOperations({
     userId: user?.id,
@@ -180,7 +182,6 @@ export default function HomePage() {
   });
 
   const {
-    opportunities,
     setOpportunities,
     saveOpportunity,
     deleteOpportunity,
@@ -192,6 +193,7 @@ export default function HomePage() {
     getFirebaseIdToken,
     reloadWorkspace,
   });
+  const opportunities = firebaseOpportunities;
 
   useFirestoreSnapshotSync({
     firebaseNotes,

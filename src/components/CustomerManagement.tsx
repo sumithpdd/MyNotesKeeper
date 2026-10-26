@@ -917,6 +917,13 @@ export function CustomerManagement({
                             .join(': ')}
                         />
                       )}
+                      {selectedCustomerProfile.seNotes?.trim() ? (
+                        <CopyableFieldWithAI
+                          label="SE Notes"
+                          value={selectedCustomerProfile.seNotes}
+                          aiContext="SE notes for CRM paste — keep dated SPD entries."
+                        />
+                      ) : null}
 
                       {(selectedCustomerProfile.servicesInvolvement ||
                         selectedCustomerProfile.servicesFitAssessment ||

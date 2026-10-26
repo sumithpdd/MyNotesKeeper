@@ -13,7 +13,7 @@ export function useNoteOperations({
   getFirebaseIdToken,
   reloadWorkspace,
 }: UseNoteOperationsProps) {
-  const [, setNotes] = useState<CustomerNote[]>([]);
+  const [notes, setNotes] = useState<CustomerNote[]>([]);
 
   const saveNote = useCallback(
     async (noteData: CustomerNote, selectedCustomerId: string) => {
@@ -94,7 +94,7 @@ export function useNoteOperations({
   );
 
   return {
-    notes: [],
+    notes,
     setNotes,
     saveNote,
     deleteNote,

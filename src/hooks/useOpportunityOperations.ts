@@ -15,7 +15,7 @@ export function useOpportunityOperations({
   getFirebaseIdToken,
   reloadWorkspace,
 }: UseOpportunityOperationsProps) {
-  const [, setOpportunities] = useState<Opportunity[]>([]);
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
 
   const saveOpportunity = useCallback(
     async (opportunity: Opportunity) => {
@@ -118,7 +118,7 @@ export function useOpportunityOperations({
   );
 
   return {
-    opportunities: [],
+    opportunities,
     setOpportunities,
     saveOpportunity,
     deleteOpportunity,
