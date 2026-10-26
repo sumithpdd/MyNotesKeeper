@@ -226,8 +226,9 @@ export default function McpTokensPage() {
         </section>
 
         <p className="text-xs text-gray-500">
-          Full guide: <code className="text-gray-700">docs/MCP.md</code>. In-app chat still uses{' '}
-          <code className="text-gray-700">POST /api/ai-chat</code> with your session token.
+          Guides: <code className="text-gray-700">docs/MCP.md</code>,{' '}
+          <code className="text-gray-700">docs/MCP_CLAUDE.md</code> (Claude Desktop + project prompt).
+          In-app chat uses <code className="text-gray-700">POST /api/ai-chat</code>.
         </p>
       </main>
     </div>

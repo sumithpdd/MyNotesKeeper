@@ -56,6 +56,7 @@ Optional: set **`NEXT_PUBLIC_MCP_HTTP_URL`** so `/mcp` displays the exact public
 | `customer_ai_summary` | read | AI summary from stored profile |
 | `add_customer_note` | write | Persist a note |
 | `create_engagement_task` | write | Kanban/calendar task |
+| `link_stakeholders_for_account` | write | Sitecore internals, customer contacts, partners + link on account |
 
 Revoke tokens anytime on `/mcp`.
 
@@ -67,8 +68,13 @@ Revoke tokens anytime on `/mcp`.
 | GET/POST | `/api/mcp/tokens` | Firebase Bearer |
 | DELETE | `/api/mcp/tokens/[id]` | Firebase Bearer |
 
+## Claude (step-by-step)
+
+**[MCP_CLAUDE.md](MCP_CLAUDE.md)** — Desktop + claude.ai connector, project instructions, Camping & Caravanning Club example prompts.
+
 ## Related
 
 - [API_GUIDE.md](API_GUIDE.md) — REST + `ai-chat`
 - [AI_CHAT_PANEL_GUIDE.md](AI_CHAT_PANEL_GUIDE.md) — in-app assistant
 - [DEPLOY_VERCEL.md](DEPLOY_VERCEL.md) — production host
+- [prompts/claude-camping-caravanning-club.md](prompts/claude-camping-caravanning-club.md) — deal-specific prompt templates

@@ -326,6 +326,8 @@ export async function loadWorkspaceSnapshot(params: { uid: string; email: string
   for (const c of customersBare) {
     (c.customerContactIds || []).forEach((id) => contactIds.add(id));
     (c.internalContactIds || []).forEach((id) => internalIds.add(id));
+    (c.accountExecutiveIds || []).forEach((id) => internalIds.add(id));
+    if (c.accountExecutiveId) internalIds.add(c.accountExecutiveId);
   }
 
   async function docsByRefs<T>(
