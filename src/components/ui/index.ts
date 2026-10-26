@@ -8,6 +8,7 @@ export * from './Avatar';
 export * from './TitleBadge';
 export * from './LinkWithCopy';
 export * from './CopyableField';
+export * from './CopyableFieldWithAI';
 export * from './MultiSelect';
 export * from './AIButton';
 export * from './FieldHint';

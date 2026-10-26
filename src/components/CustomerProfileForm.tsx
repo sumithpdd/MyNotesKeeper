@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, X, Sparkles, BookOpen } from 'lucide-react';
 import { CustomerProfile, CreateCustomerProfileData } from '@/types';
-import { DXP_OBJECTIVES, DXP_USE_CASES } from '../../data/dxpPools';
+import { DXP_USE_CASES, SALESFORCE_CUSTOMER_OBJECTIVES } from '../../data/dxpPools';
 import { PromptLibrary } from './PromptLibrary';
 import { FieldHint } from '@/components/ui';
 
@@ -640,85 +640,56 @@ Activity Details:
           <div className="bg-white p-6 rounded-lg border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Success Planning</h3>
             <div className="space-y-4">
+              <p className="text-xs text-gray-500">
+                Objectives 1–3 use the Salesforce picklist (Operational Cost Savings, Revenue Growth, Risk
+                Avoidance, Productivity Improvement). Account-specific wording goes in Details.
+              </p>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Customer Objective 1
+                  Customer Objectives 1
+                  <FieldHint text="Salesforce Customer Objectives picklist — same values as CRM." />
                 </label>
-                <div className="flex gap-2">
-                  <select
-                    {...register('customerObjective1')}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                  >
-                    <option value="">Select or type custom...</option>
-                    {DXP_OBJECTIVES.map((objective) => (
-                      <option key={objective} value={objective}>
-                        {objective}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => setValue('customerObjective1', DXP_OBJECTIVES[0] || '')}
-                    className="px-3 py-2 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
-                    title="Use predefined objective"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                  </button>
-                </div>
+                <select
+                  {...register('customerObjective1')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                >
+                  <option value="">--None--</option>
+                  {SALESFORCE_CUSTOMER_OBJECTIVES.map((objective) => (
+                    <option key={objective} value={objective}>
+                      {objective}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Customer Objective 2
-                </label>
-                <div className="flex gap-2">
-                  <select
-                    {...register('customerObjective2')}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                  >
-                    <option value="">Select or type custom...</option>
-                    {DXP_OBJECTIVES.map((objective) => (
-                      <option key={objective} value={objective}>
-                        {objective}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => setValue('customerObjective2', DXP_OBJECTIVES[1] || '')}
-                    className="px-3 py-2 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
-                    title="Use predefined objective"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                  </button>
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Customer Objectives 2</label>
+                <select
+                  {...register('customerObjective2')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                >
+                  <option value="">--None--</option>
+                  {SALESFORCE_CUSTOMER_OBJECTIVES.map((objective) => (
+                    <option key={objective} value={objective}>
+                      {objective}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Customer Objective 3
-                </label>
-                <div className="flex gap-2">
-                  <select
-                    {...register('customerObjective3')}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                  >
-                    <option value="">Select or type custom...</option>
-                    {DXP_OBJECTIVES.map((objective) => (
-                      <option key={objective} value={objective}>
-                        {objective}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => setValue('customerObjective3', DXP_OBJECTIVES[2] || '')}
-                    className="px-3 py-2 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
-                    title="Use predefined objective"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                  </button>
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Customer Objectives 3</label>
+                <select
+                  {...register('customerObjective3')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                >
+                  <option value="">--None--</option>
+                  {SALESFORCE_CUSTOMER_OBJECTIVES.map((objective) => (
+                    <option key={objective} value={objective}>
+                      {objective}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -727,9 +698,9 @@ Activity Details:
                 </label>
                 <textarea
                   {...register('customerObjectivesDetails')}
-                  rows={2}
+                  rows={4}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                  placeholder="Provide details about customer objectives..."
+                  placeholder="e.g. category-standard search/book, March 2027 season, XP 10.3 security and upgrade pressure…"
                 />
               </div>
 

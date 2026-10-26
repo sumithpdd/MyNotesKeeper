@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Eye, FileText, ArrowLeft, Sparkles, X, CalendarDays, List, ClipboardList } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, FileText, ArrowLeft, Sparkles, X, CalendarDays, List, ClipboardList, Copy, Check } from 'lucide-react';
 import { LinkWithCopy } from './ui/LinkWithCopy';
 import { useAuth } from '@/lib/auth';
 import { hubAuthJson } from '@/lib/client/hubAuthFetch';
@@ -21,6 +21,9 @@ import { OpportunityForm } from './OpportunityForm';
 import { OpportunityDetail } from './OpportunityDetail';
 import { safeFormatDate } from '@/lib/utils';
 import { TypeBadge } from './ui/TypeBadge';
+import { CopyableFieldWithAI } from './ui/CopyableFieldWithAI';
+import { formatCustomerProfileForClipboard } from '@/lib/customerProfileClipboard';
+import { formatCustomerObjectivesBlock } from '@/domain/engagement-hub/customerObjectives';
 import { getAccountExecutiveColor } from '@/lib/accountExecutiveColors';
 import { getMartechToolColor } from '@/lib/martechToolColors';
 import { formatProductDisplayName } from '@/lib/productDisplay';
@@ -111,6 +114,7 @@ export function CustomerManagement({
   const [editingOpportunity, setEditingOpportunity] = useState<Opportunity | undefined>();
   const [viewingOpportunity, setViewingOpportunity] = useState<Opportunity | null>(null);
   const [listViewMode, setListViewMode] = useState<'list' | 'calendar'>('list');
+  const [profileCopied, setProfileCopied] = useState(false);
 
   const selectedCustomerData = customers.find(c => c.id === selectedCustomer);
   const activities = buildActivities(customers, notes, customerProfiles, opportunities);
@@ -822,13 +826,37 @@ export function CustomerManagement({
                     <h3 className="text-lg font-semibold text-gray-900">Customer Profile</h3>
                     <div className="flex gap-2">
                       {selectedCustomerProfile ? (
-                        <button
-                          onClick={() => handleEditCustomerProfile(selectedCustomerProfile)}
-                          className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Edit Customer Profile"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await navigator.clipboard.writeText(
+                                  formatCustomerProfileForClipboard(selectedCustomerProfile),
+                                );
+                                setProfileCopied(true);
+                                setTimeout(() => setProfileCopied(false), 2000);
+                              } catch (e) {
+                                console.error(e);
+                              }
+                            }}
+                            className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            title="Copy full profile"
+                          >
+                            {profileCopied ? (
+                              <Check className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleEditCustomerProfile(selectedCustomerProfile)}
+                            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit Customer Profile"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                        </>
                       ) : (
                         <button
                           onClick={handleCreateCustomerProfile}
@@ -842,131 +870,91 @@ export function CustomerManagement({
                   </div>
 
                   {selectedCustomerProfile ? (
-                    <div className="space-y-4">
-                      {/* Business Problem */}
-                      {selectedCustomerProfile.businessProblem && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Business Problem</label>
-                          <p className="text-sm text-gray-900 bg-gray-50 rounded-lg p-3">
-                            {selectedCustomerProfile.businessProblem}
-                          </p>
-                        </div>
-                      )}
+                    <div className="space-y-3">
+                      <CopyableFieldWithAI
+                        label="Business Problem"
+                        value={selectedCustomerProfile.businessProblem}
+                      />
+                      <CopyableFieldWithAI label="Why Us" value={selectedCustomerProfile.whyUs} />
+                      <CopyableFieldWithAI label="Why Now" value={selectedCustomerProfile.whyNow} />
 
-                      {/* Why Us */}
-                      {selectedCustomerProfile.whyUs && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Why Us</label>
-                          <p className="text-sm text-gray-900 bg-gray-50 rounded-lg p-3">
-                            {selectedCustomerProfile.whyUs}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Why Now */}
-                      {selectedCustomerProfile.whyNow && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Why Now</label>
-                          <p className="text-sm text-gray-900 bg-gray-50 rounded-lg p-3">
-                            {selectedCustomerProfile.whyNow}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Quick Status */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Tech Select</label>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            selectedCustomerProfile.techSelect ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
-                            {selectedCustomerProfile.techSelect ? 'Yes' : 'No'}
-                          </span>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Discovery</label>
-                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {selectedCustomerProfile.discovery}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* SE Assessment */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">SE Product Fit</label>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${seRagBadgeClasses(selectedCustomerProfile.seProductFitAssessment)}`}>
-                            {seRagLabel(selectedCustomerProfile.seProductFitAssessment)}
-                          </span>
-                        </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <CopyableFieldWithAI
+                          label="Tech Select"
+                          value={selectedCustomerProfile.techSelect ? 'Yes' : 'No'}
+                        />
+                        <CopyableFieldWithAI
+                          label="Discovery"
+                          value={selectedCustomerProfile.discovery || ''}
+                        />
+                        <CopyableFieldWithAI
+                          label="SE Product Fit"
+                          value={seRagLabel(selectedCustomerProfile.seProductFitAssessment)}
+                        />
                         {selectedCustomerProfile.seConfidence ? (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">SE Confidence</label>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${seRagBadgeClasses(selectedCustomerProfile.seConfidence)}`}>
-                              {seRagLabel(selectedCustomerProfile.seConfidence)}
-                            </span>
-                          </div>
-                        ) : null}
-                        {selectedCustomerProfile.seInvolvementDetail ? (
-                          <div className="col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">SE involvement</label>
-                            <p className="text-sm text-gray-900 bg-gray-50 rounded-lg p-2">
-                              {selectedCustomerProfile.seInvolvement}: {selectedCustomerProfile.seInvolvementDetail}
-                            </p>
-                          </div>
+                          <CopyableFieldWithAI
+                            label="SE Confidence"
+                            value={seRagLabel(selectedCustomerProfile.seConfidence)}
+                          />
                         ) : null}
                       </div>
+
+                      {(selectedCustomerProfile.seInvolvement ||
+                        selectedCustomerProfile.seInvolvementDetail) && (
+                        <CopyableFieldWithAI
+                          label="SE involvement"
+                          value={[selectedCustomerProfile.seInvolvement, selectedCustomerProfile.seInvolvementDetail]
+                            .filter(Boolean)
+                            .join(': ')}
+                        />
+                      )}
 
                       {(selectedCustomerProfile.servicesInvolvement ||
                         selectedCustomerProfile.servicesFitAssessment ||
+                        selectedCustomerProfile.servicesConfidence ||
                         selectedCustomerProfile.servicesNotes) && (
-                        <div className="border-t border-gray-100 pt-4 space-y-2">
+                        <div className="border-t border-gray-100 pt-3 space-y-3">
                           <h4 className="text-sm font-semibold text-gray-800">Services</h4>
-                          {selectedCustomerProfile.servicesInvolvement && (
-                            <p className="text-sm text-gray-900 bg-gray-50 rounded-lg p-2">
-                              {selectedCustomerProfile.servicesInvolvement}
-                            </p>
+                          {selectedCustomerProfile.servicesInvolvement ? (
+                            <CopyableFieldWithAI
+                              label="Services involvement"
+                              value={selectedCustomerProfile.servicesInvolvement}
+                            />
+                          ) : null}
+                          {(selectedCustomerProfile.servicesFitAssessment ||
+                            selectedCustomerProfile.servicesConfidence) && (
+                            <CopyableFieldWithAI
+                              label="Services assessment"
+                              value={[
+                                selectedCustomerProfile.servicesFitAssessment
+                                  ? `Fit: ${seRagLabel(selectedCustomerProfile.servicesFitAssessment)}`
+                                  : '',
+                                selectedCustomerProfile.servicesConfidence
+                                  ? `Confidence: ${seRagLabel(selectedCustomerProfile.servicesConfidence)}`
+                                  : '',
+                              ]
+                                .filter(Boolean)
+                                .join('\n')}
+                            />
                           )}
-                          <div className="flex flex-wrap gap-2">
-                            {selectedCustomerProfile.servicesFitAssessment && (
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${seRagBadgeClasses(selectedCustomerProfile.servicesFitAssessment)}`}>
-                                Fit: {seRagLabel(selectedCustomerProfile.servicesFitAssessment)}
-                              </span>
-                            )}
-                            {selectedCustomerProfile.servicesConfidence && (
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${seRagBadgeClasses(selectedCustomerProfile.servicesConfidence)}`}>
-                                Confidence: {seRagLabel(selectedCustomerProfile.servicesConfidence)}
-                              </span>
-                            )}
-                          </div>
-                          {selectedCustomerProfile.servicesNotes && (
-                            <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedCustomerProfile.servicesNotes}</p>
-                          )}
+                          {selectedCustomerProfile.servicesNotes ? (
+                            <CopyableFieldWithAI
+                              label="Services notes"
+                              value={selectedCustomerProfile.servicesNotes}
+                            />
+                          ) : null}
                         </div>
                       )}
 
-                      {/* Customer Objectives */}
-                      {(selectedCustomerProfile.customerObjective1 || selectedCustomerProfile.customerObjective2 || selectedCustomerProfile.customerObjective3) && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Customer Objectives</label>
-                          <div className="space-y-1">
-                            {selectedCustomerProfile.customerObjective1 && (
-                              <p className="text-sm text-gray-900 bg-gray-50 rounded-lg p-2">
-                                1. {selectedCustomerProfile.customerObjective1}
-                              </p>
-                            )}
-                            {selectedCustomerProfile.customerObjective2 && (
-                              <p className="text-sm text-gray-900 bg-gray-50 rounded-lg p-2">
-                                2. {selectedCustomerProfile.customerObjective2}
-                              </p>
-                            )}
-                            {selectedCustomerProfile.customerObjective3 && (
-                              <p className="text-sm text-gray-900 bg-gray-50 rounded-lg p-2">
-                                3. {selectedCustomerProfile.customerObjective3}
-                              </p>
-                            )}
-                          </div>
-                        </div>
+                      {(selectedCustomerProfile.customerObjective1 ||
+                        selectedCustomerProfile.customerObjective2 ||
+                        selectedCustomerProfile.customerObjective3 ||
+                        selectedCustomerProfile.customerObjectivesDetails) && (
+                        <CopyableFieldWithAI
+                          label="Customer Objectives"
+                          value={formatCustomerObjectivesBlock(selectedCustomerProfile)}
+                          aiContext="Salesforce-style customer objectives (Operational Cost Savings, Revenue Growth, Risk Avoidance, Productivity Improvement) plus account-specific detail."
+                        />
                       )}
                     </div>
                   ) : (

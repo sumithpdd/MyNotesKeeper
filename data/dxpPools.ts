@@ -1,36 +1,18 @@
-// DXP (Digital Experience Platform) Objectives Pool
-export const DXP_OBJECTIVES = [
+/**
+ * Salesforce-aligned customer objective picklist (Customer Objectives 1–3).
+ * Narrative detail belongs in `customerObjectivesDetails` on the profile.
+ */
+export const SALESFORCE_CUSTOMER_OBJECTIVES = [
   'Operational Cost Savings',
-  'Improved Customer Experience',
-  'Digital Transformation',
-  'Content Management Efficiency',
-  'Personalization Capabilities',
-  'Multi-language Support',
-  'Integration with Existing Systems',
-  'Scalability and Performance',
-  'Omnichannel Experience',
-  'Marketing Automation',
-  'Customer Data Platform (CDP)',
-  'Headless Architecture',
-  'Mobile-First Approach',
-  'E-commerce Integration',
-  'Analytics and Reporting',
-  'Workflow Automation',
-  'Content Personalization',
-  'A/B Testing Capabilities',
-  'SEO Optimization',
-  'Accessibility Compliance',
-  'Global Content Management',
-  'Brand Consistency',
-  'Lead Generation',
-  'Customer Retention',
   'Revenue Growth',
-  'Time-to-Market Reduction',
-  'Developer Experience',
-  'API-First Architecture',
-  'Cloud Migration',
-  'Security Enhancement'
-];
+  'Risk Avoidance',
+  'Productivity Improvement',
+] as const;
+
+export type SalesforceCustomerObjective = (typeof SALESFORCE_CUSTOMER_OBJECTIVES)[number];
+
+/** @deprecated Use SALESFORCE_CUSTOMER_OBJECTIVES for profile objective fields. */
+export const DXP_OBJECTIVES: readonly string[] = SALESFORCE_CUSTOMER_OBJECTIVES;
 
 // DXP Use Cases Pool
 export const DXP_USE_CASES = [
