@@ -1,4 +1,4 @@
-import { Timestamp } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { requireAdminFirestore } from '@/lib/server/adminFirestore';
 import type { CreateCustomerData, Customer } from '@/types';
 
@@ -85,6 +85,11 @@ export async function updateCustomerAdmin(
   const payload = customerWritePayloadFromPartial(partial);
   payload.updatedBy = userId;
   payload.updatedAt = Timestamp.now();
+
+  /** Canonical FKs only — drop legacy embedded `products` arrays on the customer doc. */
+  if ('productIds' in partial && partial.productIds !== undefined) {
+    payload.products = FieldValue.delete();
+  }
 
   await ref.update(dropUndefined(payload));
 }

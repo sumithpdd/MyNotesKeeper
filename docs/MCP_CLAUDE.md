@@ -32,7 +32,7 @@ Use a **write** token if Claude should add notes or tasks. Revoke on `/mcp` if t
 ```
 
 3. **Quit and restart Claude Desktop** (required after hub MCP updates — tool list is cached).
-4. New chat → confirm tools include **`account_review_url`**, **`set_account_stakeholders`**, **`list_customer_notes`**, **`delete_customer_note`**, **`update_customer_note`** (server v1.3+).
+4. New chat → confirm tools include **`list_products`**, **`update_customer_account`**, **`update_customer_profile`**, **`account_review_url`**, stakeholder and note tools (server **v1.5+**).
 
 ### Claude on the web (claude.ai)
 
@@ -62,6 +62,11 @@ Use a **write** token if Claude should add notes or tasks. Revoke on `/mcp` if t
 | `list_tasks` / `list_notes` | Filter by account |
 | `customer_ai_summary` | AI summary from stored profile fields |
 | `hub_overview` | Workspace counts |
+| **`list_products`** | Product catalog ids/labels for **owned** products on an account |
+| **`update_customer_account`** | Patch account fields; **`productIds`** or **`productLabels`** replaces owned products (not opps) |
+| **`update_customer_profile`** | Patch profile (business problem, SE/Services, objectives, discovery, risks, use cases) |
+| **`upsert_opportunity`** | Create/update opportunities (SitecoreAI, Scrunch, etc.) |
+| **`update_engagement_task`** | Task status, due date, title |
 
 ## 4. Starter instructions (paste into Claude Project / system prompt)
 

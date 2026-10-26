@@ -516,9 +516,13 @@ export function CustomerManagement({
 
                 {/* Products */}
                 <div>
-                  <h3 className="text-sm font-bold text-gray-800 mb-3">
-                    Products ({(selectedCustomerData?.products ?? []).length})
+                  <h3 className="text-sm font-bold text-gray-800 mb-1">
+                    Owned products ({(selectedCustomerData?.products ?? []).length})
                   </h3>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Catalog SKUs the customer runs today. SitecoreAI, Scrunch, and similar deals belong under
+                    Opportunities, not here.
+                  </p>
                   {(selectedCustomerData?.products ?? []).length ? (
                     <div className="space-y-2">
                       {(selectedCustomerData?.products ?? []).map((product) => (
@@ -944,6 +948,41 @@ export function CustomerManagement({
                             />
                           ) : null}
                         </div>
+                      )}
+
+                      {(selectedCustomerProfile.knownTechnicalRisks ||
+                        selectedCustomerProfile.mitigationPlan) && (
+                        <div className="border-t border-gray-100 pt-3 space-y-3">
+                          <h4 className="text-sm font-semibold text-gray-800">Technical risks</h4>
+                          {selectedCustomerProfile.knownTechnicalRisks ? (
+                            <CopyableFieldWithAI
+                              label="Known technical risks"
+                              value={selectedCustomerProfile.knownTechnicalRisks}
+                            />
+                          ) : null}
+                          {selectedCustomerProfile.mitigationPlan ? (
+                            <CopyableFieldWithAI
+                              label="Mitigation plan"
+                              value={selectedCustomerProfile.mitigationPlan}
+                            />
+                          ) : null}
+                        </div>
+                      )}
+
+                      {(selectedCustomerProfile.customerUseCase1 ||
+                        selectedCustomerProfile.customerUseCase2 ||
+                        selectedCustomerProfile.customerUseCase3) && (
+                        <CopyableFieldWithAI
+                          label="Customer use cases"
+                          value={[
+                            selectedCustomerProfile.customerUseCase1,
+                            selectedCustomerProfile.customerUseCase2,
+                            selectedCustomerProfile.customerUseCase3,
+                          ]
+                            .filter((u) => u?.trim())
+                            .map((u, i) => `${i + 1}. ${u!.trim()}`)
+                            .join('\n\n')}
+                        />
                       )}
 
                       {(selectedCustomerProfile.customerObjective1 ||

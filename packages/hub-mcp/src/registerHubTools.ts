@@ -36,6 +36,7 @@ import {
 import type { Customer } from '../../../src/types';
 import { requireRead, requireWrite, resolveCaller } from './auth';
 import { errResult, okResult } from './json';
+import { resolveProductIdsFromInput } from './resolveProducts';
 
 function findCustomerByName(customers: Customer[], search: string) {
   const q = search.trim().toLowerCase();
@@ -214,6 +215,32 @@ export function registerHubTools(server: McpServer): void {
   );
 
   server.registerTool(
+    'list_products',
+    {
+      description:
+        'Catalog of installable/owned products (XP versions, etc.). Use ids or labels with update_customer_account — SitecoreAI and Scrunch belong on opportunities, not this list. Read-only.',
+      inputSchema: {},
+      annotations: { readOnlyHint: true },
+    },
+    async () => {
+      try {
+        const { workspace } = await loadHubWorkspace();
+        return okResult({
+          products: workspace.products.map((p) => ({
+            id: p.id,
+            name: p.name,
+            version: p.version,
+            displayName: formatProductDisplayName(p),
+            status: p.status,
+          })),
+        });
+      } catch (e) {
+        return errResult(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  server.registerTool(
     'account_review_url',
     {
       description:
@@ -352,8 +379,11 @@ export function registerHubTools(server: McpServer): void {
             customerName: match.customerName,
             salesforceLink: match.salesforceLink,
             website: match.website,
+            productIds: match.productIds ?? [],
             products: (match.products || []).map((p) => formatProductDisplayName(p)),
             partners: (match.partners || []).map((p) => p.name),
+            frontEndTech: match.frontEndTech,
+            migrationNotes: match.migrationNotes?.slice(0, 500),
             additionalInfo: match.additionalInfo,
             mergedNotes: match.mergedNotes?.slice(0, 500),
             compellingEvent: match.compellingEvent,
@@ -364,13 +394,28 @@ export function registerHubTools(server: McpServer): void {
           },
           profile: profile
             ? {
-                businessProblem: profile.businessProblem?.slice(0, 300),
+                businessProblem: profile.businessProblem?.slice(0, 500),
+                whyUs: profile.whyUs?.slice(0, 300),
+                whyNow: profile.whyNow?.slice(0, 300),
+                discovery: profile.discovery,
+                techSelect: profile.techSelect,
                 seInvolvement: profile.seInvolvement,
                 seInvolvementDetail: profile.seInvolvementDetail,
                 seConfidence: profile.seConfidence,
                 seProductFitAssessment: profile.seProductFitAssessment,
                 seValidatedQualification: profile.seValidatedQualification,
                 servicesInvolvement: profile.servicesInvolvement,
+                servicesFitAssessment: profile.servicesFitAssessment,
+                servicesConfidence: profile.servicesConfidence,
+                servicesNotes: profile.servicesNotes?.slice(0, 400),
+                customerObjective1: profile.customerObjective1,
+                customerObjective2: profile.customerObjective2,
+                customerObjective3: profile.customerObjective3,
+                customerObjectivesDetails: profile.customerObjectivesDetails?.slice(0, 500),
+                customerUseCase1: profile.customerUseCase1,
+                customerUseCase2: profile.customerUseCase2,
+                customerUseCase3: profile.customerUseCase3,
+                knownTechnicalRisks: profile.knownTechnicalRisks?.slice(0, 300),
               }
             : null,
           opportunities: opps.map((o) => ({
@@ -638,7 +683,7 @@ export function registerHubTools(server: McpServer): void {
     'update_customer_account',
     {
       description:
-        'Patch account-level fields (products, migration, hosting, licence, compelling event, Salesforce link). Requires write scope.',
+        'Patch account-level fields (owned product list via productIds/productLabels, migration, hosting, licence, compelling event, Salesforce link). Replaces the full productIds list when provided. Requires write scope.',
       inputSchema: {
         customerName: z.string().min(1),
         existingMigrationOpp: z.string().optional().describe('yes | no'),
@@ -648,13 +693,18 @@ export function registerHubTools(server: McpServer): void {
         migrationComplexity: z.string().optional(),
         compellingEvent: z.string().optional(),
         migrationNotes: z.string().optional(),
+        mergedNotes: z.string().optional(),
         salesforceLink: z.string().optional(),
         additionalInfo: z.string().optional(),
         website: z.string().optional(),
         productIds: z
           .array(z.string())
           .optional()
-          .describe('Catalog ids e.g. product-xp-103, product-sitecore-ai, product-scrunch'),
+          .describe('Replaces owned products. Catalog ids — call list_products. Not opportunity names.'),
+        productLabels: z
+          .array(z.string())
+          .optional()
+          .describe('Replaces owned products by label, e.g. ["XP 10.3"]. Resolved against list_products.'),
       },
     },
     async (input) => {
@@ -663,11 +713,28 @@ export function registerHubTools(server: McpServer): void {
         requireWrite(caller);
         const match = findCustomerByName(workspace.customers, input.customerName);
         if (!match) return errResult(`Customer not found: ${input.customerName}`);
-        const { customerName: _n, ...patch } = input;
+        const { customerName: _n, productIds, productLabels, ...rest } = input;
+        const patch: Record<string, unknown> = { ...rest };
+        if (productIds !== undefined || productLabels !== undefined) {
+          const resolved = resolveProductIdsFromInput(workspace.products, { productIds, productLabels });
+          if (resolved.unresolved.length) {
+            return errResult(
+              `Unknown product(s): ${resolved.unresolved.join(', ')}. Call list_products for ids/labels.`,
+            );
+          }
+          patch.productIds = resolved.ids;
+        }
         await updateCustomerAdmin(match.id, patch, caller.uid);
         return okResult({
           updated: true,
           customerId: match.id,
+          productIds: patch.productIds ?? match.productIds,
+          productsDisplay: (patch.productIds as string[] | undefined)
+            ? (patch.productIds as string[]).map((id) => {
+                const p = workspace.products.find((x) => x.id === id);
+                return p ? formatProductDisplayName(p) : id;
+              })
+            : (match.products || []).map((p) => formatProductDisplayName(p)),
           hubReviewUrl: buildAccountReviewUrl({ customerId: match.id }),
         });
       } catch (e) {
@@ -703,6 +770,18 @@ export function registerHubTools(server: McpServer): void {
         customerUseCase1: z.string().optional(),
         customerUseCase2: z.string().optional(),
         customerUseCase3: z.string().optional(),
+        techSelect: z.boolean().optional(),
+        preDiscovery: z.boolean().optional(),
+        discovery: z.string().optional(),
+        discoveryNotesAttached: z.boolean().optional(),
+        techDeepDive: z.string().optional(),
+        infoSecCompleted: z.boolean().optional(),
+        knownTechnicalRisks: z.string().optional(),
+        mitigationPlan: z.string().optional(),
+        seProductNotGreenReason: z.string().optional(),
+        seConfidenceNotGreenReason: z.string().optional(),
+        totalDemos: z.number().int().min(0).optional(),
+        latestDemoDryRun: z.boolean().optional(),
       },
     },
     async (input) => {
@@ -721,6 +800,7 @@ export function registerHubTools(server: McpServer): void {
           updated: true,
           profileId,
           created,
+          fieldsPatched: Object.keys(patch),
           hubReviewUrl: buildAccountReviewUrl({ customerId: match.id }),
         });
       } catch (e) {
