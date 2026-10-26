@@ -9,7 +9,16 @@ import {
   updateNoteAdmin,
 } from '../../../src/lib/server/notesAdmin';
 import { updateCustomerAdmin } from '../../../src/lib/server/customersAdmin';
-import { createEngagementTaskAdmin } from '../../../src/lib/server/tasksAdmin';
+import { mergeCustomerProfileByCustomerIdAdmin } from '../../../src/lib/server/customerProfilesAdmin';
+import {
+  createEngagementTaskAdmin,
+  patchEngagementTaskAdmin,
+} from '../../../src/lib/server/tasksAdmin';
+import {
+  createOpportunityAdmin,
+  getOpportunitiesByCustomerAdmin,
+  updateOpportunityAdmin,
+} from '../../../src/lib/server/opportunitiesAdmin';
 import {
   mergeStakeholderIdsOnCustomer,
   upsertCustomerContactAdmin,
@@ -626,6 +635,216 @@ export function registerHubTools(server: McpServer): void {
   }
 
   server.registerTool(
+    'update_customer_account',
+    {
+      description:
+        'Patch account-level fields (products, migration, hosting, licence, compelling event, Salesforce link). Requires write scope.',
+      inputSchema: {
+        customerName: z.string().min(1),
+        existingMigrationOpp: z.string().optional().describe('yes | no'),
+        perpetualOrSubscription: z.enum(['Perpetual', 'Subscription', 'Churn']).optional(),
+        hostingLocation: z.string().optional(),
+        frontEndTech: z.string().optional(),
+        migrationComplexity: z.string().optional(),
+        compellingEvent: z.string().optional(),
+        migrationNotes: z.string().optional(),
+        salesforceLink: z.string().optional(),
+        additionalInfo: z.string().optional(),
+        website: z.string().optional(),
+        productIds: z
+          .array(z.string())
+          .optional()
+          .describe('Catalog ids e.g. product-xp-103, product-sitecore-ai, product-scrunch'),
+      },
+    },
+    async (input) => {
+      try {
+        const { caller, workspace } = await loadHubWorkspace();
+        requireWrite(caller);
+        const match = findCustomerByName(workspace.customers, input.customerName);
+        if (!match) return errResult(`Customer not found: ${input.customerName}`);
+        const { customerName: _n, ...patch } = input;
+        await updateCustomerAdmin(match.id, patch, caller.uid);
+        return okResult({
+          updated: true,
+          customerId: match.id,
+          hubReviewUrl: buildAccountReviewUrl({ customerId: match.id }),
+        });
+      } catch (e) {
+        return errResult(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  server.registerTool(
+    'update_customer_profile',
+    {
+      description:
+        'Patch customer profile (business problem, why us/now, SE/Services/Success planning fields). Creates profile if missing. Requires write scope.',
+      inputSchema: {
+        customerName: z.string().min(1),
+        businessProblem: z.string().optional(),
+        whyUs: z.string().optional(),
+        whyNow: z.string().optional(),
+        seInvolvement: z.enum(['Yes', 'No', 'Not Needed', '']).optional(),
+        seInvolvementDetail: z.string().optional(),
+        seNotes: z.string().optional(),
+        seProductFitAssessment: z.enum(['Green', 'Yellow', 'Red', 'Not Applicable', '']).optional(),
+        seConfidence: z.enum(['Green', 'Yellow', 'Red', 'Not Applicable', '']).optional(),
+        seValidatedQualification: z.boolean().optional(),
+        servicesInvolvement: z.string().optional(),
+        servicesFitAssessment: z.enum(['Green', 'Yellow', 'Red', 'Not Applicable', '']).optional(),
+        servicesConfidence: z.enum(['Green', 'Yellow', 'Red', 'Not Applicable', '']).optional(),
+        servicesNotes: z.string().optional(),
+        customerObjective1: z.string().optional(),
+        customerObjective2: z.string().optional(),
+        customerObjective3: z.string().optional(),
+        customerObjectivesDetails: z.string().optional(),
+        customerUseCase1: z.string().optional(),
+        customerUseCase2: z.string().optional(),
+        customerUseCase3: z.string().optional(),
+      },
+    },
+    async (input) => {
+      try {
+        const { caller, workspace } = await loadHubWorkspace();
+        requireWrite(caller);
+        const match = findCustomerByName(workspace.customers, input.customerName);
+        if (!match) return errResult(`Customer not found: ${input.customerName}`);
+        const { customerName: _n, ...patch } = input;
+        const { profileId, created } = await mergeCustomerProfileByCustomerIdAdmin(
+          match.id,
+          patch,
+          caller.uid,
+        );
+        return okResult({
+          updated: true,
+          profileId,
+          created,
+          hubReviewUrl: buildAccountReviewUrl({ customerId: match.id }),
+        });
+      } catch (e) {
+        return errResult(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  server.registerTool(
+    'update_engagement_task',
+    {
+      description:
+        'Update task status, due date, title, or category (by task id from list_tasks). Requires write scope.',
+      inputSchema: {
+        taskId: z.string().min(1),
+        status: z.enum(['todo', 'in_progress', 'done', 'cancelled']).optional(),
+        dueDate: z.string().optional(),
+        title: z.string().optional(),
+        categoryName: z.string().optional(),
+      },
+    },
+    async ({ taskId, status, dueDate, title, categoryName }) => {
+      try {
+        const { caller, workspace } = await loadHubWorkspace();
+        requireWrite(caller);
+        const task = workspace.tasks.find((t) => t.id === taskId);
+        if (!task) return errResult(`Task not found: ${taskId}`);
+        let categoryIds = task.categoryIds;
+        if (categoryName?.trim()) {
+          const cat = workspace.taskCategories.find(
+            (c) => c.name.toLowerCase() === categoryName.trim().toLowerCase(),
+          );
+          if (cat) categoryIds = [cat.id];
+        }
+        await patchEngagementTaskAdmin(
+          taskId,
+          {
+            ...(status ? { status } : {}),
+            ...(dueDate ? { dueDate } : {}),
+            ...(title ? { title } : {}),
+            ...(categoryIds ? { categoryIds } : {}),
+          },
+          caller.uid,
+          caller.email,
+        );
+        return okResult({ updated: true, taskId });
+      } catch (e) {
+        return errResult(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  server.registerTool(
+    'upsert_opportunity',
+    {
+      description:
+        'Create or update an opportunity on an account (name match). Requires write scope.',
+      inputSchema: {
+        customerName: z.string().min(1),
+        opportunityName: z.string().min(1),
+        currentStage: z
+          .enum([
+            'Plan',
+            'Prospect',
+            'Qualify',
+            'Discover',
+            'Differentiate',
+            'Propose',
+            'Close',
+            'Delivery and Success',
+            'Expand',
+          ])
+          .optional(),
+        crmOpportunityUrl: z.string().optional(),
+      },
+    },
+    async ({ customerName, opportunityName, currentStage, crmOpportunityUrl }) => {
+      try {
+        const { caller, workspace } = await loadHubWorkspace();
+        requireWrite(caller);
+        const match = findCustomerByName(workspace.customers, customerName);
+        if (!match) return errResult(`Customer not found: ${customerName}`);
+        const existing = (await getOpportunitiesByCustomerAdmin(match.id)).find((o) =>
+          (o.opportunityName || '').toLowerCase().includes(opportunityName.toLowerCase().slice(0, 12)),
+        );
+        if (existing) {
+          await updateOpportunityAdmin({
+            id: existing.id,
+            ...(currentStage ? { currentStage } : {}),
+            ...(crmOpportunityUrl ? { crmOpportunityUrl } : {}),
+          });
+          return okResult({
+            updated: true,
+            opportunityId: existing.id,
+            hubReviewUrl: buildAccountReviewUrl({
+              customerId: match.id,
+              opportunityId: existing.id,
+            }),
+          });
+        }
+        const created = await createOpportunityAdmin({
+          customerId: match.id,
+          opportunityName,
+          currentStage: currentStage ?? 'Discover',
+          crmOpportunityUrl,
+          products: [],
+          createdBy: caller.uid,
+          updatedBy: caller.uid,
+        });
+        return okResult({
+          created: true,
+          opportunityId: created.id,
+          hubReviewUrl: buildAccountReviewUrl({
+            customerId: match.id,
+            opportunityId: created.id,
+          }),
+        });
+      } catch (e) {
+        return errResult(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  server.registerTool(
     'summarize_engagement_text',
     {
       description:
@@ -683,7 +902,12 @@ export function registerHubTools(server: McpServer): void {
           migrationNotes: match.migrationNotes,
           mergedNotes: match.mergedNotes,
         });
-        return okResult({ found: true, customerName: match.customerName, summary });
+        return okResult({
+          found: true,
+          customerName: match.customerName,
+          hubReviewUrl: buildAccountReviewUrl({ customerId: match.id }),
+          summary,
+        });
       } catch (e) {
         return errResult(e instanceof Error ? e.message : String(e));
       }

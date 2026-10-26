@@ -169,6 +169,36 @@ export async function loadWorkspaceSnapshot(params: { uid: string; email: string
     if (email) jobs.push(db.collection('customers').where('createdBy', '==', email).get());
     const snaps = await Promise.all(jobs);
     customerDocMap = mergeCustDocs(snaps);
+
+    /** Accounts linked via this user's notes/opps even if `createdBy` was never set (seeds, MCP). */
+    const linkedCustomerIds = new Set<string>();
+    const noteJobs: Promise<QuerySnapshot>[] = [
+      db.collection('customerNotes').where('createdBy', '==', uid).get(),
+    ];
+    if (email) noteJobs.push(db.collection('customerNotes').where('createdBy', '==', email).get());
+    const noteSnaps = await Promise.all(noteJobs);
+    for (const snap of noteSnaps) {
+      snap.docs.forEach((d) => {
+        const cid = d.data().customerId;
+        if (typeof cid === 'string' && cid) linkedCustomerIds.add(cid);
+      });
+    }
+    const oppJobs: Promise<QuerySnapshot>[] = [
+      db.collection('opportunities').where('createdBy', '==', uid).get(),
+    ];
+    if (email) oppJobs.push(db.collection('opportunities').where('createdBy', '==', email).get());
+    const oppSnaps = await Promise.all(oppJobs);
+    for (const snap of oppSnaps) {
+      snap.docs.forEach((d) => {
+        const cid = d.data().customerId;
+        if (typeof cid === 'string' && cid) linkedCustomerIds.add(cid);
+      });
+    }
+    for (const cid of linkedCustomerIds) {
+      if (customerDocMap.has(cid)) continue;
+      const doc = await db.collection('customers').doc(cid).get();
+      if (doc.exists) customerDocMap.set(doc.id, doc);
+    }
   } else {
     const all = await db.collection('customers').get();
     customerDocMap = mergeCustDocs([all]);
@@ -252,8 +282,14 @@ export async function loadWorkspaceSnapshot(params: { uid: string; email: string
   }
 
   if (customerIds.length > 0) {
-    const ownSnap = await db.collection('opportunities').where('createdBy', '==', uid).get();
-    ownSnap.docs.forEach((doc) => addOpp(mapOpp(doc.id, doc.data())));
+    const ownOppJobs: Promise<QuerySnapshot>[] = [
+      db.collection('opportunities').where('createdBy', '==', uid).get(),
+    ];
+    if (email) ownOppJobs.push(db.collection('opportunities').where('createdBy', '==', email).get());
+    const ownSnaps = await Promise.all(ownOppJobs);
+    for (const ownSnap of ownSnaps) {
+      ownSnap.docs.forEach((doc) => addOpp(mapOpp(doc.id, doc.data())));
+    }
   }
 
   /** Profiles scoped to tenant customers */

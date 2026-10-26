@@ -899,13 +899,51 @@ export function CustomerManagement({
                             {seRagLabel(selectedCustomerProfile.seProductFitAssessment)}
                           </span>
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Total Demos</label>
-                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                            {selectedCustomerProfile.totalDemos}
-                          </span>
-                        </div>
+                        {selectedCustomerProfile.seConfidence ? (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">SE Confidence</label>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${seRagBadgeClasses(selectedCustomerProfile.seConfidence)}`}>
+                              {seRagLabel(selectedCustomerProfile.seConfidence)}
+                            </span>
+                          </div>
+                        ) : null}
+                        {selectedCustomerProfile.seInvolvementDetail ? (
+                          <div className="col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">SE involvement</label>
+                            <p className="text-sm text-gray-900 bg-gray-50 rounded-lg p-2">
+                              {selectedCustomerProfile.seInvolvement}: {selectedCustomerProfile.seInvolvementDetail}
+                            </p>
+                          </div>
+                        ) : null}
                       </div>
+
+                      {(selectedCustomerProfile.servicesInvolvement ||
+                        selectedCustomerProfile.servicesFitAssessment ||
+                        selectedCustomerProfile.servicesNotes) && (
+                        <div className="border-t border-gray-100 pt-4 space-y-2">
+                          <h4 className="text-sm font-semibold text-gray-800">Services</h4>
+                          {selectedCustomerProfile.servicesInvolvement && (
+                            <p className="text-sm text-gray-900 bg-gray-50 rounded-lg p-2">
+                              {selectedCustomerProfile.servicesInvolvement}
+                            </p>
+                          )}
+                          <div className="flex flex-wrap gap-2">
+                            {selectedCustomerProfile.servicesFitAssessment && (
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${seRagBadgeClasses(selectedCustomerProfile.servicesFitAssessment)}`}>
+                                Fit: {seRagLabel(selectedCustomerProfile.servicesFitAssessment)}
+                              </span>
+                            )}
+                            {selectedCustomerProfile.servicesConfidence && (
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${seRagBadgeClasses(selectedCustomerProfile.servicesConfidence)}`}>
+                                Confidence: {seRagLabel(selectedCustomerProfile.servicesConfidence)}
+                              </span>
+                            )}
+                          </div>
+                          {selectedCustomerProfile.servicesNotes && (
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedCustomerProfile.servicesNotes}</p>
+                          )}
+                        </div>
+                      )}
 
                       {/* Customer Objectives */}
                       {(selectedCustomerProfile.customerObjective1 || selectedCustomerProfile.customerObjective2 || selectedCustomerProfile.customerObjective3) && (

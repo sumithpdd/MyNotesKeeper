@@ -8,7 +8,7 @@ import { registerHubTools } from './registerHubTools';
 export function createHubMcpServer(): McpServer {
   const server = new McpServer({
     name: 'customer-engagement-hub',
-    version: '1.3.0',
+    version: '1.4.0',
   });
 
   registerHubTools(server);
