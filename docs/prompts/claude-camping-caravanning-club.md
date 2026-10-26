@@ -21,6 +21,7 @@ Use with MCP connected ([MCP_CLAUDE.md](../MCP_CLAUDE.md)). Hub account name: **
 ```
 Use account_status for "Camping & Caravanning Club". Summarize opportunities, notes, and tasks.
 Call out missing CRM fields, partner linkage, or workshop prep gaps.
+Always give the user the hubReviewUrl from the tool response so they can open the account in the browser.
 ```
 
 ### Email → note

@@ -430,9 +430,16 @@ export async function POST(request: NextRequest) {
             (t.customerId === match.id || (t.opportunityId && accountOppIds.has(t.opportunityId))),
         );
 
+        const { buildAccountReviewUrl, accountReviewLinkLabel } = await import('@/lib/hubDeepLinks');
+        const hubReviewUrl = buildAccountReviewUrl({ customerId: match.id });
+
         return {
           found: true,
           account: match.customerName,
+          customerId: match.id,
+          hubReviewUrl,
+          hubReviewLinkLabel: accountReviewLinkLabel(match.customerName),
+          salesforceLink: match.salesforceLink || null,
           seInvolvement: reportSEInvolvement(profile?.seInvolvement),
           seProductFit: reportSERag(profile?.seProductFitAssessment),
           seNotesLastUpdated: profile?.seNotesLastUpdated ?? null,

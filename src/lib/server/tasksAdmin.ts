@@ -216,6 +216,47 @@ export async function updateEngagementTaskAdmin(task: EngagementTask, uid: strin
   await db.collection(COLLECTION).doc(task.id).update(taskToFirestore(task));
 }
 
+/** Partial update for MCP / automation (status, dates, categories, title, description). */
+export async function patchEngagementTaskAdmin(
+  taskId: string,
+  patch: {
+    status?: EngagementTask['status'];
+    title?: string;
+    description?: string;
+    dueDate?: Date | string | null;
+    startDate?: Date | string | null;
+    endDate?: Date | string | null;
+    categoryIds?: string[];
+  },
+  uid: string,
+  email: string | null,
+): Promise<void> {
+  await assertTaskWritable(taskId, uid, email);
+  const db = requireAdminFirestore();
+  const snap = await db.collection(COLLECTION).doc(taskId).get();
+  if (!snap.exists) throw new Error('Task not found');
+  const cur = engagementTaskFromDoc(taskId, snap.data() as DocumentData);
+  const next: EngagementTask = {
+    ...cur,
+    ...(patch.status ? { status: patch.status } : {}),
+    ...(patch.title !== undefined ? { title: patch.title } : {}),
+    ...(patch.description !== undefined ? { description: patch.description } : {}),
+    ...(patch.categoryIds ? { categoryIds: patch.categoryIds } : {}),
+    ...(patch.dueDate !== undefined
+      ? { dueDate: patch.dueDate ? new Date(patch.dueDate) : null }
+      : {}),
+    ...(patch.startDate !== undefined
+      ? { startDate: patch.startDate ? new Date(patch.startDate) : null }
+      : {}),
+    ...(patch.endDate !== undefined
+      ? { endDate: patch.endDate ? new Date(patch.endDate) : null }
+      : {}),
+    updatedBy: uid,
+    updatedAt: new Date(),
+  };
+  await db.collection(COLLECTION).doc(taskId).update(taskToFirestore(next));
+}
+
 export async function updateEngagementTasksBatchAdmin(
   tasks: EngagementTask[],
   uid: string,

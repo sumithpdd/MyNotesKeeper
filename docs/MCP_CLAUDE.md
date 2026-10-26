@@ -32,7 +32,7 @@ Use a **write** token if Claude should add notes or tasks. Revoke on `/mcp` if t
 ```
 
 3. **Quit and restart Claude Desktop** (required after hub MCP updates — tool list is cached).
-4. New chat → confirm tools include **`set_account_stakeholders`**, **`list_customer_notes`**, **`delete_customer_note`**, **`update_customer_note`** (server v1.2+).
+4. New chat → confirm tools include **`account_review_url`**, **`set_account_stakeholders`**, **`list_customer_notes`**, **`delete_customer_note`**, **`update_customer_note`** (server v1.3+).
 
 ### Claude on the web (claude.ai)
 
@@ -49,7 +49,8 @@ Use a **write** token if Claude should add notes or tasks. Revoke on `/mcp` if t
 | Tool | Use when |
 |------|----------|
 | `search_customers` | Find account by partial name |
-| `account_status` | Full snapshot: notes, opps, tasks, CRM links |
+| `account_status` | Full snapshot: notes, opps, tasks, CRM links — includes **`hubReviewUrl`** for the user |
+| **`account_review_url`** | **Shareable hub link** to open the account (optionally one opportunity) |
 | `summarize_engagement_text` | Paste email/meeting text → structured summary (Gemini on server) |
 | `add_customer_note` | Save summary or SE note to hub |
 | **`set_account_stakeholders`** | **Primary** — customer / partner / Sitecore contacts on the account (not notes) |

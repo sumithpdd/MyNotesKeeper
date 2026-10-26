@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { FileText, Users, Settings, Target, LayoutGrid, Sparkles, ChevronRight } from 'lucide-react';
 import type { Customer, CustomerProfile, CustomerNote, MartechTool, Product } from '@/types';
 import type { AccountPlanningPillarId } from '@/domain/engagement-hub/accountPlanningPillars';
@@ -17,6 +17,7 @@ import { computeQuicklookStats } from '@/domain/engagement-hub/quicklookStats';
 import { useAuth } from '@/lib/auth';
 import { hubAuthFetch, hubAuthJson } from '@/lib/client/hubAuthFetch';
 import { computeEngagementDashboardStats } from '@/domain/engagement-hub';
+import { buildAccountReviewUrl, type HubWorkspaceTab } from '@/lib/hubDeepLinks';
 import {
   useAiPanelEntityActions,
   useCustomerOperations,
@@ -63,12 +64,54 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<'notes' | 'entities' | 'migration' | 'tasks'>('tasks');
   const [showAIChat, setShowAIChat] = useState(false);
 
-  const openCustomerWorkspace = useCallback((customerId: string, opportunityId?: string | null) => {
-    setActiveTab('notes');
+  const syncAccountReviewUrl = useCallback(
+    (customerId: string | null, opportunityId?: string | null, tab: HubWorkspaceTab = 'notes') => {
+      if (typeof window === 'undefined') return;
+      if (!customerId) {
+        window.history.replaceState(null, '', '/');
+        return;
+      }
+      window.history.replaceState(
+        null,
+        '',
+        buildAccountReviewUrl({ customerId, opportunityId, tab }),
+      );
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const customerId = params.get('customer')?.trim();
+    if (!customerId) return;
+    const opportunityId = params.get('opportunity')?.trim() || null;
+    const tabParam = params.get('tab')?.trim();
+    const tab: HubWorkspaceTab =
+      tabParam === 'tasks' || tabParam === 'migration' || tabParam === 'entities' ? tabParam : 'notes';
+    setActiveTab(tab === 'entities' ? 'entities' : tab === 'migration' ? 'migration' : tab === 'tasks' ? 'tasks' : 'notes');
     setSelectedCustomer(customerId);
-    setWorkspaceFocus({ customerId, opportunityId: opportunityId ?? null });
-    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (opportunityId) setWorkspaceFocus({ customerId, opportunityId });
   }, []);
+
+  const openCustomerWorkspace = useCallback(
+    (customerId: string, opportunityId?: string | null) => {
+      setActiveTab('notes');
+      setSelectedCustomer(customerId);
+      setWorkspaceFocus({ customerId, opportunityId: opportunityId ?? null });
+      syncAccountReviewUrl(customerId, opportunityId, 'notes');
+      if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    [syncAccountReviewUrl],
+  );
+
+  const handleSelectCustomer = useCallback(
+    (customerId: string | null) => {
+      setSelectedCustomer(customerId);
+      syncAccountReviewUrl(customerId, null, activeTab === 'tasks' ? 'tasks' : 'notes');
+    },
+    [activeTab, syncAccountReviewUrl],
+  );
 
   const clearWorkspaceFocus = useCallback(() => setWorkspaceFocus(null), []);
 
@@ -469,7 +512,7 @@ export default function HomePage() {
               workspaceFocus={workspaceFocus}
               onWorkspaceFocusConsumed={clearWorkspaceFocus}
               currentUser={user?.email || 'Unknown User'}
-              onSelectCustomer={setSelectedCustomer}
+              onSelectCustomer={handleSelectCustomer}
               onSaveCustomer={saveCustomer}
               onDeleteCustomer={handleDeleteCustomerWithCleanup}
               onSaveCustomerProfile={(profile) => setCustomerProfiles((prev) => [...prev, profile])}

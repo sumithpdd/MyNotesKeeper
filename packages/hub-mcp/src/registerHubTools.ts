@@ -19,6 +19,11 @@ import {
 import { aiService } from '../../../src/lib/ai';
 import { geminiModelId } from '../../../src/lib/aiModel';
 import { formatProductDisplayName } from '../../../src/lib/productDisplay';
+import {
+  accountReviewLinkLabel,
+  buildAccountReviewUrl,
+  hubPublicOrigin,
+} from '../../../src/lib/hubDeepLinks';
 import type { Customer } from '../../../src/types';
 import { requireRead, requireWrite, resolveCaller } from './auth';
 import { errResult, okResult } from './json';
@@ -200,6 +205,55 @@ export function registerHubTools(server: McpServer): void {
   );
 
   server.registerTool(
+    'account_review_url',
+    {
+      description:
+        'Return the Customer Engagement Hub URL to open an account for review in the browser. Always share hubReviewUrl with the user after account changes. Read-only.',
+      inputSchema: {
+        customerName: z.string().min(1),
+        opportunityName: z
+          .string()
+          .optional()
+          .describe('Optional — deep-link to this opportunity on the account'),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async ({ customerName, opportunityName }) => {
+      try {
+        const { workspace } = await loadHubWorkspace();
+        const match = findCustomerByName(workspace.customers, customerName);
+        if (!match) return okResult({ found: false, customerName });
+        let opportunityId: string | undefined;
+        if (opportunityName?.trim()) {
+          const opps = workspace.opportunities.filter((o) => o.customerId === match.id);
+          const q = opportunityName.trim().toLowerCase();
+          const hit = opps.find(
+            (o) =>
+              (o.opportunityName || '').toLowerCase().includes(q) ||
+              q.includes((o.opportunityName || '').toLowerCase()),
+          );
+          opportunityId = hit?.id;
+        }
+        const hubReviewUrl = buildAccountReviewUrl({
+          customerId: match.id,
+          opportunityId,
+        });
+        return okResult({
+          found: true,
+          customerName: match.customerName,
+          customerId: match.id,
+          hubReviewUrl,
+          hubReviewLinkLabel: accountReviewLinkLabel(match.customerName),
+          salesforceLink: match.salesforceLink || undefined,
+          opportunityId: opportunityId ?? null,
+        });
+      } catch (e) {
+        return errResult(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  server.registerTool(
     'search_customers',
     {
       description: 'Search customers by partial name. Read-only.',
@@ -221,9 +275,15 @@ export function registerHubTools(server: McpServer): void {
             id: c.id,
             customerName: c.customerName,
             salesforceLink: c.salesforceLink || undefined,
+            hubReviewUrl: buildAccountReviewUrl({ customerId: c.id }),
             accountExecutives: (c.accountExecutiveIds || []).length,
           }));
-        return okResult({ query, count: matches.length, customers: matches });
+        return okResult({
+          query,
+          count: matches.length,
+          hubOrigin: hubPublicOrigin(),
+          customers: matches,
+        });
       } catch (e) {
         return errResult(e instanceof Error ? e.message : String(e));
       }
@@ -273,20 +333,44 @@ export function registerHubTools(server: McpServer): void {
             dueDate: t.dueDate,
           }));
         const profile = workspace.customerProfiles.find((p) => p.customerId === match.id);
+        const hubReviewUrl = buildAccountReviewUrl({ customerId: match.id });
         return okResult({
           found: true,
+          hubReviewUrl,
+          hubReviewLinkLabel: accountReviewLinkLabel(match.customerName),
           customer: {
             id: match.id,
             customerName: match.customerName,
             salesforceLink: match.salesforceLink,
+            website: match.website,
             products: (match.products || []).map((p) => formatProductDisplayName(p)),
             partners: (match.partners || []).map((p) => p.name),
             additionalInfo: match.additionalInfo,
             mergedNotes: match.mergedNotes?.slice(0, 500),
             compellingEvent: match.compellingEvent,
+            existingMigrationOpp: match.existingMigrationOpp,
+            hostingLocation: match.hostingLocation,
+            perpetualOrSubscription: match.perpetualOrSubscription,
+            migrationComplexity: match.migrationComplexity,
           },
-          profile: profile ? { businessProblem: profile.businessProblem?.slice(0, 300) } : null,
-          opportunities: opps,
+          profile: profile
+            ? {
+                businessProblem: profile.businessProblem?.slice(0, 300),
+                seInvolvement: profile.seInvolvement,
+                seInvolvementDetail: profile.seInvolvementDetail,
+                seConfidence: profile.seConfidence,
+                seProductFitAssessment: profile.seProductFitAssessment,
+                seValidatedQualification: profile.seValidatedQualification,
+                servicesInvolvement: profile.servicesInvolvement,
+              }
+            : null,
+          opportunities: opps.map((o) => ({
+            ...o,
+            hubReviewUrl: buildAccountReviewUrl({
+              customerId: match.id,
+              opportunityId: o.id,
+            }),
+          })),
           notes,
           tasks,
         });

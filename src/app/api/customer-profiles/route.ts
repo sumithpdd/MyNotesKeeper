@@ -3,7 +3,13 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { authorizeApiRequest, forbidUserIdMismatch } from '@/lib/server/authorizeApiRequest';
 import { requireAdminFirestore } from '@/lib/server/adminFirestore';
 
-const DATE_FIELDS = new Set(['latestDemoDate', 'seNotesLastUpdated', 'createdAt', 'updatedAt']);
+const DATE_FIELDS = new Set([
+  'latestDemoDate',
+  'seNotesLastUpdated',
+  'servicesNotesLastUpdated',
+  'createdAt',
+  'updatedAt',
+]);
 
 /**
  * PATCH /api/customer-profiles — merges profile fields via Admin SDK.
