@@ -31,8 +31,8 @@ Use a **write** token if Claude should add notes or tasks. Revoke on `/mcp` if t
 }
 ```
 
-3. **Quit and restart Claude Desktop** (required for MCP changes).
-4. New chat → tools icon should list hub tools (`account_status`, `add_customer_note`, etc.).
+3. **Quit and restart Claude Desktop** (required after hub MCP updates — tool list is cached).
+4. New chat → confirm tools include **`set_account_stakeholders`**, **`list_customer_notes`**, **`delete_customer_note`**, **`update_customer_note`** (server v1.2+).
 
 ### Claude on the web (claude.ai)
 
@@ -52,7 +52,11 @@ Use a **write** token if Claude should add notes or tasks. Revoke on `/mcp` if t
 | `account_status` | Full snapshot: notes, opps, tasks, CRM links |
 | `summarize_engagement_text` | Paste email/meeting text → structured summary (Gemini on server) |
 | `add_customer_note` | Save summary or SE note to hub |
-| `link_stakeholders_for_account` | Sitecore AE/SC, customer attendees, partner org + people (not a note blob) |
+| **`set_account_stakeholders`** | **Primary** — customer / partner / Sitecore contacts on the account (not notes) |
+| `link_stakeholders_for_account` | Same as `set_account_stakeholders` |
+| `list_customer_notes` | List note ids (for delete/update) |
+| `delete_customer_note` | Remove a duplicate or obsolete note |
+| `update_customer_note` | Edit note text |
 | `create_engagement_task` | Workshop, follow-up, calendar item |
 | `list_tasks` / `list_notes` | Filter by account |
 | `customer_ai_summary` | AI summary from stored profile fields |

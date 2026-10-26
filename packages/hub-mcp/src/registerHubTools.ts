@@ -3,7 +3,12 @@ import { z } from 'zod';
 import { generateText } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { loadWorkspaceSnapshot } from '../../../src/lib/server/workspaceLoad';
-import { createNoteAdmin } from '../../../src/lib/server/notesAdmin';
+import {
+  createNoteAdmin,
+  deleteNoteAdmin,
+  updateNoteAdmin,
+} from '../../../src/lib/server/notesAdmin';
+import { updateCustomerAdmin } from '../../../src/lib/server/customersAdmin';
 import { createEngagementTaskAdmin } from '../../../src/lib/server/tasksAdmin';
 import {
   mergeStakeholderIdsOnCustomer,
@@ -39,6 +44,133 @@ function geminiModel() {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY is not configured on the server');
   return createGoogleGenerativeAI({ apiKey })(geminiModelId());
+}
+
+const stakeholderInputSchema = {
+  customerName: z.string().min(1),
+  primaryContactName: z
+    .string()
+    .optional()
+    .describe('Sets primaryCustomerContactId on the account after linking'),
+  sitecoreInternals: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        email: z.string().optional(),
+        role: z.string().optional(),
+        isAccountExecutive: z.boolean().optional(),
+      }),
+    )
+    .optional(),
+  customerContacts: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        email: z.string().optional(),
+        role: z.string().optional(),
+        companyName: z.string().optional(),
+      }),
+    )
+    .optional(),
+  partners: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        type: z.string().optional(),
+        contacts: z
+          .array(
+            z.object({
+              name: z.string().min(1),
+              email: z.string().optional(),
+              role: z.string().optional(),
+            }),
+          )
+          .optional(),
+      }),
+    )
+    .optional(),
+};
+
+type StakeholderInput = z.infer<z.ZodObject<typeof stakeholderInputSchema>>;
+
+function normName(s: string): string {
+  return s.trim().toLowerCase();
+}
+
+async function linkStakeholdersForAccount(input: StakeholderInput) {
+  const { caller, workspace } = await loadHubWorkspace();
+  requireWrite(caller);
+  const match = findCustomerByName(workspace.customers, input.customerName);
+  if (!match) return errResult(`Customer not found: ${input.customerName}`);
+
+  const customerContactIds: string[] = [];
+  const internalContactIds: string[] = [];
+  const partnerIds: string[] = [];
+  const accountExecutiveIds: string[] = [];
+  const contactIdByNormName = new Map<string, string>();
+
+  for (const p of input.sitecoreInternals || []) {
+    const id = await upsertInternalContactAdmin({
+      name: p.name,
+      email: p.email,
+      role: p.role || 'Sitecore',
+    });
+    internalContactIds.push(id);
+    contactIdByNormName.set(normName(p.name), id);
+    if (p.isAccountExecutive) accountExecutiveIds.push(id);
+  }
+
+  for (const c of input.customerContacts || []) {
+    const id = await upsertCustomerContactAdmin({
+      name: c.name,
+      email: c.email,
+      role: c.role,
+      companyName: c.companyName || match.customerName,
+      customerId: match.id,
+    });
+    customerContactIds.push(id);
+    contactIdByNormName.set(normName(c.name), id);
+  }
+
+  for (const p of input.partners || []) {
+    const partnerId = await upsertPartnerAdmin({ name: p.name, type: p.type });
+    partnerIds.push(partnerId);
+    for (const pc of p.contacts || []) {
+      const id = await upsertCustomerContactAdmin({
+        name: pc.name,
+        email: pc.email,
+        role: pc.role || 'Partner',
+        companyName: p.name,
+        customerId: match.id,
+      });
+      customerContactIds.push(id);
+      contactIdByNormName.set(normName(pc.name), id);
+    }
+  }
+
+  await mergeStakeholderIdsOnCustomer(
+    match.id,
+    { customerContactIds, internalContactIds, partnerIds, accountExecutiveIds },
+    caller.uid,
+  );
+
+  if (input.primaryContactName?.trim()) {
+    const pid = contactIdByNormName.get(normName(input.primaryContactName));
+    if (pid) {
+      await updateCustomerAdmin(match.id, { primaryCustomerContactId: pid }, caller.uid);
+    }
+  }
+
+  return okResult({
+    customerName: match.customerName,
+    customerId: match.id,
+    linked: {
+      customerContacts: customerContactIds.length,
+      internalContacts: internalContactIds.length,
+      partners: partnerIds.length,
+      accountExecutives: accountExecutiveIds.length,
+    },
+  });
 }
 
 export function registerHubTools(server: McpServer): void {
@@ -201,6 +333,100 @@ export function registerHubTools(server: McpServer): void {
   );
 
   server.registerTool(
+    'list_customer_notes',
+    {
+      description: 'List notes for an account (includes note ids for update/delete). Read-only.',
+      inputSchema: {
+        customerName: z.string().min(1),
+        limit: z.number().int().min(1).max(50).optional(),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async ({ customerName, limit }) => {
+      try {
+        const { workspace } = await loadHubWorkspace();
+        const match = findCustomerByName(workspace.customers, customerName);
+        if (!match) return okResult({ found: false, customerName });
+        const max = limit ?? 25;
+        const notes = workspace.notes
+          .filter((n) => n.customerId === match.id)
+          .slice(0, max)
+          .map((n) => ({
+            id: n.id,
+            noteDate: n.noteDate,
+            seConfidence: n.seConfidence,
+            preview: (n.notes || '').slice(0, 280),
+          }));
+        return okResult({ found: true, customerName: match.customerName, count: notes.length, notes });
+      } catch (e) {
+        return errResult(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  server.registerTool(
+    'delete_customer_note',
+    {
+      description: 'Delete a customer note by id (from list_customer_notes). Requires write scope.',
+      inputSchema: {
+        noteId: z.string().min(1),
+        customerName: z.string().optional().describe('Safety check — must match note customer if provided'),
+      },
+    },
+    async ({ noteId, customerName }) => {
+      try {
+        const { caller, workspace } = await loadHubWorkspace();
+        requireWrite(caller);
+        const note = workspace.notes.find((n) => n.id === noteId);
+        if (!note) return errResult(`Note not found: ${noteId}`);
+        if (customerName?.trim()) {
+          const match = findCustomerByName(workspace.customers, customerName);
+          if (!match || note.customerId !== match.id) {
+            return errResult('Note does not belong to that customer');
+          }
+        }
+        await deleteNoteAdmin(noteId);
+        return okResult({ deleted: true, noteId });
+      } catch (e) {
+        return errResult(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  server.registerTool(
+    'update_customer_note',
+    {
+      description: 'Update note text or date by id. Requires write scope.',
+      inputSchema: {
+        noteId: z.string().min(1),
+        notes: z.string().optional(),
+        noteDate: z.string().optional(),
+        seConfidence: z.enum(['Green', 'Yellow', 'Red', 'Not Applicable']).optional(),
+      },
+    },
+    async ({ noteId, notes, noteDate, seConfidence }) => {
+      try {
+        const { caller, workspace } = await loadHubWorkspace();
+        requireWrite(caller);
+        const note = workspace.notes.find((n) => n.id === noteId);
+        if (!note) return errResult(`Note not found: ${noteId}`);
+        await updateNoteAdmin(
+          {
+            id: noteId,
+            ...(notes !== undefined ? { notes } : {}),
+            ...(noteDate ? { noteDate: new Date(noteDate) } : {}),
+            ...(seConfidence ? { seConfidence } : {}),
+          },
+          caller.uid,
+        );
+        return okResult({ updated: true, noteId, customerId: note.customerId });
+      } catch (e) {
+        return errResult(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  server.registerTool(
     'add_customer_note',
     {
       description:
@@ -294,121 +520,26 @@ export function registerHubTools(server: McpServer): void {
     },
   );
 
-  server.registerTool(
-    'link_stakeholders_for_account',
-    {
-      description:
-        'Upsert Sitecore internal contacts, customer contacts, partner org, and partner-side people; link them on the customer record (customerContactIds, internalContactIds, partnerIds, accountExecutiveIds). Requires write scope.',
-      inputSchema: {
-        customerName: z.string().min(1),
-        sitecoreInternals: z
-          .array(
-            z.object({
-              name: z.string().min(1),
-              email: z.string().optional(),
-              role: z.string().optional(),
-              isAccountExecutive: z.boolean().optional(),
-            }),
-          )
-          .optional(),
-        customerContacts: z
-          .array(
-            z.object({
-              name: z.string().min(1),
-              email: z.string().optional(),
-              role: z.string().optional(),
-              companyName: z.string().optional(),
-            }),
-          )
-          .optional(),
-        partners: z
-          .array(
-            z.object({
-              name: z.string().min(1),
-              type: z.string().optional(),
-              contacts: z
-                .array(
-                  z.object({
-                    name: z.string().min(1),
-                    email: z.string().optional(),
-                    role: z.string().optional(),
-                  }),
-                )
-                .optional(),
-            }),
-          )
-          .optional(),
+  const stakeholderDescriptions = {
+    set_account_stakeholders:
+      'Add or update account stakeholders (customer contacts, partner people, Sitecore AE/SC) on the customer record — use this instead of dumping stakeholders into notes. Requires write scope.',
+    link_stakeholders_for_account:
+      'Alias of set_account_stakeholders — links customerContactIds, internalContactIds, partnerIds, accountExecutiveIds on the account.',
+  };
+
+  for (const [toolName, description] of Object.entries(stakeholderDescriptions)) {
+    server.registerTool(
+      toolName,
+      { description, inputSchema: stakeholderInputSchema },
+      async (input) => {
+        try {
+          return await linkStakeholdersForAccount(input as StakeholderInput);
+        } catch (e) {
+          return errResult(e instanceof Error ? e.message : String(e));
+        }
       },
-    },
-    async ({ customerName, sitecoreInternals, customerContacts, partners }) => {
-      try {
-        const { caller, workspace } = await loadHubWorkspace();
-        requireWrite(caller);
-        const match = findCustomerByName(workspace.customers, customerName);
-        if (!match) return errResult(`Customer not found: ${customerName}`);
-
-        const customerContactIds: string[] = [];
-        const internalContactIds: string[] = [];
-        const partnerIds: string[] = [];
-        const accountExecutiveIds: string[] = [];
-
-        for (const p of sitecoreInternals || []) {
-          const id = await upsertInternalContactAdmin({
-            name: p.name,
-            email: p.email,
-            role: p.role || 'Sitecore',
-          });
-          internalContactIds.push(id);
-          if (p.isAccountExecutive) accountExecutiveIds.push(id);
-        }
-
-        for (const c of customerContacts || []) {
-          const id = await upsertCustomerContactAdmin({
-            name: c.name,
-            email: c.email,
-            role: c.role,
-            companyName: c.companyName || match.customerName,
-            customerId: match.id,
-          });
-          customerContactIds.push(id);
-        }
-
-        for (const p of partners || []) {
-          const partnerId = await upsertPartnerAdmin({ name: p.name, type: p.type });
-          partnerIds.push(partnerId);
-          for (const pc of p.contacts || []) {
-            const id = await upsertCustomerContactAdmin({
-              name: pc.name,
-              email: pc.email,
-              role: pc.role || 'Partner',
-              companyName: p.name,
-              customerId: match.id,
-            });
-            customerContactIds.push(id);
-          }
-        }
-
-        await mergeStakeholderIdsOnCustomer(
-          match.id,
-          { customerContactIds, internalContactIds, partnerIds, accountExecutiveIds },
-          caller.uid,
-        );
-
-        return okResult({
-          customerName: match.customerName,
-          customerId: match.id,
-          linked: {
-            customerContacts: customerContactIds.length,
-            internalContacts: internalContactIds.length,
-            partners: partnerIds.length,
-            accountExecutives: accountExecutiveIds.length,
-          },
-        });
-      } catch (e) {
-        return errResult(e instanceof Error ? e.message : String(e));
-      }
-    },
-  );
+    );
+  }
 
   server.registerTool(
     'summarize_engagement_text',
