@@ -118,11 +118,19 @@ export function DealQualificationPanel({ qualification, className = '' }: Props)
         role="note"
       >
         <HelpCircle className="h-4 w-4 shrink-0 mt-0.5 text-gray-400" />
-        <p>
-          <strong>Mentions</strong> measure how much a topic was discussed — coverage, not quality. A
-          low count means the conversation never went there.{' '}
-          <strong>Score</strong> is a deliberate read on how well the element is satisfied.
-        </p>
+        <div className="space-y-2">
+          <p>
+            <strong>Mentions</strong> measure how much a topic was discussed — coverage, not quality.{' '}
+            <strong>Score</strong> is a deliberate 0–10 read on how well the element is satisfied.
+          </p>
+          <p>
+            <strong>MEDDPICC</strong> — Metrics, Economic buyer, Decision criteria/process, Paper process,
+            Identify pain, Champion, Competition.
+          </p>
+          <p>
+            <strong>BANT</strong> — Budget, Authority, Need, Timeline.
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

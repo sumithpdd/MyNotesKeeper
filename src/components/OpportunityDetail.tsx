@@ -11,6 +11,11 @@ import { safeFormatDate, safeFormatDateTime } from '@/lib/utils';
 import { formatProductDisplayName } from '@/lib/productDisplay';
 import { OPPORTUNITY_STAGE_ORDER, OPPORTUNITY_STAGE_HELP, formatTimeInCurrentStage } from '@/lib/opportunityStages';
 import { parseDealQualification } from '@/domain/engagement-hub/dealQualification';
+import {
+  mergeAnalyticsIntoQualification,
+  parseConversationAnalytics,
+} from '@/domain/engagement-hub/conversationAnalytics';
+import { ConversationAnalyticsPanel } from '@/components/opportunities/ConversationAnalyticsPanel';
 import { scoreEntity, OPPORTUNITY_FIELDS } from '@/domain/engagement-hub/completeness';
 import { DealQualificationPanel } from './opportunities/DealQualificationPanel';
 import { CompletenessPanel } from './completeness/CompletenessPanel';
@@ -372,8 +377,15 @@ export function OpportunityDetail({
             )}
           </div>
 
-          {/* MEDDPICC / BANT */}
-          <DealQualificationPanel qualification={parseDealQualification(opportunity.dealQualification)} />
+          <ConversationAnalyticsPanel analytics={opportunity.conversationAnalytics} />
+
+          {/* MEDDPICC / BANT — mention counts merged from conversation analytics when present */}
+          <DealQualificationPanel
+            qualification={mergeAnalyticsIntoQualification(
+              parseDealQualification(opportunity.dealQualification),
+              parseConversationAnalytics(opportunity.conversationAnalytics),
+            )}
+          />
 
           {/* Record completeness */}
           <CompletenessPanel

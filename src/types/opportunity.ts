@@ -1,6 +1,7 @@
 import { Product } from './product';
 import { InternalContact } from './contacts';
 import type { DealQualification } from '@/domain/engagement-hub/dealQualification';
+import type { ConversationAnalytics } from '@/domain/engagement-hub/conversationAnalytics';
 
 // Opportunity Stage Types
 export type OpportunityStage = 
@@ -85,6 +86,8 @@ export interface Opportunity {
   crmOpportunityUrl?: string;
   /** MEDDPICC / BANT qualification — see `domain/engagement-hub/dealQualification.ts`. */
   dealQualification?: DealQualification;
+  /** Gong-style tracker counts — see `domain/engagement-hub/conversationAnalytics.ts`. */
+  conversationAnalytics?: ConversationAnalytics;
 
   // Metadata
   createdBy: string;
@@ -111,6 +114,7 @@ export interface CreateOpportunityData {
   nextSteps?: string;
   crmOpportunityUrl?: string;
   dealQualification?: DealQualification;
+  conversationAnalytics?: ConversationAnalytics;
   createdBy: string;
   updatedBy: string;
 }

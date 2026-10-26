@@ -121,6 +121,16 @@ export function hydrateWorkspacePayload(json: Record<string, unknown>): {
         ...e,
         changedAt: coerceDate(e.changedAt),
       })) ?? [],
+    ...(o.conversationAnalytics?.recordedAt != null
+      ? {
+          conversationAnalytics: {
+            ...o.conversationAnalytics,
+            recordedAt: coerceDate(
+              (o.conversationAnalytics as { recordedAt?: unknown }).recordedAt,
+            ),
+          },
+        }
+      : {}),
   })) as Opportunity[];
 
   const products = workspaceArray(json, 'products') as Product[];
