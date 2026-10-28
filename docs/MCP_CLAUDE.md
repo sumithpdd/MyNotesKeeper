@@ -66,7 +66,7 @@ Use a **write** token if Claude should add notes or tasks. Revoke on `/mcp` if t
 | **`research_company`** | Draft About-the-company / industry brief from hub context (save with `update_customer_account`) |
 | **`update_customer_account`** | Patch account fields; **`productIds`** or **`productLabels`** replaces owned products (not opps) |
 | **`update_customer_profile`** | Patch profile (business problem, SE/Services, objectives, discovery, risks, use cases) |
-| **`upsert_opportunity`** | Create/update opportunities (SitecoreAI, Scrunch, etc.) |
+| **`upsert_opportunity`** | Create/update **one** opportunity. Match by Salesforce URL or **exact** name — never a prefix. One account can have many opps. |
 | **`update_engagement_task`** | Task status, due date, title |
 
 ## 4. Starter instructions (paste into Claude Project / system prompt)

@@ -38,6 +38,30 @@ import { requireRead, requireWrite, resolveCaller } from './auth';
 import { errResult, okResult } from './json';
 import { resolveProductIdsFromInput } from './resolveProducts';
 
+function salesforceOpportunityIdFromUrl(url: string | undefined): string | null {
+  if (!url) return null;
+  const m = url.match(/\/Opportunity\/(006[A-Za-z0-9]{10,18})/i);
+  return m?.[1] ?? null;
+}
+
+/** Match an existing opp by Salesforce URL/id, hub id, or exact name — never a short prefix (that collapsed 4 Pinsent deals into one). */
+function findOpportunityForUpsert(
+  opps: { id: string; opportunityName?: string; crmOpportunityUrl?: string }[],
+  input: { opportunityId?: string; opportunityName: string; crmOpportunityUrl?: string },
+) {
+  if (input.opportunityId?.trim()) {
+    const byId = opps.find((o) => o.id === input.opportunityId!.trim());
+    if (byId) return byId;
+  }
+  const sfId = salesforceOpportunityIdFromUrl(input.crmOpportunityUrl);
+  if (sfId) {
+    const byCrm = opps.find((o) => (o.crmOpportunityUrl || '').includes(sfId));
+    if (byCrm) return byCrm;
+  }
+  const name = input.opportunityName.trim().toLowerCase();
+  return opps.find((o) => (o.opportunityName || '').trim().toLowerCase() === name);
+}
+
 function findCustomerByName(customers: Customer[], search: string) {
   const q = search.trim().toLowerCase();
   if (!q) return undefined;
@@ -919,10 +943,11 @@ export function registerHubTools(server: McpServer): void {
     'upsert_opportunity',
     {
       description:
-        'Create or update an opportunity on an account (name match). Requires write scope.',
+        'Create or update one opportunity on an account. Accounts can have many opportunities. Match order: opportunityId, then Salesforce Opportunity URL/id, then exact opportunity name. Never match on a name prefix (that would merge Scrunch into SitecoreAI). Requires write scope.',
       inputSchema: {
         customerName: z.string().min(1),
         opportunityName: z.string().min(1),
+        opportunityId: z.string().optional().describe('Hub opportunity id from account_status — updates that row only'),
         currentStage: z
           .enum([
             'Plan',
@@ -937,27 +962,41 @@ export function registerHubTools(server: McpServer): void {
           ])
           .optional(),
         crmOpportunityUrl: z.string().optional(),
+        estimatedValue: z.number().optional(),
+        currency: z.string().optional().describe('e.g. GBP'),
+        expectedCloseDate: z.string().optional().describe('ISO date YYYY-MM-DD'),
       },
     },
-    async ({ customerName, opportunityName, currentStage, crmOpportunityUrl }) => {
+    async (input) => {
       try {
         const { caller, workspace } = await loadHubWorkspace();
         requireWrite(caller);
-        const match = findCustomerByName(workspace.customers, customerName);
-        if (!match) return errResult(`Customer not found: ${customerName}`);
-        const existing = (await getOpportunitiesByCustomerAdmin(match.id)).find((o) =>
-          (o.opportunityName || '').toLowerCase().includes(opportunityName.toLowerCase().slice(0, 12)),
-        );
+        const match = findCustomerByName(workspace.customers, input.customerName);
+        if (!match) return errResult(`Customer not found: ${input.customerName}`);
+        const { customerName: _n, opportunityName, opportunityId, currentStage, crmOpportunityUrl, estimatedValue, currency, expectedCloseDate } =
+          input;
+        const existing = findOpportunityForUpsert(await getOpportunitiesByCustomerAdmin(match.id), {
+          opportunityId,
+          opportunityName,
+          crmOpportunityUrl,
+        });
+        const close = expectedCloseDate ? new Date(expectedCloseDate) : undefined;
         if (existing) {
           await updateOpportunityAdmin({
             id: existing.id,
             opportunityName,
             ...(currentStage ? { currentStage } : {}),
             ...(crmOpportunityUrl ? { crmOpportunityUrl } : {}),
+            ...(estimatedValue != null ? { estimatedValue } : {}),
+            ...(currency ? { currency } : {}),
+            ...(close && !Number.isNaN(close.getTime()) ? { expectedCloseDate: close } : {}),
+            updatedBy: caller.uid,
           });
           return okResult({
             updated: true,
+            created: false,
             opportunityId: existing.id,
+            opportunityName,
             hubReviewUrl: buildAccountReviewUrl({
               customerId: match.id,
               opportunityId: existing.id,
@@ -969,13 +1008,18 @@ export function registerHubTools(server: McpServer): void {
           opportunityName,
           currentStage: currentStage ?? 'Discover',
           crmOpportunityUrl,
+          estimatedValue,
+          currency: currency ?? (estimatedValue != null ? 'GBP' : undefined),
+          expectedCloseDate: close && !Number.isNaN(close.getTime()) ? close : undefined,
           products: [],
           createdBy: caller.uid,
           updatedBy: caller.uid,
         });
         return okResult({
           created: true,
+          updated: false,
           opportunityId: created.id,
+          opportunityName,
           hubReviewUrl: buildAccountReviewUrl({
             customerId: match.id,
             opportunityId: created.id,
